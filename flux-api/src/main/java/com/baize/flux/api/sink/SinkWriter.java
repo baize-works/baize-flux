@@ -1,0 +1,1 @@
+package com.baize.flux.api.sink; import com.baize.flux.api.table.RowBatch; public interface SinkWriter extends AutoCloseable { void open() throws Exception; long write(RowBatch batch) throws Exception; void flush() throws Exception; default void abort(Throwable cause){} void close() throws Exception; }
