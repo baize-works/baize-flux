@@ -14,7 +14,7 @@ public final class Constraints {
     }
 
     public static Constraint<String> notBlank() {
-        return Constraint.of("must not be blank", (config, value) -> value != null && !value.isBlank());
+        return Constraint.of("must not be blank", (config, value) -> value != null && !value.trim().isEmpty());
     }
 
     public static Constraint<String> matches(String regex) {

@@ -2,7 +2,7 @@ package com.baize.flux.api.configuration;
 
 import com.baize.flux.common.exception.FluxException;
 
-import java.io.Serial;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,7 +14,6 @@ import java.util.Objects;
  */
 public class ConfigValidationException extends FluxException {
 
-    @Serial
     private static final long serialVersionUID = 1L;
 
     private final ValidationResult validationResult;
@@ -59,7 +58,7 @@ public class ConfigValidationException extends FluxException {
 
     private static Map<String, Object> buildContext(
             ValidationResult validationResult) {
-        return Map.of(
+        return Collections.<String, Object>singletonMap(
                 "violationCount",
                 validationResult.violations().size()
         );

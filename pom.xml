@@ -22,8 +22,8 @@
         <maven-surefire-plugin.version>3.0.0-M6</maven-surefire-plugin.version>
         <maven-dependency-plugin.version>3.1.1</maven-dependency-plugin.version>
         <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
+        <junit.version>4.13.2</junit.version>
         <java.version>8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <file_encoding>UTF-8</file_encoding>
@@ -54,8 +54,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>${maven-compiler-plugin.version}</version>
                     <configuration>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
+                        <release>${maven.compiler.release}</release>
                     </configuration>
                 </plugin>
             </plugins>

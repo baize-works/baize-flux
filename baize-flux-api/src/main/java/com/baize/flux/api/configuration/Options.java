@@ -42,7 +42,7 @@ public final class Options {
                     new ConfigConverter<String>() {
                         @Override
                         public String convert(Object raw) {
-                            return String.valueOf(raw);
+                            return toStringValue(raw);
                         }
                     },
                     false
@@ -168,7 +168,7 @@ public final class Options {
                                     new Function<Object, String>() {
                                         @Override
                                         public String apply(Object value) {
-                                            return String.valueOf(value);
+                                            return toStringValue(value);
                                         }
                                     }
                             );
@@ -360,6 +360,9 @@ public final class Options {
         }
 
         public Option<T> defaultValue(T value) {
+            if (value == null) {
+                throw new IllegalArgumentException("Default value must not be null");
+            }
             return build(value, true);
         }
 
@@ -386,6 +389,35 @@ public final class Options {
         }
     }
 
+    private static String toStringValue(Object raw) {
+        requireRawValue(raw);
+
+        if (!(raw instanceof String)) {
+            throw new IllegalArgumentException(
+                    "Expected String value, but got "
+                            + raw.getClass().getName()
+            );
+        }
+
+        return (String) raw;
+    }
+
+    private static long toExactLong(Number raw) {
+        try {
+            return new BigDecimal(raw.toString()).longValueExact();
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                    "Expected an integral numeric value: " + raw,
+                    e
+            );
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(
+                    "Expected an integral numeric value: " + raw,
+                    e
+            );
+        }
+    }
+
     private static Integer toInteger(Object raw) {
         requireRawValue(raw);
 
@@ -394,7 +426,7 @@ public final class Options {
         }
 
         if (raw instanceof Number) {
-            long value = ((Number) raw).longValue();
+            long value = toExactLong((Number) raw);
 
             if (value < Integer.MIN_VALUE
                     || value > Integer.MAX_VALUE) {
@@ -417,7 +449,7 @@ public final class Options {
         }
 
         if (raw instanceof Number) {
-            return Long.valueOf(((Number) raw).longValue());
+            return Long.valueOf(toExactLong((Number) raw));
         }
 
         return Long.valueOf(raw.toString().trim());

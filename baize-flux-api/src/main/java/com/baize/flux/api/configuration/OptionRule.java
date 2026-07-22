@@ -1,27 +1,22 @@
 package com.baize.flux.api.configuration;
 
-import java.io.Serializable;
 import java.util.*;
 
 /**
  * Declares all supported options and their structural and value validation rules.
  */
-public final class OptionRule implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public final class OptionRule {
 
     /**
      * Marker interface for all configuration rules.
      */
-    public interface Rule extends Serializable {
+    public interface Rule {
     }
 
     /**
      * Declares that all specified options are required.
      */
     public static final class RequiredRule implements Rule {
-
-        private static final long serialVersionUID = 1L;
 
         private final List<Option<?>> options;
 
@@ -62,8 +57,6 @@ public final class OptionRule implements Serializable {
      */
     public static final class ExactlyOneRule implements Rule {
 
-        private static final long serialVersionUID = 1L;
-
         private final List<Option<?>> options;
 
         public ExactlyOneRule(List<Option<?>> options) {
@@ -102,8 +95,6 @@ public final class OptionRule implements Serializable {
      * Declares that zero or one of the specified options may have a value.
      */
     public static final class AtMostOneRule implements Rule {
-
-        private static final long serialVersionUID = 1L;
 
         private final List<Option<?>> options;
 
@@ -145,8 +136,6 @@ public final class OptionRule implements Serializable {
      */
     public static final class AllOrNoneRule implements Rule {
 
-        private static final long serialVersionUID = 1L;
-
         private final List<Option<?>> options;
 
         public AllOrNoneRule(List<Option<?>> options) {
@@ -185,8 +174,6 @@ public final class OptionRule implements Serializable {
      * Declares that the specified options become required when a condition matches.
      */
     public static final class ConditionalRequiredRule implements Rule {
-
-        private static final long serialVersionUID = 1L;
 
         private final RuleCondition condition;
         private final List<Option<?>> requiredOptions;
@@ -252,8 +239,6 @@ public final class OptionRule implements Serializable {
      * @param <T> option value type
      */
     public static final class ValueRule<T> implements Rule {
-
-        private static final long serialVersionUID = 1L;
 
         private final Option<T> option;
         private final Constraint<T> constraint;
@@ -470,10 +455,6 @@ public final class OptionRule implements Serializable {
                     )
             );
 
-            register(
-                    referencedOptions.toArray(new Option<?>[0])
-            );
-
             register(requiredOptions);
 
             rules.add(
@@ -538,14 +519,11 @@ public final class OptionRule implements Serializable {
                     continue;
                 }
 
-                if (!existing.typeName().equals(option.typeName())) {
+                if (existing != option) {
                     throw new IllegalArgumentException(
                             "Option key '"
                                     + option.key()
-                                    + "' is declared with conflicting types: "
-                                    + existing.typeName()
-                                    + " and "
-                                    + option.typeName()
+                                    + "' is declared by different Option instances"
                     );
                 }
             }

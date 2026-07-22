@@ -1,5 +1,6 @@
 package com.baize.flux.api.configuration;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -20,7 +21,8 @@ public final class RuleCondition {
             Set<Option<?>> referencedOptions) {
         this.description = Objects.requireNonNull(description, "description");
         this.predicate = Objects.requireNonNull(predicate, "predicate");
-        this.referencedOptions = Set.copyOf(referencedOptions);
+        this.referencedOptions = Collections.unmodifiableSet(
+                new LinkedHashSet<Option<?>>(referencedOptions));
     }
 
     public static <T> RuleCondition equalTo(Option<T> option, T expectedValue) {
@@ -31,13 +33,13 @@ public final class RuleCondition {
                         config.getResolvedOptional(option)
                                 .map(value -> Objects.equals(value, expectedValue))
                                 .orElse(false),
-                Set.of(option));
+                Collections.<Option<?>>singleton(option));
     }
 
     public static RuleCondition present(Option<?> option) {
         Objects.requireNonNull(option, "option");
         return new RuleCondition(
-                "'" + option.key() + "' is configured", config -> config.contains(option), Set.of(option));
+                "'" + option.key() + "' is configured", config -> config.contains(option), Collections.<Option<?>>singleton(option));
     }
 
     public static RuleCondition absent(Option<?> option) {
@@ -45,7 +47,7 @@ public final class RuleCondition {
         return new RuleCondition(
                 "'" + option.key() + "' is not configured",
                 config -> !config.contains(option),
-                Set.of(option));
+                Collections.<Option<?>>singleton(option));
     }
 
     public static RuleCondition custom(

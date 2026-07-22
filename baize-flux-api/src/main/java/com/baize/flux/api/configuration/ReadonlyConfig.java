@@ -59,6 +59,7 @@ public final class ReadonlyConfig {
                 .orElseThrow(
                         () ->
                                 new ConfigAccessException(
+                                        option.key(),
                                         "Option '" + option.key() + "' is not configured"));
     }
 
@@ -89,10 +90,10 @@ public final class ReadonlyConfig {
         String[] parts = key.split("\\.");
         Object current = values;
         for (String part : parts) {
-            if (!(current instanceof Map<?, ?> map)) {
+            if (!(current instanceof Map)) {
                 return null;
             }
-            current = map.get(part);
+            current = ((Map<?, ?>) current).get(part);
             if (current == null) {
                 return null;
             }
@@ -107,11 +108,12 @@ public final class ReadonlyConfig {
     }
 
     private static Object deepImmutableValue(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            return deepImmutableMap(map);
+        if (value instanceof Map) {
+            return deepImmutableMap((Map<?, ?>) value);
         }
-        if (value instanceof List<?> list) {
-            List<Object> result = new ArrayList<>(list.size());
+        if (value instanceof List) {
+            List<?> list = (List<?>) value;
+            List<Object> result = new ArrayList<Object>(list.size());
             list.forEach(item -> result.add(deepImmutableValue(item)));
             return Collections.unmodifiableList(result);
         }
