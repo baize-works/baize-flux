@@ -14,30 +14,63 @@ import static com.baize.flux.api.configuration.ValidationResult.Violation;
 import static com.baize.flux.api.configuration.ValidationResult.ViolationType;
 
 /**
- * Validates unknown keys, type conversion, structural rules and value constraints.
+ * 配置校验器。
+ *
+ * 用于校验未知配置项、配置值类型、配置结构规则以及配置值约束。
+ *
+ * @author weifuwan
  */
 public final class ConfigValidator {
 
+    /**
+     * 是否拒绝未声明的配置项。
+     */
     private final boolean rejectUnknownKeys;
 
+    /**
+     * 创建配置校验器。
+     *
+     * @param rejectUnknownKeys 是否拒绝未声明的配置项
+     */
     private ConfigValidator(boolean rejectUnknownKeys) {
         this.rejectUnknownKeys = rejectUnknownKeys;
     }
 
+    /**
+     * 创建严格模式的配置校验器。
+     *
+     * 严格模式下，未声明的配置项将被视为校验错误。
+     *
+     * @return 配置校验器
+     */
     public static ConfigValidator strict() {
         return new ConfigValidator(true);
     }
 
+    /**
+     * 创建宽松模式的配置校验器。
+     *
+     * 宽松模式下，不校验未声明的配置项。
+     *
+     * @return 配置校验器
+     */
     public static ConfigValidator lenient() {
         return new ConfigValidator(false);
     }
 
+    /**
+     * 校验配置内容。
+     *
+     * @param config     待校验的只读配置
+     * @param optionRule 配置项规则
+     * @return 配置校验结果
+     */
     public ValidationResult validate(
             ReadonlyConfig config,
             OptionRule optionRule) {
 
-        List<Violation> violations = new ArrayList<Violation>();
-        Set<String> typeErrorKeys = new HashSet<String>();
+        List<Violation> violations = new ArrayList<>();
+        Set<String> typeErrorKeys = new HashSet<>();
 
         if (rejectUnknownKeys) {
             validateUnknownKeys(config, optionRule, violations);
@@ -60,18 +93,25 @@ public final class ConfigValidator {
         return new ValidationResult(violations);
     }
 
+    /**
+     * 校验配置中是否存在未声明的配置项。
+     *
+     * @param config     待校验的只读配置
+     * @param optionRule 配置项规则
+     * @param violations 违规信息集合
+     */
     private void validateUnknownKeys(
             ReadonlyConfig config,
             OptionRule optionRule,
             List<Violation> violations) {
 
-        Map<String, Option<?>> declared =
-                new LinkedHashMap<String, Option<?>>();
+        Map<String, Option<?>> declared = new LinkedHashMap<>();
 
         for (Option<?> option : optionRule.options()) {
             if (!declared.containsKey(option.key())) {
                 declared.put(option.key(), option);
             }
+
             for (String fallbackKey : option.fallbackKeys()) {
                 if (!declared.containsKey(fallbackKey)) {
                     declared.put(fallbackKey, option);
@@ -87,6 +127,14 @@ public final class ConfigValidator {
         );
     }
 
+    /**
+     * 递归收集未声明的配置项。
+     *
+     * @param values     当前层级的配置内容
+     * @param prefix     当前配置路径前缀
+     * @param declared   已声明的配置项
+     * @param violations 违规信息集合
+     */
     private void collectUnknownKeys(
             Map<String, Object> values,
             String prefix,
@@ -147,6 +195,13 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 判断指定配置路径下是否存在已声明的子配置项。
+     *
+     * @param path         配置路径
+     * @param declaredKeys 已声明的配置项名称
+     * @return 存在子配置项时返回 {@code true}
+     */
     private boolean hasDeclaredChild(
             String path,
             Set<String> declaredKeys) {
@@ -162,6 +217,13 @@ public final class ConfigValidator {
         return false;
     }
 
+    /**
+     * 查找允许包含当前配置路径的父配置项。
+     *
+     * @param path    配置路径
+     * @param options 配置项集合
+     * @return 匹配的父配置项，不存在时返回 {@code null}
+     */
     private Option<?> findNestedOwner(
             String path,
             Collection<Option<?>> options) {
@@ -175,6 +237,14 @@ public final class ConfigValidator {
         return null;
     }
 
+    /**
+     * 校验配置值类型以及允许值范围。
+     *
+     * @param config        待校验的只读配置
+     * @param optionRule    配置项规则
+     * @param violations    违规信息集合
+     * @param typeErrorKeys 类型转换失败的配置项名称
+     */
     private void validateTypesAndAllowedValues(
             ReadonlyConfig config,
             OptionRule optionRule,
@@ -227,6 +297,14 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验配置项之间的结构规则和配置值约束。
+     *
+     * @param config        待校验的只读配置
+     * @param optionRule    配置项规则
+     * @param violations    违规信息集合
+     * @param typeErrorKeys 类型转换失败的配置项名称
+     */
     private void validateRules(
             ReadonlyConfig config,
             OptionRule optionRule,
@@ -276,12 +354,19 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验必填配置项规则。
+     *
+     * @param config     待校验的只读配置
+     * @param rule       必填配置项规则
+     * @param violations 违规信息集合
+     */
     private void validateRequired(
             ReadonlyConfig config,
             OptionRule.RequiredRule rule,
             List<Violation> violations) {
 
-        List<String> absent = new ArrayList<String>();
+        List<String> absent = new ArrayList<>();
 
         for (Option<?> option : rule.options()) {
             if (!isResolved(config, option)) {
@@ -300,6 +385,13 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验配置项只能配置其中一个的规则。
+     *
+     * @param config     待校验的只读配置
+     * @param rule       唯一配置项规则
+     * @param violations 违规信息集合
+     */
     private void validateExactlyOne(
             ReadonlyConfig config,
             OptionRule.ExactlyOneRule rule,
@@ -320,6 +412,13 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验配置项最多只能配置其中一个的规则。
+     *
+     * @param config     待校验的只读配置
+     * @param rule       互斥配置项规则
+     * @param violations 违规信息集合
+     */
     private void validateAtMostOne(
             ReadonlyConfig config,
             OptionRule.AtMostOneRule rule,
@@ -340,6 +439,13 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验配置项必须同时配置或同时不配置的规则。
+     *
+     * @param config     待校验的只读配置
+     * @param rule       全有或全无规则
+     * @param violations 违规信息集合
+     */
     private void validateAllOrNone(
             ReadonlyConfig config,
             OptionRule.AllOrNoneRule rule,
@@ -352,9 +458,7 @@ public final class ConfigValidator {
                 && present.size() != rule.options().size()) {
 
             Set<String> absent =
-                    new LinkedHashSet<String>(
-                            keys(rule.options())
-                    );
+                    new LinkedHashSet<>(keys(rule.options()));
 
             absent.removeAll(present);
 
@@ -372,6 +476,13 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验条件必填规则。
+     *
+     * @param config     待校验的只读配置
+     * @param rule       条件必填规则
+     * @param violations 违规信息集合
+     */
     private void validateConditional(
             ReadonlyConfig config,
             OptionRule.ConditionalRequiredRule rule,
@@ -400,7 +511,7 @@ public final class ConfigValidator {
             return;
         }
 
-        List<String> absent = new ArrayList<String>();
+        List<String> absent = new ArrayList<>();
 
         for (Option<?> option : rule.requiredOptions()) {
             if (!isResolved(config, option)) {
@@ -420,6 +531,15 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 校验配置值约束。
+     *
+     * @param config        待校验的只读配置
+     * @param rule          配置值约束规则
+     * @param violations    违规信息集合
+     * @param typeErrorKeys 类型转换失败的配置项名称
+     * @param <T>           配置值类型
+     */
     private <T> void validateValue(
             ReadonlyConfig config,
             OptionRule.ValueRule<T> rule,
@@ -453,6 +573,13 @@ public final class ConfigValidator {
         }
     }
 
+    /**
+     * 判断配置项是否存在有效配置值。
+     *
+     * @param config 配置内容
+     * @param option 配置项
+     * @return 配置项已配置或存在默认值时返回 {@code true}
+     */
     private boolean isResolved(
             ReadonlyConfig config,
             Option<?> option) {
@@ -461,11 +588,18 @@ public final class ConfigValidator {
                 || option.hasDefaultValue();
     }
 
+    /**
+     * 获取已经配置的配置项名称。
+     *
+     * @param config  配置内容
+     * @param options 配置项集合
+     * @return 已配置的配置项名称
+     */
     private List<String> presentKeys(
             ReadonlyConfig config,
             List<Option<?>> options) {
 
-        List<String> present = new ArrayList<String>();
+        List<String> present = new ArrayList<>();
 
         for (Option<?> option : options) {
             if (isResolved(config, option)) {
@@ -476,17 +610,28 @@ public final class ConfigValidator {
         return present;
     }
 
+    /**
+     * 获取配置项名称。
+     *
+     * @param options 配置项集合
+     * @return 配置项名称
+     */
     private List<String> keys(
             List<Option<?>> options) {
 
         return optionKeys(options);
     }
 
+    /**
+     * 获取配置项名称。
+     *
+     * @param options 配置项集合
+     * @return 配置项名称
+     */
     private List<String> optionKeys(
             Collection<Option<?>> options) {
 
-        List<String> keys =
-                new ArrayList<String>(options.size());
+        List<String> keys = new ArrayList<>(options.size());
 
         for (Option<?> option : options) {
             keys.add(option.key());
@@ -495,6 +640,12 @@ public final class ConfigValidator {
         return keys;
     }
 
+    /**
+     * 将通用 Map 转换为配置 Map。
+     *
+     * @param map 原始 Map
+     * @return 配置 Map
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, Object> castMap(
             Map<?, ?> map) {

@@ -14,28 +14,62 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Factory and fluent builder for {@link Option}.
+ * 配置项工厂类。
+ *
+ * 用于根据配置项名称和目标类型，通过链式构建方式创建 {@link Option}。
+ *
+ * @author weifuwan
  */
 public final class Options {
 
+    /**
+     * 工具类不允许实例化。
+     */
     private Options() {
     }
 
+    /**
+     * 根据配置项名称创建配置项构建器。
+     *
+     * @param key 配置项名称
+     * @return 配置项构建器
+     */
     public static OptionBuilder key(String key) {
         if (isBlank(key)) {
-            throw new IllegalArgumentException("Option key must not be blank");
+            throw new IllegalArgumentException(
+                    "Option key must not be blank"
+            );
         }
+
         return new OptionBuilder(key);
     }
 
+    /**
+     * 配置项类型构建器。
+     *
+     * 用于为指定配置项选择目标类型和对应的类型转换器。
+     */
     public static final class OptionBuilder {
 
+        /**
+         * 配置项名称。
+         */
         private final String key;
 
+        /**
+         * 创建配置项类型构建器。
+         *
+         * @param key 配置项名称
+         */
         private OptionBuilder(String key) {
             this.key = key;
         }
 
+        /**
+         * 将配置项声明为字符串类型。
+         *
+         * @return 字符串类型配置项构建器
+         */
         public TypedOptionBuilder<String> stringType() {
             return typed(
                     "String",
@@ -49,6 +83,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为整数类型。
+         *
+         * @return 整数类型配置项构建器
+         */
         public TypedOptionBuilder<Integer> intType() {
             return typed(
                     "Integer",
@@ -62,6 +101,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为长整数类型。
+         *
+         * @return 长整数类型配置项构建器
+         */
         public TypedOptionBuilder<Long> longType() {
             return typed(
                     "Long",
@@ -75,6 +119,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为单精度浮点数类型。
+         *
+         * @return 单精度浮点数类型配置项构建器
+         */
         public TypedOptionBuilder<Float> floatType() {
             return typed(
                     "Float",
@@ -88,6 +137,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为双精度浮点数类型。
+         *
+         * @return 双精度浮点数类型配置项构建器
+         */
         public TypedOptionBuilder<Double> doubleType() {
             return typed(
                     "Double",
@@ -101,6 +155,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为高精度小数类型。
+         *
+         * @return 高精度小数类型配置项构建器
+         */
         public TypedOptionBuilder<BigDecimal> bigDecimalType() {
             return typed(
                     "BigDecimal",
@@ -114,6 +173,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为布尔类型。
+         *
+         * @return 布尔类型配置项构建器
+         */
         public TypedOptionBuilder<Boolean> booleanType() {
             return typed(
                     "Boolean",
@@ -127,6 +191,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为时间间隔类型。
+         *
+         * @return 时间间隔类型配置项构建器
+         */
         public TypedOptionBuilder<Duration> durationType() {
             return typed(
                     "Duration",
@@ -140,10 +209,20 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为指定枚举类型。
+         *
+         * @param enumType 枚举类型
+         * @param <E>      枚举值类型
+         * @return 枚举类型配置项构建器
+         */
         public <E extends Enum<E>> TypedOptionBuilder<E> enumType(
                 final Class<E> enumType) {
 
-            Objects.requireNonNull(enumType, "enumType must not be null");
+            Objects.requireNonNull(
+                    enumType,
+                    "enumType must not be null"
+            );
 
             return typed(
                     enumType.getSimpleName(),
@@ -157,6 +236,11 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为字符串列表类型。
+         *
+         * @return 字符串列表类型配置项构建器
+         */
         public TypedOptionBuilder<List<String>> listType() {
             return typed(
                     "List<String>",
@@ -178,6 +262,14 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为指定元素类型的列表。
+         *
+         * @param elementType      列表元素类型
+         * @param elementConverter 列表元素转换器
+         * @param <T>              列表元素类型
+         * @return 列表类型配置项构建器
+         */
         public <T> TypedOptionBuilder<List<T>> listType(
                 final Class<T> elementType,
                 final ConfigConverter<T> elementConverter) {
@@ -201,7 +293,9 @@ public final class Options {
                                     new Function<Object, T>() {
                                         @Override
                                         public T apply(Object value) {
-                                            return elementConverter.convert(value);
+                                            return elementConverter.convert(
+                                                    value
+                                            );
                                         }
                                     }
                             );
@@ -211,6 +305,13 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为字符串键值映射类型。
+         *
+         * 默认允许包含任意嵌套配置项。
+         *
+         * @return 字符串键值映射类型配置项构建器
+         */
         public TypedOptionBuilder<Map<String, String>> mapType() {
             return typed(
                     "Map<String,String>",
@@ -224,6 +325,13 @@ public final class Options {
             );
         }
 
+        /**
+         * 将配置项声明为对象键值映射类型。
+         *
+         * 默认允许包含任意嵌套配置项。
+         *
+         * @return 对象键值映射类型配置项构建器
+         */
         public TypedOptionBuilder<Map<String, Object>> mapObjectType() {
             return typed(
                     "Map<String,Object>",
@@ -238,8 +346,15 @@ public final class Options {
         }
 
         /**
-         * Defines a connector-specific type without making the configuration
-         * core depend on a JSON mapper or reflection framework.
+         * 将配置项声明为自定义类型。
+         *
+         * 自定义类型由业务模块或连接器提供转换器，避免配置核心模块
+         * 依赖 JSON 映射器或反射框架。
+         *
+         * @param typeName 配置值目标类型名称
+         * @param converter 配置值转换器
+         * @param <T> 配置值类型
+         * @return 自定义类型配置项构建器
          */
         public <T> TypedOptionBuilder<T> customType(
                 String typeName,
@@ -256,15 +371,28 @@ public final class Options {
                     "converter must not be null"
             );
 
-            return typed(typeName, converter, false);
+            return typed(
+                    typeName,
+                    converter,
+                    false
+            );
         }
 
+        /**
+         * 创建指定类型的配置项构建器。
+         *
+         * @param typeName        配置值目标类型名称
+         * @param converter       配置值转换器
+         * @param allowNestedKeys 是否允许任意嵌套配置项
+         * @param <T>             配置值类型
+         * @return 指定类型的配置项构建器
+         */
         private <T> TypedOptionBuilder<T> typed(
                 String typeName,
                 ConfigConverter<T> converter,
                 boolean allowNestedKeys) {
 
-            return new TypedOptionBuilder<T>(
+            return new TypedOptionBuilder<>(
                     key,
                     typeName,
                     converter,
@@ -273,21 +401,65 @@ public final class Options {
         }
     }
 
+    /**
+     * 指定类型的配置项构建器。
+     *
+     * 用于设置配置项描述、备用名称、允许值、敏感属性和默认值。
+     *
+     * @param <T> 配置值类型
+     */
     public static final class TypedOptionBuilder<T> {
 
+        /**
+         * 配置项名称。
+         */
         private final String key;
+
+        /**
+         * 配置值目标类型名称。
+         */
         private final String typeName;
+
+        /**
+         * 配置值转换器。
+         */
         private final ConfigConverter<T> converter;
 
+        /**
+         * 配置项描述。
+         */
         private String description = "";
-        private final List<String> fallbackKeys =
-                new ArrayList<String>();
-        private final List<T> allowedValues =
-                new ArrayList<T>();
 
+        /**
+         * 备用配置项名称。
+         */
+        private final List<String> fallbackKeys =
+                new ArrayList<>();
+
+        /**
+         * 配置项允许使用的值。
+         */
+        private final List<T> allowedValues =
+                new ArrayList<>();
+
+        /**
+         * 配置项是否包含敏感信息。
+         */
         private boolean sensitive;
+
+        /**
+         * 是否允许包含任意嵌套配置项。
+         */
         private boolean allowNestedKeys;
 
+        /**
+         * 创建指定类型的配置项构建器。
+         *
+         * @param key             配置项名称
+         * @param typeName        配置值目标类型名称
+         * @param converter       配置值转换器
+         * @param allowNestedKeys 是否允许任意嵌套配置项
+         */
         private TypedOptionBuilder(
                 String key,
                 String typeName,
@@ -300,15 +472,31 @@ public final class Options {
             this.allowNestedKeys = allowNestedKeys;
         }
 
+        /**
+         * 设置配置项描述。
+         *
+         * @param description 配置项描述
+         * @return 当前构建器
+         */
         public TypedOptionBuilder<T> description(
                 String description) {
 
             this.description =
-                    description == null ? "" : description;
+                    description == null
+                            ? ""
+                            : description;
 
             return this;
         }
 
+        /**
+         * 添加备用配置项名称。
+         *
+         * 空白的备用配置项名称将被忽略。
+         *
+         * @param fallbackKeys 备用配置项名称
+         * @return 当前构建器
+         */
         public TypedOptionBuilder<T> fallbackKeys(
                 String... fallbackKeys) {
 
@@ -318,24 +506,40 @@ public final class Options {
 
             for (String fallbackKey : fallbackKeys) {
                 if (!isBlank(fallbackKey)) {
-                    this.fallbackKeys.add(fallbackKey.trim());
+                    this.fallbackKeys.add(
+                            fallbackKey.trim()
+                    );
                 }
             }
 
             return this;
         }
 
+        /**
+         * 添加配置项允许使用的值。
+         *
+         * @param values 允许使用的配置值
+         * @return 当前构建器
+         */
         @SafeVarargs
         public final TypedOptionBuilder<T> allowedValues(
                 T... values) {
 
             if (values != null) {
-                this.allowedValues.addAll(Arrays.asList(values));
+                this.allowedValues.addAll(
+                        Arrays.asList(values)
+                );
             }
 
             return this;
         }
 
+        /**
+         * 添加配置项允许使用的值。
+         *
+         * @param values 允许使用的配置值集合
+         * @return 当前构建器
+         */
         public TypedOptionBuilder<T> allowedValues(
                 Collection<T> values) {
 
@@ -346,49 +550,88 @@ public final class Options {
             return this;
         }
 
+        /**
+         * 将配置项标记为敏感配置项。
+         *
+         * @return 当前构建器
+         */
         public TypedOptionBuilder<T> sensitive() {
             this.sensitive = true;
             return this;
         }
 
         /**
-         * Allows arbitrary nested keys, useful for properties-style map options.
+         * 允许配置项包含任意子配置项。
+         *
+         * 适用于 properties 等动态键值形式的 Map 配置项。
+         *
+         * @return 当前构建器
          */
         public TypedOptionBuilder<T> allowNestedKeys() {
             this.allowNestedKeys = true;
             return this;
         }
 
+        /**
+         * 设置配置项默认值并构建配置项。
+         *
+         * @param value 配置项默认值
+         * @return 配置项
+         */
         public Option<T> defaultValue(T value) {
             if (value == null) {
-                throw new IllegalArgumentException("Default value must not be null");
+                throw new IllegalArgumentException(
+                        "Default value must not be null"
+                );
             }
+
             return build(value, true);
         }
 
+        /**
+         * 构建不包含默认值的配置项。
+         *
+         * @return 配置项
+         */
         public Option<T> noDefaultValue() {
             return build(null, false);
         }
 
+        /**
+         * 构建配置项。
+         *
+         * @param defaultValue    配置项默认值
+         * @param hasDefaultValue 是否声明了默认值
+         * @return 配置项
+         */
         private Option<T> build(
                 T defaultValue,
                 boolean hasDefaultValue) {
 
-            return new Option<T>(
+            return new Option<>(
                     key,
                     typeName,
                     converter,
                     defaultValue,
                     hasDefaultValue,
                     description,
-                    new ArrayList<String>(fallbackKeys),
-                    new ArrayList<T>(allowedValues),
+                    new ArrayList<>(fallbackKeys),
+                    new ArrayList<>(allowedValues),
                     sensitive,
                     allowNestedKeys
             );
         }
     }
 
+    /**
+     * 将原始配置值转换为字符串。
+     *
+     * 仅接受字符串类型的原始配置值，不会通过 {@code toString()}
+     * 隐式转换其他类型。
+     *
+     * @param raw 原始配置值
+     * @return 字符串配置值
+     */
     private static String toStringValue(Object raw) {
         requireRawValue(raw);
 
@@ -402,9 +645,19 @@ public final class Options {
         return (String) raw;
     }
 
+    /**
+     * 将数字精确转换为长整数。
+     *
+     * 包含小数部分或超出长整数范围时转换失败。
+     *
+     * @param raw 原始数字
+     * @return 长整数值
+     */
     private static long toExactLong(Number raw) {
         try {
-            return new BigDecimal(raw.toString()).longValueExact();
+            return new BigDecimal(
+                    raw.toString()
+            ).longValueExact();
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
                     "Expected an integral numeric value: " + raw,
@@ -418,6 +671,12 @@ public final class Options {
         }
     }
 
+    /**
+     * 将原始配置值转换为整数。
+     *
+     * @param raw 原始配置值
+     * @return 整数配置值
+     */
     private static Integer toInteger(Object raw) {
         requireRawValue(raw);
 
@@ -438,9 +697,17 @@ public final class Options {
             return Integer.valueOf((int) value);
         }
 
-        return Integer.valueOf(raw.toString().trim());
+        return Integer.valueOf(
+                raw.toString().trim()
+        );
     }
 
+    /**
+     * 将原始配置值转换为长整数。
+     *
+     * @param raw 原始配置值
+     * @return 长整数配置值
+     */
     private static Long toLong(Object raw) {
         requireRawValue(raw);
 
@@ -449,12 +716,22 @@ public final class Options {
         }
 
         if (raw instanceof Number) {
-            return Long.valueOf(toExactLong((Number) raw));
+            return Long.valueOf(
+                    toExactLong((Number) raw)
+            );
         }
 
-        return Long.valueOf(raw.toString().trim());
+        return Long.valueOf(
+                raw.toString().trim()
+        );
     }
 
+    /**
+     * 将原始配置值转换为单精度浮点数。
+     *
+     * @param raw 原始配置值
+     * @return 单精度浮点数配置值
+     */
     private static Float toFloat(Object raw) {
         requireRawValue(raw);
 
@@ -463,12 +740,22 @@ public final class Options {
         }
 
         if (raw instanceof Number) {
-            return Float.valueOf(((Number) raw).floatValue());
+            return Float.valueOf(
+                    ((Number) raw).floatValue()
+            );
         }
 
-        return Float.valueOf(raw.toString().trim());
+        return Float.valueOf(
+                raw.toString().trim()
+        );
     }
 
+    /**
+     * 将原始配置值转换为双精度浮点数。
+     *
+     * @param raw 原始配置值
+     * @return 双精度浮点数配置值
+     */
     private static Double toDouble(Object raw) {
         requireRawValue(raw);
 
@@ -477,12 +764,22 @@ public final class Options {
         }
 
         if (raw instanceof Number) {
-            return Double.valueOf(((Number) raw).doubleValue());
+            return Double.valueOf(
+                    ((Number) raw).doubleValue()
+            );
         }
 
-        return Double.valueOf(raw.toString().trim());
+        return Double.valueOf(
+                raw.toString().trim()
+        );
     }
 
+    /**
+     * 将原始配置值转换为高精度小数。
+     *
+     * @param raw 原始配置值
+     * @return 高精度小数配置值
+     */
     private static BigDecimal toBigDecimal(Object raw) {
         requireRawValue(raw);
 
@@ -494,9 +791,19 @@ public final class Options {
             return new BigDecimal(raw.toString());
         }
 
-        return new BigDecimal(raw.toString().trim());
+        return new BigDecimal(
+                raw.toString().trim()
+        );
     }
 
+    /**
+     * 将原始配置值转换为布尔值。
+     *
+     * 仅接受忽略大小写的 {@code true} 或 {@code false}。
+     *
+     * @param raw 原始配置值
+     * @return 布尔配置值
+     */
     private static Boolean toBoolean(Object raw) {
         requireRawValue(raw);
 
@@ -519,6 +826,15 @@ public final class Options {
         );
     }
 
+    /**
+     * 将原始配置值转换为时间间隔。
+     *
+     * 支持 ISO-8601 格式，以及 {@code ms}、{@code s}、{@code m}、
+     * {@code h}、{@code d} 后缀的简写格式。
+     *
+     * @param raw 原始配置值
+     * @return 时间间隔配置值
+     */
     private static Duration toDuration(Object raw) {
         requireRawValue(raw);
 
@@ -537,7 +853,7 @@ public final class Options {
         try {
             return Duration.parse(value);
         } catch (RuntimeException ignored) {
-            // Try shorthand duration formats below.
+            // 继续尝试解析简写时间格式。
         }
 
         String normalized =
@@ -579,6 +895,13 @@ public final class Options {
         );
     }
 
+    /**
+     * 移除时间单位后缀并解析长整数。
+     *
+     * @param value        待解析文本
+     * @param suffixLength 后缀长度
+     * @return 长整数值
+     */
     private static long parseLong(
             String value,
             int suffixLength) {
@@ -592,6 +915,16 @@ public final class Options {
         return Long.parseLong(numberPart);
     }
 
+    /**
+     * 将原始配置值转换为指定枚举值。
+     *
+     * 枚举名称和 {@link Enum#toString()} 返回值均忽略大小写匹配。
+     *
+     * @param raw      原始配置值
+     * @param enumType 枚举类型
+     * @param <E>      枚举值类型
+     * @return 枚举配置值
+     */
     private static <E extends Enum<E>> E toEnum(
             Object raw,
             Class<E> enumType) {
@@ -617,6 +950,16 @@ public final class Options {
         );
     }
 
+    /**
+     * 将原始配置值转换为列表。
+     *
+     * 支持集合类型以及使用逗号分隔的字符串。
+     *
+     * @param raw           原始配置值
+     * @param itemConverter 列表元素转换器
+     * @param <T>           列表元素类型
+     * @return 不可修改的配置值列表
+     */
     private static <T> List<T> toList(
             Object raw,
             Function<Object, T> itemConverter) {
@@ -627,13 +970,15 @@ public final class Options {
                 "itemConverter must not be null"
         );
 
-        List<T> result = new ArrayList<T>();
+        List<T> result = new ArrayList<>();
 
         if (raw instanceof Collection) {
             Collection<?> values = (Collection<?>) raw;
 
             for (Object value : values) {
-                result.add(itemConverter.apply(value));
+                result.add(
+                        itemConverter.apply(value)
+                );
             }
 
             return Collections.unmodifiableList(result);
@@ -663,6 +1008,14 @@ public final class Options {
         );
     }
 
+    /**
+     * 将原始配置值转换为字符串键值映射。
+     *
+     * Map 的键和值均通过 {@link String#valueOf(Object)} 转换为字符串。
+     *
+     * @param raw 原始配置值
+     * @return 不可修改的字符串键值映射
+     */
     private static Map<String, String> toStringMap(
             Object raw) {
 
@@ -677,7 +1030,7 @@ public final class Options {
 
         Map<?, ?> source = (Map<?, ?>) raw;
         Map<String, String> result =
-                new LinkedHashMap<String, String>();
+                new LinkedHashMap<>();
 
         for (Map.Entry<?, ?> entry : source.entrySet()) {
             result.put(
@@ -689,6 +1042,15 @@ public final class Options {
         return Collections.unmodifiableMap(result);
     }
 
+    /**
+     * 将原始配置值转换为对象键值映射。
+     *
+     * Map 的键通过 {@link String#valueOf(Object)} 转换为字符串，
+     * 值保持原始对象不变。
+     *
+     * @param raw 原始配置值
+     * @return 不可修改的对象键值映射
+     */
     private static Map<String, Object> toObjectMap(
             Object raw) {
 
@@ -703,7 +1065,7 @@ public final class Options {
 
         Map<?, ?> source = (Map<?, ?>) raw;
         Map<String, Object> result =
-                new LinkedHashMap<String, Object>();
+                new LinkedHashMap<>();
 
         for (Map.Entry<?, ?> entry : source.entrySet()) {
             result.put(
@@ -715,6 +1077,11 @@ public final class Options {
         return Collections.unmodifiableMap(result);
     }
 
+    /**
+     * 校验原始配置值不为空。
+     *
+     * @param raw 原始配置值
+     */
     private static void requireRawValue(Object raw) {
         if (raw == null) {
             throw new IllegalArgumentException(
@@ -723,7 +1090,14 @@ public final class Options {
         }
     }
 
+    /**
+     * 判断文本是否为空白。
+     *
+     * @param value 待判断文本
+     * @return 文本为 {@code null} 或空白时返回 {@code true}
+     */
     private static boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
+        return value == null
+                || value.trim().isEmpty();
     }
 }

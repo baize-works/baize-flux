@@ -2,10 +2,16 @@ package com.baize.flux.api.configuration;
 
 import com.baize.flux.common.exception.ErrorCategory;
 import com.baize.flux.common.exception.FluxErrorCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Baize Flux 配置体系错误码。
+ *
+ * @author weifuwan
  */
+@Getter
+@RequiredArgsConstructor
 public enum ConfigurationErrorCode implements FluxErrorCode {
 
     CONFIG_VALUE_MISSING(
@@ -37,38 +43,10 @@ public enum ConfigurationErrorCode implements FluxErrorCode {
     );
 
     private final String code;
+
     private final String description;
+
     private final ErrorCategory category;
+
     private final boolean retryable;
-
-    ConfigurationErrorCode(
-            String code,
-            String description,
-            ErrorCategory category,
-            boolean retryable) {
-        this.code = code;
-        this.description = description;
-        this.category = category;
-        this.retryable = retryable;
-    }
-
-    @Override
-    public String getCode() {
-        return code;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-
-    @Override
-    public ErrorCategory getCategory() {
-        return category;
-    }
-
-    @Override
-    public boolean isRetryable() {
-        return retryable;
-    }
 }
