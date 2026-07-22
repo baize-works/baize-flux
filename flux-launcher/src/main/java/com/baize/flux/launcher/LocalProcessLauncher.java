@@ -1,2 +1,0 @@
-package com.baize.flux.launcher; import java.io.*; import java.nio.file.*; import java.util.*;
-/** Starts, but never participates in, a runner's data transfer. */ public final class LocalProcessLauncher { public Process launch(Path javaExecutable,String classpath,Path jobConfig)throws IOException{return new ProcessBuilder(javaExecutable.toString(),"-cp",classpath,"com.baize.flux.runner.RunnerMain",jobConfig.toString()).inheritIO().start();}}

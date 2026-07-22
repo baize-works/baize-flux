@@ -1,1 +1,0 @@
-package com.baize.flux.api.source; import com.baize.flux.api.table.RowBatch; public interface SourceReader extends AutoCloseable { void open() throws Exception; SourceResult poll(int batchSize) throws Exception; void close() throws Exception; record SourceResult(RowBatch batch, boolean finished) {} }
