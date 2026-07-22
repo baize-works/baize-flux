@@ -10,22 +10,8 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>baize-flux-framework</artifactId>
+    <artifactId>baize-flux-connectors</artifactId>
     <version>1.0.0</version>
 
-
-    <dependencies>
-        <dependency>
-            <groupId>com.baize.flux</groupId>
-            <artifactId>baize-flux-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>${typesafe.version}</version>
-        </dependency>
-    </dependencies>
 
 </project>

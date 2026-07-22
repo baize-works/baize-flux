@@ -109,22 +109,7 @@ public class FluxException extends RuntimeException {
         );
     }
 
-    /**
-     * 传播异常，避免重复包装。
-     */
-    public static FluxException propagate(Throwable cause) {
-        Objects.requireNonNull(cause, "cause must not be null");
 
-        if (cause instanceof FluxException) {
-            return (FluxException) cause;
-        }
-
-        return wrap(
-                CommonErrorCode.INTERNAL_ERROR,
-                getCauseMessage(cause),
-                cause
-        );
-    }
 
     public String getCode() {
         return errorCode.getCode();
