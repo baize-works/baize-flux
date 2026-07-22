@@ -1,0 +1,51 @@
+{
+    "job": {
+        "setting": {
+            "speed": {
+                "channel": 2
+            },
+            "errorLimit": {
+                "record": 0
+            }
+        },
+        "content": [
+            {
+                "reader": {
+                    "name": "streamreader",
+                    "parameter": {
+                        "column": [
+                            {
+                                "value": "DataX",
+                                "type": "string"
+                            },
+                            {
+                                "value": 1724154616370,
+                                "type": "long"
+                            },
+                            {
+                                "value": "2024-01-01 00:00:00",
+                                "type": "date"
+                            },
+                            {
+                                "value": true,
+                                "type": "bool"
+                            },
+                            {
+                                "value": "TestRawData",
+                                "type": "bytes"
+                            }
+                        ],
+                        "sliceRecordCount": 100
+                    }
+                },
+                "writer": {
+                    "name": "streamwriter",
+                    "parameter": {
+                        "print": false,
+                        "encoding": "UTF-8"
+                    }
+                }
+            }
+        ]
+    }
+}
