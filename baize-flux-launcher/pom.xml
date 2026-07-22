@@ -13,5 +13,19 @@
     <artifactId>baize-flux-launcher</artifactId>
     <version>1.0.0</version>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.baize.flux</groupId>
+            <artifactId>baize-flux-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.baize.flux</groupId>
+            <artifactId>baize-flux-framework</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
 
 </project>
