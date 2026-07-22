@@ -1,0 +1,7 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion><groupId>com.baize.flux</groupId><artifactId>baize-flux</artifactId><version>0.1.0-SNAPSHOT</version><packaging>pom</packaging>
+  <properties><maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><junit.version>5.11.4</junit.version></properties>
+  <modules><module>flux-common</module><module>flux-config</module><module>flux-api</module><module>flux-plugin</module><module>flux-planner</module><module>flux-engine</module><module>flux-runner</module><module>flux-launcher</module><module>flux-connectors</module><module>flux-e2e</module></modules>
+  <dependencyManagement><dependencies><dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency></dependencies></dependencyManagement>
+  <build><pluginManagement><plugins><plugin><artifactId>maven-surefire-plugin</artifactId><version>3.5.2</version></plugin></plugins></pluginManagement></build>
+</project>

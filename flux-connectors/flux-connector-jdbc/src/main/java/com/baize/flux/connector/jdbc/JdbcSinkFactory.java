@@ -1,0 +1,1 @@
+package com.baize.flux.connector.jdbc; import com.baize.flux.api.factory.SinkFactory; import com.baize.flux.api.sink.Sink; import java.util.*; public final class JdbcSinkFactory implements SinkFactory {public String identifier(){return "jdbc";} public Sink create(Map<String,String> options){return new JdbcSink(options);}}

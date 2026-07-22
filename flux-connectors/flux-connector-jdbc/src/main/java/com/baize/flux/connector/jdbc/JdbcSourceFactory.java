@@ -1,0 +1,1 @@
+package com.baize.flux.connector.jdbc; import com.baize.flux.api.factory.SourceFactory; import com.baize.flux.api.source.Source; import java.util.*; public final class JdbcSourceFactory implements SourceFactory {public String identifier(){return "jdbc";} public Source create(Map<String,String> options){return new JdbcSource(options);}}

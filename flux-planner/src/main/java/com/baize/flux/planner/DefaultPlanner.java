@@ -1,0 +1,2 @@
+package com.baize.flux.planner; import com.baize.flux.config.JobConfig; import com.baize.flux.plugin.FactoryRegistry; import java.util.*;
+public final class DefaultPlanner { public PipelinePlan plan(JobConfig c,FactoryRegistry r){var s=r.source(c.source().identifier()).create(c.source().options()); var sink=r.sink(c.sink().identifier()).create(c.sink().options()); sink.validateInputSchema(s.producedSchema()); return new PipelinePlan(s,List.of(),sink,c.batchSize());} }
