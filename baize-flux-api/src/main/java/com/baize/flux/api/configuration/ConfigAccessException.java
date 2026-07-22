@@ -3,6 +3,7 @@ package com.baize.flux.api.configuration;
 import com.baize.flux.common.exception.FluxException;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -90,6 +91,8 @@ public class ConfigAccessException extends FluxException {
             return Collections.emptyMap();
         }
 
-        return Map.of("optionKey", optionKey);
+        Map<String, Object> context = new LinkedHashMap<String, Object>();
+        context.put("optionKey", optionKey);
+        return context;
     }
 }

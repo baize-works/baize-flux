@@ -2,7 +2,6 @@ package com.baize.flux.common.exception;
 
 import lombok.Getter;
 
-import java.io.Serial;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,7 +15,6 @@ import java.util.Objects;
 @Getter
 public class FluxException extends RuntimeException {
 
-    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

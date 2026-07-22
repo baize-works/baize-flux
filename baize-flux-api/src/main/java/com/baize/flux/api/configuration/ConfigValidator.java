@@ -72,6 +72,11 @@ public final class ConfigValidator {
             if (!declared.containsKey(option.key())) {
                 declared.put(option.key(), option);
             }
+            for (String fallbackKey : option.fallbackKeys()) {
+                if (!declared.containsKey(fallbackKey)) {
+                    declared.put(fallbackKey, option);
+                }
+            }
         }
 
         collectUnknownKeys(

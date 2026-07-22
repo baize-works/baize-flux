@@ -1,5 +1,7 @@
 package com.baize.flux.api.configuration;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,11 +39,14 @@ public final class Option<T> {
         this.key = requireText(key, "Option key must not be blank");
         this.typeName = requireText(typeName, "Option type name must not be blank");
         this.converter = Objects.requireNonNull(converter, "converter");
+        if (hasDefaultValue && defaultValue == null) {
+            throw new IllegalArgumentException("Default value must not be null");
+        }
         this.defaultValue = defaultValue;
         this.hasDefaultValue = hasDefaultValue;
         this.description = description == null ? "" : description;
-        this.fallbackKeys = List.copyOf(fallbackKeys);
-        this.allowedValues = List.copyOf(allowedValues);
+        this.fallbackKeys = Collections.unmodifiableList(new ArrayList<String>(fallbackKeys));
+        this.allowedValues = Collections.unmodifiableList(new ArrayList<T>(allowedValues));
         this.sensitive = sensitive;
         this.allowNestedKeys = allowNestedKeys;
 
@@ -123,31 +128,12 @@ public final class Option<T> {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-
-        if (!(obj instanceof Option)) {
-            return false;
-        }
-
-        Option<?> other = (Option<?>) obj;
-        return key.equals(other.key);
-    }
-
-    @Override
-    public int hashCode() {
-        return key.hashCode();
-    }
-
-    @Override
     public String toString() {
         return "Option{" + "key='" + key + '\'' + ", type='" + typeName + '\'' + '}';
     }
 
     private static String requireText(String value, String message) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(message);
         }
         return value;

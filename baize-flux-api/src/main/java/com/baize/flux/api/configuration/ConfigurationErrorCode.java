@@ -27,6 +27,13 @@ public enum ConfigurationErrorCode implements FluxErrorCode {
             "配置校验失败",
             ErrorCategory.CONFIGURATION,
             false
+    ),
+
+    CONFIG_PARSE_FAILED(
+            "CONFIG-004",
+            "配置解析失败",
+            ErrorCategory.CONFIGURATION,
+            false
     );
 
     private final String code;

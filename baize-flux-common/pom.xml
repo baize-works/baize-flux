@@ -19,7 +19,7 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.baize.flux</groupId>
+                <groupId>com.baize.flux</groupId>
                 <artifactId>baize-flux-bom</artifactId>
                 <version>${project.version}</version>
                 <type>pom</type>
