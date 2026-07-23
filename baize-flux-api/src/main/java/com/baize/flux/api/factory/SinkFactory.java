@@ -5,8 +5,7 @@ import com.baize.flux.api.configuration.util.OptionRule;
 import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.table.type.FluxRow;
 
-public interface SinkFactory {
-    String factoryIdentifier();
+public interface SinkFactory extends Factory {
 
     OptionRule optionRule();
 
