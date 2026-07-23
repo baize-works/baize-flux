@@ -2,7 +2,6 @@ package com.baize.flux.connector.jdbc.source;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.util.OptionRule;
-import com.baize.flux.api.source.SourceFactory;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.factory.TableSourceFactory;

@@ -1,7 +1,7 @@
 package com.baize.flux.framework.plugin;
 
 import com.baize.flux.api.factory.SinkFactory;
-import com.baize.flux.api.source.SourceFactory;
+import com.baize.flux.api.factory.SourceFactory;
 
 import java.util.*;
 

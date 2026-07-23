@@ -77,10 +77,4 @@ public final class MySqlCatalogFactory
                 config);
     }
 
-    @Override
-    public OptionRule optionRule() {
-        return JdbcCommonOptions
-                .baseConnectionRule()
-                .build();
-    }
 }
