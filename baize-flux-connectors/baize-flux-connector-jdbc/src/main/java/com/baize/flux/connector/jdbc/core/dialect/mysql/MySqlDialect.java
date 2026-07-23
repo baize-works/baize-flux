@@ -2,6 +2,7 @@ package com.baize.flux.connector.jdbc.core.dialect.mysql;
 
 import com.baize.flux.api.table.catalog.Catalog;
 import com.baize.flux.api.table.catalog.TablePath;
+import com.baize.flux.connector.jdbc.catalog.JdbcCatalogConfig;
 import com.baize.flux.connector.jdbc.catalog.mysql.MySqlCatalog;
 import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
 import com.baize.flux.connector.jdbc.core.converter.JdbcRowConverter;
@@ -43,9 +44,7 @@ public final class MySqlDialect
                 connectionConfig;
 
         this.typeMapper =
-                new MySqlTypeMapper(
-                        connectionConfig
-                                .isIntTypeNarrowing());
+                new MySqlTypeMapper(false);
     }
 
     @Override
@@ -60,7 +59,13 @@ public final class MySqlDialect
 
         return new MySqlCatalog(
                 catalogName,
-                connectionConfig);
+                new JdbcCatalogConfig(
+                        connectionConfig.getUrl(),
+                        connectionConfig.getUsername(),
+                        connectionConfig.getPassword(),
+                        connectionConfig.getDriverName(),
+                        connectionConfig.getProperties(),
+                        false));
     }
 
     @Override
@@ -103,10 +108,7 @@ public final class MySqlDialect
                 tablePath.getDatabaseName();
 
         if (!JdbcDialect.hasText(database)) {
-            database =
-                    connectionConfig
-                            .getDefaultDatabase()
-                            .orElse(null);
+            database = connectionConfig.getSchema();
         }
 
         if (!JdbcDialect.hasText(database)) {

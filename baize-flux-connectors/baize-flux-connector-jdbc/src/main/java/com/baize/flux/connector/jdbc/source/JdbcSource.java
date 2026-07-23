@@ -8,8 +8,10 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.connector.TableSource;
 import com.baize.flux.api.table.type.FluxRow;
-import com.baize.flux.connector.jdbc.catalog.JdbcCatalogUtils;
 import com.baize.flux.connector.jdbc.config.JdbcSourceConfig;
+import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
+import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
+import com.baize.flux.connector.jdbc.utils.JdbcCatalogUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -38,11 +40,10 @@ public final class JdbcSource
 
         this.config = config;
 
-        this.sourceTables =
-                JdbcCatalogUtils.getTables(
-                        config.getJdbcConnectionConfig(),
-                        config.getTableConfigList(),
-                        config.getMultiTableFailurePolicy());
+        JdbcDialect dialect = JdbcDialectLoader.load(
+                config.getConnectionConfig());
+
+        this.sourceTables = JdbcCatalogUtils.getTables(config, dialect);
     }
 
     @Override
