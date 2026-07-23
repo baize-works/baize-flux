@@ -34,7 +34,7 @@ import java.util.Objects;
  *
  * 表读取、分片生成和连接管理不在 Factory 中处理。
  */
-@AutoService(SourceFactory.class)
+@AutoService(TableSourceFactory.class)
 public final class JdbcSourceFactory
         implements TableSourceFactory<JdbcSourceSplit> {
 
