@@ -21,11 +21,15 @@ final class JdbcSourceSplitGenerator {
 
     static List<JdbcSourceSplit> generate(
             JdbcSourceConfig config,
-            Map<TablePath, CatalogTable> tables)
+            Map<TablePath, CatalogTable> tables,
+            int parallelism)
             throws Exception {
 
         Objects.requireNonNull(config, "config must not be null");
         Objects.requireNonNull(tables, "tables must not be null");
+        if (parallelism <= 0) {
+            throw new IllegalArgumentException("parallelism must be greater than 0");
+        }
 
         JdbcDialect dialect = JdbcDialectLoader.load(config.getConnectionConfig());
         Map<TablePath, JdbcSourceTable> sourceTables =
@@ -39,7 +43,7 @@ final class JdbcSourceSplitGenerator {
             }
         }
 
-        return new JdbcSourceSplitEnumerator(config, sourceTables, 1)
+        return new JdbcSourceSplitEnumerator(config, sourceTables, parallelism)
                 .enumerateSplits();
     }
 }

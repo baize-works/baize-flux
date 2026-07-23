@@ -24,6 +24,26 @@ public interface Source<SplitT extends SourceSplit>
             throws Exception;
 
     /**
+     * Creates the splits for an execution with the supplied reader parallelism.
+     * <p>
+     * Connectors that can use the parallelism while planning (for example to
+     * cap JDBC range splits) should override this method. The default keeps
+     * existing connectors source-compatible and lets the framework distribute
+     * their returned splits among reader tasks.
+     */
+    default List<SplitT> createSplits(
+            Map<TablePath, CatalogTable> tables,
+            int parallelism)
+            throws Exception {
+
+        if (parallelism <= 0) {
+            throw new IllegalArgumentException(
+                    "parallelism must be greater than 0");
+        }
+        return createSplits(tables);
+    }
+
+    /**
      * 创建 SourceReader。
      * <p>
      * 每个执行任务必须使用独立 Reader，

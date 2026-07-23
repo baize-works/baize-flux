@@ -49,4 +49,16 @@ The result columns retain their query order and use JDBC column labels as the
 
 `partition_column`, `partition_lower_bound`, `partition_upper_bound`, and `partition_num` split a table into deterministic, non-overlapping ranges. Numeric columns use `FixedChunkSplitter`; fixed-width ASCII keys use `AsciiStringRangeSplitter`. The final range is upper-bound inclusive, so no boundary row is lost. Partition bounds are required deliberately: this bounded source does not issue an unbounded `MIN`/`MAX` analysis query during planning.
 
+## Execution parallelism
+
+Configure job-level reader concurrency outside the connector configuration:
+
+```hocon
+env {
+  parallelism = 4
+}
+```
+
+The launcher creates at most `parallelism` source readers and assigns every split to one reader exactly once. JDBC uses this value while planning range splits, so an unspecified `partition_num` produces no more than this many chunks per table. Batches from different tables or ranges can be read concurrently, while the local sink remains single-threaded because the current `SinkWriter` owns one transactional JDBC connection and is not safe to share across writers.
+
 For string keys, configure a fixed-width ASCII column using a binary/ASCII-compatible database collation. Locale-aware and variable-width strings are not safe range keys.
