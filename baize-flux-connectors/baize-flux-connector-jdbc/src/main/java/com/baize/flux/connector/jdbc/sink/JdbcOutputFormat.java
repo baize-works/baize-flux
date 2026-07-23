@@ -33,13 +33,36 @@ public final class JdbcOutputFormat implements AutoCloseable {
         CatalogTable target = targetTable(sourceTable); prepareTable(target); ensureConnection();
         List<String> fields = target.getTableSchema().getColumns().stream().map(c -> c.getName()).collect(Collectors.toList());
         String sql = config.hasCustomSql() ? config.getCustomSql() : config.isUpsert() ? dialect.buildUpsertSql(target.getTablePath(), fields, primaryKeys(target)).orElseThrow(() -> new IllegalArgumentException("Dialect does not support UPSERT: " + dialect.name())) : dialect.buildInsertSql(target.getTablePath(), fields);
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            int pending = 0;
-            for (FluxRow row : rows) { dialect.rowConverter().write(statement, row, target.getTableSchema()); statement.addBatch(); if (++pending == config.getBatchSize()) { execute(statement); pending = 0; } }
-            if (pending > 0) execute(statement);
+        for (int start = 0; start < rows.size(); start += config.getBatchSize()) {
+            int end = Math.min(start + config.getBatchSize(), rows.size());
+            executeBatch(sql, rows.subList(start, end), target.getTableSchema());
         }
     }
-    private void execute(PreparedStatement statement) throws Exception { Exception failure = null; for (int attempt = 0; attempt <= config.getMaxRetries(); attempt++) try { statement.executeBatch(); connection.commit(); return; } catch (Exception e) { failure = e; rollback(e); } throw failure; }
+    private void executeBatch(String sql, List<FluxRow> rows, TableSchema schema) throws Exception {
+        Exception failure = null;
+        for (int attempt = 0; attempt <= config.getMaxRetries(); attempt++) {
+            try {
+                ensureConnection();
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    for (FluxRow row : rows) {
+                        dialect.rowConverter().write(statement, row, schema);
+                        statement.addBatch();
+                    }
+                    statement.executeBatch();
+                    connection.commit();
+                    return;
+                }
+            } catch (Exception e) {
+                failure = e;
+                rollback(e);
+                if (!connectionProvider.isConnectionValid()) {
+                    connection = connectionProvider.reestablishConnection();
+                    connection.setAutoCommit(false);
+                }
+            }
+        }
+        throw failure;
+    }
     private void prepareTable(CatalogTable target) throws Exception {
         if (!preparedTables.add(target.getTablePath())) return;
         Catalog catalog = dialect.createCatalog(config.getConnectionConfig());
@@ -60,7 +83,21 @@ public final class JdbcOutputFormat implements AutoCloseable {
         return target.withSchema(schema);
     }
     private List<String> primaryKeys(CatalogTable table) { if (config.hasConfiguredPrimaryKeys()) return config.getPrimaryKeys(); PrimaryKey key = table.getTableSchema().getPrimaryKey(); return key == null ? new ArrayList<>() : key.getColumnNames(); }
-    private void ensureConnection() throws Exception { if (connection == null || connection.isClosed()) { connection = connectionProvider.getConnection(); connection.setAutoCommit(false); } }
-    private void rollback(Exception original) { try { if (connection != null) connection.rollback(); } catch (Exception e) { original.addSuppressed(e); } }
-    @Override public void close() throws Exception { if (connection != null) try { connection.close(); } finally { connection = null; } }
+    private void ensureConnection() throws Exception {
+        if (connection == null || !connectionProvider.isConnectionValid()) {
+            connection = connectionProvider.getOrEstablishConnection();
+            connection.setAutoCommit(false);
+        }
+    }
+    private void rollback(Exception original) {
+        try {
+            if (connection != null) connection.rollback();
+        } catch (Exception e) {
+            original.addSuppressed(e);
+        }
+    }
+    @Override public void close() {
+        connectionProvider.closeConnection();
+        connection = null;
+    }
 }
