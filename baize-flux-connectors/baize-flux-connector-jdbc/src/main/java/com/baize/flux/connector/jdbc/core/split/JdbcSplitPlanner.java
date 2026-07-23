@@ -309,6 +309,8 @@ public final class JdbcSplitPlanner {
                                 table,
                                 column,
                                 baseQuery,
+                                lower,
+                                upper,
                                 requestedChunks,
                                 parallelism);
 
@@ -388,6 +390,8 @@ public final class JdbcSplitPlanner {
                         table,
                         column,
                         baseQuery,
+                        lower,
+                        upper,
                         requestedChunks,
                         parallelism);
 
@@ -447,6 +451,8 @@ public final class JdbcSplitPlanner {
             JdbcSourceTable table,
             Column column,
             String baseQuery,
+            String lower,
+            String upper,
             int requestedChunks,
             int parallelism) {
 
@@ -474,18 +480,12 @@ public final class JdbcSplitPlanner {
                 return Optional.empty();
             }
 
-            String predicate = predicateOptional.get();
-
-            /*
-             * HASH(NULL) 通常返回 NULL，因此首个桶额外负责读取 NULL。
-             */
-            if (bucket == 0) {
-                predicate = "("
-                        + predicate
-                        + " OR "
-                        + quotedColumn
-                        + " IS NULL)";
-            }
+            String predicate = buildHashPredicate(
+                    quotedColumn,
+                    predicateOptional.get(),
+                    lower,
+                    upper,
+                    bucket == 0);
 
             String query = appendPredicate(
                     baseQuery,
@@ -504,6 +504,44 @@ public final class JdbcSplitPlanner {
 
         return Optional.of(
                 Collections.unmodifiableList(result));
+    }
+
+    /**
+     * Combines a dialect hash expression with the configured partition bounds.
+     *
+     * <p>HASH only assigns rows to splits; it must not expand the range selected
+     * by {@code partition_lower_bound} and {@code partition_upper_bound}. NULL
+     * values retain the same first-split ownership as range splitting.
+     */
+    static String buildHashPredicate(
+            String quotedColumn,
+            String hashPredicate,
+            String lower,
+            String upper,
+            boolean firstChunk) {
+
+        String boundedPredicate = "("
+                + hashPredicate
+                + " AND "
+                + quotedColumn
+                + " >= "
+                + literal(lower)
+                + " AND "
+                + quotedColumn
+                + " <= "
+                + literal(upper)
+                + ")";
+
+        if (!firstChunk) {
+            return boundedPredicate;
+        }
+
+        /* HASH(NULL) 通常返回 NULL，因此首个桶额外负责读取 NULL。 */
+        return "("
+                + boundedPredicate
+                + " OR "
+                + quotedColumn
+                + " IS NULL)";
     }
 
     private static <T> List<JdbcSourceSplit> createRangeSplits(

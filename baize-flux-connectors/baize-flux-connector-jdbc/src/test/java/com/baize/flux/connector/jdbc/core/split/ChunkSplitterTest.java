@@ -52,6 +52,26 @@ public class ChunkSplitterTest {
         assertEquals(3, DynamicChunkSplitter.effectiveChunkCount(3, 4));
     }
 
+    @Test
+    public void hashPredicateRetainsConfiguredBounds() {
+        assertEquals(
+                "((MOD(CRC32(`id`), 4) = 0 AND `id` >= 'A''A' AND `id` <= 'Z') OR `id` IS NULL)",
+                JdbcSplitPlanner.buildHashPredicate(
+                        "`id`",
+                        "MOD(CRC32(`id`), 4) = 0",
+                        "A'A",
+                        "Z",
+                        true));
+        assertEquals(
+                "(MOD(CRC32(`id`), 4) = 1 AND `id` >= 'A' AND `id` <= 'Z')",
+                JdbcSplitPlanner.buildHashPredicate(
+                        "`id`",
+                        "MOD(CRC32(`id`), 4) = 1",
+                        "A",
+                        "Z",
+                        false));
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void dynamicSplitterRejectsInvalidParallelism() {
         DynamicChunkSplitter.effectiveChunkCount(1, 0);
