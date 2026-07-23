@@ -19,22 +19,23 @@ public final class JdbcMultiTableSyncExample {
                     + "  password = \"123456\"\n"
                     + "  table_list = [\n"
                     + "    { table_path = \"flux_test.user_info\" },\n"
-                    + "    { table_path = \"flux_test.orders\" }\n"
+                    + "    { table_path = \"flux_test.user_info_copy\" }\n"
                     + "  ]\n"
                     + "}\n"
                     + "sink {\n"
                     + "  type = \"jdbc\"\n"
-                    + "  url = \"jdbc:mysql://127.0.0.1:3306/flux_test?useSSL=false&serverTimezone=UTC\"\n"
+                    + "  url = \"jdbc:mysql://127.0.0.1:3306/test1?useSSL=false&serverTimezone=UTC\"\n"
                     + "  driver = \"com.mysql.cj.jdbc.Driver\"\n"
                     + "  user = \"root\"\n"
                     + "  password = \"123456\"\n"
                     + "  # `table` is an alias for table_path. Each source table gets its own target.\n"
-                    + "  table = \"sink_${schema_name}_${table_name}\"\n"
+                    + "  table = \"${schema_name}.sink_${table_name}\"\n"
                     + "  schema_save_mode = CREATE_SCHEMA_WHEN_NOT_EXIST\n"
                     + "  data_save_mode = APPEND_DATA\n"
                     + "}\n";
 
-    private JdbcMultiTableSyncExample() {}
+    private JdbcMultiTableSyncExample() {
+    }
 
     public static void main(String[] args) throws Exception {
         if (args.length > 1) {
