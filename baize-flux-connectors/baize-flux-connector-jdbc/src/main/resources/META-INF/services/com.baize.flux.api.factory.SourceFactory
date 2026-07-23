@@ -1,1 +1,1 @@
-com.baize.flux.connectors.jdbc.JdbcSourceFactory
+com.baize.flux.connector.jdbc.source.JdbcSourceFactory

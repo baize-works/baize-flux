@@ -2,7 +2,7 @@ package com.baize.flux.connector.jdbc.source;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.util.OptionRule;
-import com.baize.flux.api.factory.Factory;
+import com.baize.flux.api.source.SourceFactory;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.factory.TableSourceFactory;
@@ -34,7 +34,7 @@ import java.util.Objects;
  *
  * 表读取、分片生成和连接管理不在 Factory 中处理。
  */
-@AutoService(Factory.class)
+@AutoService(SourceFactory.class)
 public final class JdbcSourceFactory
         implements TableSourceFactory<JdbcSourceSplit> {
 
@@ -73,15 +73,8 @@ public final class JdbcSourceFactory
         JdbcDialect dialect =
                 loadDialect(config);
 
-        /*
-         * 建议后续将 dialect 直接传入 JdbcCatalogUtils，
-         * 避免工具类再次执行 JdbcDialectLoader.load()。
-         */
         Map<?, JdbcSourceTable> tables =
-                JdbcCatalogUtils.getTables(
-                        config.getConnectionConfig(),
-                        config.getTableConfigs(),
-                        config.getMultiTableFailurePolicy());
+                JdbcCatalogUtils.getTables(config, dialect);
 
         List<CatalogTable> result =
                 new ArrayList<>(tables.size());
