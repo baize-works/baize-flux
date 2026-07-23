@@ -45,3 +45,8 @@ INSERT/UPSERT SQL for the resolved target and ignores `custom_sql`/`query`.
 
 The result columns retain their query order and use JDBC column labels as the
 `FluxRow` field names.
+## Partitioned reads
+
+`partition_column`, `partition_lower_bound`, `partition_upper_bound`, and `partition_num` split a table into deterministic, non-overlapping ranges. Numeric columns use `FixedChunkSplitter`; fixed-width ASCII keys use `AsciiStringRangeSplitter`. The final range is upper-bound inclusive, so no boundary row is lost. Partition bounds are required deliberately: this bounded source does not issue an unbounded `MIN`/`MAX` analysis query during planning.
+
+For string keys, configure a fixed-width ASCII column using a binary/ASCII-compatible database collation. Locale-aware and variable-width strings are not safe range keys.
