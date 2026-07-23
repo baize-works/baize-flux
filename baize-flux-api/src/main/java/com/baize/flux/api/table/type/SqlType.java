@@ -26,6 +26,7 @@ public enum SqlType {
     TIMESTAMP,
     TIMESTAMP_TZ,
 
+    MAP,
     ARRAY,
     ROW,
 

@@ -43,36 +43,24 @@ public abstract class AbstractJdbcRowConverter
             TableSchema tableSchema)
             throws SQLException {
 
-        Objects.requireNonNull(
-                resultSet,
-                "resultSet must not be null");
+        Objects.requireNonNull(resultSet, "resultSet must not be null");
+        Objects.requireNonNull(tableSchema, "tableSchema must not be null");
 
-        Objects.requireNonNull(
-                tableSchema,
-                "tableSchema must not be null");
+        List<Column> columns = tableSchema.getColumns();
+        FluxRow row = new FluxRow(columns.size());
 
-        List<Column> columns =
-                tableSchema.getColumns();
-
-        Object[] fields =
-                new Object[columns.size()];
-
-        for (int fieldIndex = 0;
-             fieldIndex < columns.size();
-             fieldIndex++) {
-
-            Column column =
-                    columns.get(fieldIndex);
-
-            int resultSetIndex =
-                    fieldIndex + 1;
+        for (int fieldIndex = 0; fieldIndex < columns.size(); fieldIndex++) {
+            Column column = columns.get(fieldIndex);
+            int resultSetIndex = fieldIndex + 1;
 
             try {
-                fields[fieldIndex] =
+                Object value =
                         readValue(
                                 resultSet,
                                 resultSetIndex,
                                 column);
+
+                row.setField(fieldIndex, value);
             } catch (SQLException e) {
                 throw new SQLException(
                         "读取 JDBC 字段失败，converter="
@@ -98,7 +86,7 @@ public abstract class AbstractJdbcRowConverter
             }
         }
 
-        return new FluxRow(fields);
+        return row;
     }
 
     @Override

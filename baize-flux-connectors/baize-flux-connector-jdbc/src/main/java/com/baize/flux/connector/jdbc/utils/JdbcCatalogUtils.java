@@ -252,7 +252,7 @@ public final class JdbcCatalogUtils {
         }
 
         TablePath parsed =
-                dialect.parse(tablePath);
+                dialect.parseTablePath(tablePath);
 
         if (parsed == null) {
             throw new IllegalArgumentException(

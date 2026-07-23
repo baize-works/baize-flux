@@ -162,47 +162,7 @@ public final class JdbcSourceTableConfig
             return;
         }
 
-        /**
-         * 校验当前表的分片配置。
-         *
-         * 未配置 partition_column 时按单分片读取；
-         * 配置 partition_column 时自动启用分片读取。
-         */
-        public void validatePartition() {
-            boolean hasLowerBound =
-                    partitionLowerBound != null;
 
-            boolean hasUpperBound =
-                    partitionUpperBound != null;
-
-            boolean hasAnyPartitionConfig =
-                    partitionColumn != null
-                            || hasLowerBound
-                            || hasUpperBound;
-
-            if (!hasAnyPartitionConfig) {
-                return;
-            }
-
-            if (partitionColumn == null) {
-                throw new IllegalArgumentException(
-                        "配置分片边界时必须指定 partition_column，table="
-                                + tablePath);
-            }
-
-            if (partitionNumber <= 1) {
-                throw new IllegalArgumentException(
-                        "partition_num 必须大于 1，table="
-                                + tablePath);
-            }
-
-            if (hasLowerBound != hasUpperBound) {
-                throw new IllegalArgumentException(
-                        "partition_lower_bound 和 "
-                                + "partition_upper_bound 必须同时配置，table="
-                                + tablePath);
-            }
-        }
 
         /*
          * 开启分片能力，但当前表没有配置分片字段时，
@@ -236,6 +196,7 @@ public final class JdbcSourceTableConfig
                             + tablePath);
         }
     }
+
 
     /**
      * 校验当前表的分片配置。
