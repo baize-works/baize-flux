@@ -1,33 +1,30 @@
 package com.baize.flux.api.table.factory;
 
-import com.baize.flux.api.source.SourceFactory;
+import com.baize.flux.api.factory.SourceFactory;
+import com.baize.flux.api.source.Source;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.api.table.connector.TableSource;
-import com.baize.flux.api.table.type.FluxRow;
 
 import java.util.List;
 
 /**
- * 表类型 Source 工厂。
+ * 支持表结构发现的 Source 工厂。
+ *
+ * @param <SplitT> Source 分片类型
  */
 public interface TableSourceFactory<SplitT extends SourceSplit>
-        extends SourceFactory<FluxRow, SplitT> {
+        extends SourceFactory {
 
-    @Override
-    TableSource<SplitT> createSource(
+    /**
+     * 创建 Source。
+     */
+    Source<SplitT> createSource(
             SourceFactoryContext context)
             throws Exception;
 
     /**
-     * 读取数据源元数据并发现表结构。
-     *
-     * 该方法可以用于：
-     * 1. dry-run；
-     * 2. Web 页面预览字段；
-     * 3. Source 和 Sink 字段映射；
-     * 4. 提交任务前校验表是否存在。
+     * 发现 Source 输出表结构。
      */
     List<CatalogTable> discoverTableSchemas(
             SourceFactoryContext context)

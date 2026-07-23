@@ -30,6 +30,12 @@
             <artifactId>baize-flux-connectors</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.baize.flux</groupId>
+            <artifactId>baize-flux-connector-jdbc</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
 

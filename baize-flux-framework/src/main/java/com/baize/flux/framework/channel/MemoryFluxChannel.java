@@ -2,10 +2,10 @@ package com.baize.flux.framework.channel;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
-public final class MemoryChannel<T> implements Channel<T> {
+public final class MemoryFluxChannel<T> implements Channel<T> {
     private final ArrayBlockingQueue<T> queue;
 
-    public MemoryChannel(int capacity) {
+    public MemoryFluxChannel(int capacity) {
         queue = new ArrayBlockingQueue<T>(capacity);
     }
 

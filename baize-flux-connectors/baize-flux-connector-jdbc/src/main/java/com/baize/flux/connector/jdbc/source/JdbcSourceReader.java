@@ -71,9 +71,26 @@ public final class JdbcSourceReader
                         new ArrayList<>(splits));
 
         this.splitIndex = 0;
-        this.opened = true;
+        this.currentSplit = null;
+        this.finished = false;
 
-        inputFormat.openInputFormat();
+        try {
+            inputFormat.openInputFormat();
+            opened = true;
+        } catch (Exception e) {
+            try {
+                inputFormat.closeInputFormat();
+            } catch (Exception closeException) {
+                e.addSuppressed(closeException);
+            }
+
+            this.splits = Collections.emptyList();
+            this.splitIndex = 0;
+            this.currentSplit = null;
+            this.finished = false;
+
+            throw e;
+        }
     }
 
     @Override

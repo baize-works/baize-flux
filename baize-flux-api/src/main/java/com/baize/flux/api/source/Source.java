@@ -1,27 +1,35 @@
 package com.baize.flux.api.source;
 
+import com.baize.flux.api.table.catalog.CatalogTable;
+import com.baize.flux.api.table.catalog.TablePath;
+import com.baize.flux.api.table.type.FluxRow;
+
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Flux 通用离线 Source。
+ * 离线数据源。
  *
- * @param <T> 输出数据类型
- * @param <SplitT> 分片类型
+ * @param <SplitT> Source 分片类型
  */
-public interface Source<T, SplitT extends SourceSplit>
+public interface Source<SplitT extends SourceSplit>
         extends Serializable {
 
     /**
-     * 创建 Source 分片生成器。
+     * 根据表结构生成读取分片。
      */
-    SourceSplitEnumerator<SplitT> createSplitEnumerator(
-            SourceEnumeratorContext context)
+    List<SplitT> createSplits(
+            Map<TablePath, CatalogTable> tables)
             throws Exception;
 
     /**
-     * 创建 Source Reader。
+     * 创建 SourceReader。
+     *
+     * 每个执行任务必须使用独立 Reader，
+     * Reader 不应在多个线程之间共享。
      */
-    SourceReader<T, SplitT> createReader(
-            SourceReaderContext context)
-            throws Exception;
+    SourceReader<FluxRow, SplitT> createReader(
+            Map<TablePath, CatalogTable> tables,
+            int batchSize);
 }

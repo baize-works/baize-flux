@@ -10,22 +10,9 @@ import com.baize.flux.api.configuration.util.OptionRule;
 public interface Factory {
 
     /**
-     * 插件唯一标识。
+     * 工厂唯一标识。
      *
-     * 建议统一使用小写，例如：
-     *
-     * jdbc
-     * file
-     * http
+     * 例如：jdbc、mysql-cdc、file。
      */
     String factoryIdentifier();
-
-    /**
-     * 返回插件配置规则。
-     *
-     * 用于：
-     * 1. 提交任务时校验配置；
-     * 2. Web 页面动态生成配置表单。
-     */
-    OptionRule optionRule();
 }
