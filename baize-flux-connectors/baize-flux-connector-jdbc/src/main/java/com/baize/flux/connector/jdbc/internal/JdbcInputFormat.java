@@ -10,7 +10,6 @@ import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.source.JdbcSourceSplit;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Map;
@@ -22,6 +21,7 @@ public final class JdbcInputFormat {
     private final JdbcSourceConfig config;
     private final Map<TablePath, CatalogTable> tables;
     private final JdbcDialect dialect;
+    private final JdbcConnectionProvider connectionProvider;
     private Connection connection;
     private PreparedStatement statement;
     private ResultSet resultSet;
@@ -32,12 +32,11 @@ public final class JdbcInputFormat {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.tables = Objects.requireNonNull(tables, "tables must not be null");
         this.dialect = JdbcDialectLoader.load(config.getConnectionConfig());
+        this.connectionProvider = new JdbcConnectionProvider(config.getConnectionConfig(), dialect);
     }
 
     public void openInputFormat() throws Exception {
-        JdbcConnectionConfig connectionConfig = config.getConnectionConfig();
-        Class.forName(connectionConfig.getDriverName());
-        connection = DriverManager.getConnection(connectionConfig.getUrl(), connectionConfig.toProperties());
+        connection = connectionProvider.getConnection();
     }
 
     public void open(JdbcSourceSplit split) throws Exception {

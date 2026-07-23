@@ -1,12 +1,18 @@
 package com.baize.flux.launcher;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
+import com.baize.flux.api.configuration.util.ConfigValidator;
+import com.baize.flux.api.factory.SinkFactory;
+import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.source.RecordBatch;
+import com.baize.flux.api.table.catalog.CatalogTable;
+import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.Channel;
 import com.baize.flux.framework.channel.MemoryFluxChannel;
 import com.baize.flux.framework.execution.source.SourceAction;
 import com.baize.flux.framework.execution.source.SourceExecuteProcessor;
+import com.baize.flux.framework.execution.sink.SinkExecuteProcessor;
 import com.baize.flux.framework.factory.PreparedSource;
 import com.baize.flux.framework.util.FactoryUtil;
 import com.typesafe.config.Config;
@@ -50,6 +56,16 @@ public final class LocalSyncLauncher {
                     + "\n"
                     + "  table_path = \"flux_test.user_info\"\n"
                     + "  fetch_size = 100\n"
+                    + "}\n"
+                    + "sink {\n"
+                    + "  type = \"jdbc\"\n"
+                    + "  url = \"jdbc:mysql://127.0.0.1:3306/flux_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8\"\n"
+                    + "  driver = \"com.mysql.cj.jdbc.Driver\"\n"
+                    + "  user = \"root\"\n"
+                    + "  password = \"123456\"\n"
+                    + "  table_path = \"flux_test.user_info_copy\"\n"
+                    + "  schema_save_mode = CREATE_SCHEMA_WHEN_NOT_EXIST\n"
+                    + "  data_save_mode = APPEND_DATA\n"
                     + "}\n";
 
     private LocalSyncLauncher() {
@@ -138,6 +154,17 @@ public final class LocalSyncLauncher {
                         .withoutPath("type")
                         .withoutPath("batch-size");
 
+        SinkWriter<FluxRow> sinkWriter = null;
+        if (root.hasPath("sink")) {
+            Config sinkConfig = root.getConfig("sink");
+            if (!sinkConfig.hasPath("type")) throw new IllegalArgumentException("HOCON configuration must contain 'sink.type'");
+            String sinkType = sinkConfig.getString("type").trim();
+            ReadonlyConfig sinkOptions = ReadonlyConfig.fromConfig(sinkConfig.withoutPath("type"));
+            SinkFactory sinkFactory = FactoryUtil.discoverFactory(classLoader, SinkFactory.class, sinkType);
+            ConfigValidator.of(sinkOptions).validate(sinkFactory.optionRule());
+            sinkWriter = sinkFactory.createSink(sinkOptions);
+        }
+
         PreparedSource<?> preparedSource =
                 FactoryUtil.createAndPrepareSource(
                         factoryIdentifier,
@@ -145,9 +172,7 @@ public final class LocalSyncLauncher {
                                 connectorConfig),
                         classLoader);
 
-        executeAndPrint(
-                preparedSource,
-                batchSize);
+        try (SinkWriter<FluxRow> writer = sinkWriter) { executeAndPrint(preparedSource, batchSize, writer); }
     }
 
     /**
@@ -156,7 +181,8 @@ public final class LocalSyncLauncher {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void executeAndPrint(
             PreparedSource<?> preparedSource,
-            int batchSize)
+            int batchSize,
+            SinkWriter<FluxRow> sinkWriter)
             throws Exception {
 
         Channel<RecordBatch<FluxRow>> channel =
@@ -177,7 +203,7 @@ public final class LocalSyncLauncher {
         producer.start();
 
         try {
-            consumeAndPrint(channel);
+            consumeAndWrite(channel, preparedSource.getTables(), sinkWriter);
         } finally {
             if (producer.isAlive()) {
                 producer.interrupt();
@@ -228,9 +254,7 @@ public final class LocalSyncLauncher {
     /**
      * 消费并打印 Source 输出数据。
      */
-    private static void consumeAndPrint(
-            Channel<RecordBatch<FluxRow>> channel)
-            throws InterruptedException {
+    private static void consumeAndWrite(Channel<RecordBatch<FluxRow>> channel, java.util.Map<TablePath, CatalogTable> tables, SinkWriter<FluxRow> sinkWriter) throws Exception {
 
         long totalRows = 0L;
         long batchCount = 0L;
@@ -244,6 +268,10 @@ public final class LocalSyncLauncher {
             }
 
             batchCount++;
+
+            if (sinkWriter != null) {
+                new SinkExecuteProcessor().execute(batch, tables, sinkWriter);
+            }
 
             for (FluxRow row : batch.getRecords()) {
                 totalRows++;
