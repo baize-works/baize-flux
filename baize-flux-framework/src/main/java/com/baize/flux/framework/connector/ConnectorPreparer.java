@@ -52,7 +52,7 @@ public final class ConnectorPreparer {
     }
 
     public PreparedJob prepare(
-            JobDefinition definition) {
+            JobDefinition definition) throws Exception {
 
         Objects.requireNonNull(
                 definition,
@@ -74,7 +74,7 @@ public final class ConnectorPreparer {
     }
 
     private PreparedSource<?> prepareSource(
-            SourceDefinition definition) {
+            SourceDefinition definition) throws Exception {
 
         TableSourceFactory<?> factory =
                 registry.getSourceFactory(
@@ -100,7 +100,7 @@ public final class ConnectorPreparer {
     PreparedSource<SplitT> createPreparedSource(
             String identifier,
             TableSourceFactory<SplitT> factory,
-            SourceFactoryContext context) {
+            SourceFactoryContext context) throws Exception {
 
         Source<SplitT> source =
                 factory.createSource(context);
