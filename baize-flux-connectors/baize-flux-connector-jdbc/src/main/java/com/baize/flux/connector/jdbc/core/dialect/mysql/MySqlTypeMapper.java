@@ -6,7 +6,6 @@ import com.baize.flux.api.table.type.DecimalType;
 import com.baize.flux.api.table.type.FluxDataType;
 import com.baize.flux.api.table.type.SqlType;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcTypeMapper;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +17,7 @@ import java.util.Locale;
 
 /**
  * MySQL 类型映射器。
- *
+ * <p>
  * 不依赖 MySQL Driver 内部 MysqlType 枚举，
  * 只使用 JDBC 标准类型和 INFORMATION_SCHEMA 元数据。
  */
@@ -48,6 +47,252 @@ public final class MySqlTypeMapper
 
         this.intTypeNarrowing =
                 intTypeNarrowing;
+    }
+
+    private static void applyTypeProperties(
+            Column.Builder builder,
+            SqlType sqlType,
+            int precision,
+            int scale) {
+
+        if (sqlType == SqlType.STRING
+                || sqlType == SqlType.BYTES) {
+
+            if (precision > 0) {
+                builder.length(
+                        (long) precision);
+            }
+
+            return;
+        }
+
+        if (sqlType == SqlType.DECIMAL) {
+            if (precision > 0) {
+                builder.precision(
+                        precision);
+            }
+
+            if (scale >= 0) {
+                builder.scale(scale);
+            }
+
+            return;
+        }
+
+        if (sqlType == SqlType.TIME
+                || sqlType == SqlType.TIMESTAMP
+                || sqlType
+                == SqlType.TIMESTAMP_TZ) {
+
+            if (scale > 0) {
+                builder.precision(scale);
+            }
+        }
+    }
+
+    private static String stringType(
+            Column column) {
+
+        Long length =
+                column.getLength();
+
+        if (length == null
+                || length <= 0) {
+
+            return "LONGTEXT";
+        }
+
+        if (length <= 255) {
+            return "VARCHAR(" + length + ")";
+        }
+
+        if (length <= 65_535) {
+            return "TEXT";
+        }
+
+        if (length <= 16_777_215) {
+            return "MEDIUMTEXT";
+        }
+
+        return "LONGTEXT";
+    }
+
+    private static String binaryType(
+            Column column) {
+
+        Long length =
+                column.getLength();
+
+        if (length == null
+                || length <= 0) {
+
+            return "LONGBLOB";
+        }
+
+        if (length <= 65_532) {
+            return "VARBINARY(" + length + ")";
+        }
+
+        if (length <= 16_777_215) {
+            return "MEDIUMBLOB";
+        }
+
+        return "LONGBLOB";
+    }
+
+    private static String decimalType(
+            Column column) {
+
+        int precision =
+                column.getPrecision() == null
+                        ? DEFAULT_DECIMAL_PRECISION
+                        : column.getPrecision();
+
+        int scale =
+                column.getScale() == null
+                        ? 0
+                        : column.getScale();
+
+        precision =
+                Math.max(
+                        1,
+                        Math.min(
+                                precision,
+                                65));
+
+        scale =
+                Math.max(
+                        0,
+                        Math.min(
+                                scale,
+                                Math.min(
+                                        30,
+                                        precision)));
+
+        return "DECIMAL("
+                + precision
+                + ","
+                + scale
+                + ")";
+    }
+
+    private static String temporalType(
+            String type,
+            Integer precision) {
+
+        if (precision == null
+                || precision <= 0) {
+
+            return type;
+        }
+
+        return type
+                + "("
+                + Math.min(
+                precision,
+                MAX_TIME_PRECISION)
+                + ")";
+    }
+
+    private static boolean isInteger(
+            SqlType sqlType) {
+
+        return sqlType == SqlType.TINYINT
+                || sqlType == SqlType.SMALLINT
+                || sqlType == SqlType.INT
+                || sqlType == SqlType.BIGINT;
+    }
+
+    private static boolean isNumeric(
+            SqlType sqlType) {
+
+        return isInteger(sqlType)
+                || sqlType == SqlType.FLOAT
+                || sqlType == SqlType.DOUBLE
+                || sqlType == SqlType.DECIMAL;
+    }
+
+    private static String normalizeType(
+            String value) {
+
+        String normalized =
+                normalize(value);
+
+        if (normalized == null) {
+            return "";
+        }
+
+        return normalized.toUpperCase(
+                Locale.ROOT);
+    }
+
+    private static String firstNonEmpty(
+            String first,
+            String second) {
+
+        String normalized =
+                normalize(first);
+
+        return normalized == null
+                ? normalize(second)
+                : normalized;
+    }
+
+    private static Integer getInteger(
+            ResultSet resultSet,
+            String column)
+            throws SQLException {
+
+        Object value =
+                resultSet.getObject(column);
+
+        return value == null
+                ? null
+                : ((Number) value)
+                .intValue();
+    }
+
+    private static Long getLong(
+            ResultSet resultSet,
+            String column)
+            throws SQLException {
+
+        Object value =
+                resultSet.getObject(column);
+
+        return value == null
+                ? null
+                : ((Number) value)
+                .longValue();
+    }
+
+    private static int valueOrDefault(
+            Integer value,
+            int defaultValue) {
+
+        return value == null
+                ? defaultValue
+                : value;
+    }
+
+    private static boolean hasText(
+            String value) {
+
+        return normalize(value) != null;
+    }
+
+    private static String normalize(
+            String value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        return normalized.isEmpty()
+                ? null
+                : normalized;
     }
 
     /**
@@ -84,9 +329,9 @@ public final class MySqlTypeMapper
 
         boolean nullable =
                 metadata.isNullable(
-                                columnIndex)
+                        columnIndex)
                         != ResultSetMetaData
-                                .columnNoNulls;
+                        .columnNoNulls;
 
         FluxDataType<?> dataType =
                 mapJdbcType(
@@ -99,8 +344,8 @@ public final class MySqlTypeMapper
 
         Column.Builder builder =
                 Column.builder(
-                                name,
-                                dataType)
+                        name,
+                        dataType)
                         .nullable(nullable)
                         .sourceType(sourceType);
 
@@ -135,9 +380,9 @@ public final class MySqlTypeMapper
         boolean unsigned =
                 columnType != null
                         && columnType
-                                .toLowerCase(
-                                        Locale.ROOT)
-                                .contains("unsigned");
+                        .toLowerCase(
+                                Locale.ROOT)
+                        .contains("unsigned");
 
         Integer precision =
                 getInteger(
@@ -180,8 +425,8 @@ public final class MySqlTypeMapper
 
         Column.Builder builder =
                 Column.builder(
-                                name,
-                                fluxType)
+                        name,
+                        fluxType)
                         .nullable(nullable)
                         .defaultValue(
                                 resultSet.getObject(
@@ -189,9 +434,9 @@ public final class MySqlTypeMapper
                         .autoIncrement(
                                 extra != null
                                         && extra.toLowerCase(
-                                                        Locale.ROOT)
-                                                .contains(
-                                                        "auto_increment"))
+                                        Locale.ROOT)
+                                        .contains(
+                                                "auto_increment"))
                         .comment(
                                 resultSet.getString(
                                         "COLUMN_COMMENT"))
@@ -247,7 +492,7 @@ public final class MySqlTypeMapper
         } else if (sqlType == SqlType.TIME
                 || sqlType == SqlType.TIMESTAMP
                 || sqlType
-                        == SqlType.TIMESTAMP_TZ) {
+                == SqlType.TIMESTAMP_TZ) {
 
             builder.precision(
                     dateTimePrecision);
@@ -277,7 +522,7 @@ public final class MySqlTypeMapper
 
         if (preserveSourceType
                 && hasText(
-                        column.getSourceType())) {
+                column.getSourceType())) {
 
             return column.getSourceType();
         }
@@ -361,8 +606,8 @@ public final class MySqlTypeMapper
 
         if (isNumeric(sqlType)
                 && Boolean.parseBoolean(
-                        column.getAttributes()
-                                .get("unsigned"))) {
+                column.getAttributes()
+                        .get("unsigned"))) {
 
             type += " UNSIGNED";
         }
@@ -384,8 +629,8 @@ public final class MySqlTypeMapper
         switch (normalized) {
             case "BIT":
                 if (valueOrDefault(
-                                precision,
-                                1)
+                        precision,
+                        1)
                         <= 1) {
 
                     return BasicType.BOOLEAN_TYPE;
@@ -401,10 +646,10 @@ public final class MySqlTypeMapper
                 if (intTypeNarrowing
                         && columnType != null
                         && columnType
-                                .toLowerCase(
-                                        Locale.ROOT)
-                                .startsWith(
-                                        "tinyint(1)")) {
+                        .toLowerCase(
+                                Locale.ROOT)
+                        .startsWith(
+                                "tinyint(1)")) {
 
                     return BasicType.BOOLEAN_TYPE;
                 }
@@ -521,7 +766,7 @@ public final class MySqlTypeMapper
             case Types.TINYINT:
                 if (intTypeNarrowing
                         && "tinyint".equalsIgnoreCase(
-                                sourceType)
+                        sourceType)
                         && precision == 1) {
 
                     return BasicType.BOOLEAN_TYPE;
@@ -605,7 +850,7 @@ public final class MySqlTypeMapper
 
         int safePrecision =
                 precision == null
-                                || precision <= 0
+                        || precision <= 0
                         ? DEFAULT_DECIMAL_PRECISION
                         : precision;
 
@@ -642,251 +887,5 @@ public final class MySqlTypeMapper
         return new DecimalType(
                 safePrecision,
                 safeScale);
-    }
-
-    private static void applyTypeProperties(
-            Column.Builder builder,
-            SqlType sqlType,
-            int precision,
-            int scale) {
-
-        if (sqlType == SqlType.STRING
-                || sqlType == SqlType.BYTES) {
-
-            if (precision > 0) {
-                builder.length(
-                        (long) precision);
-            }
-
-            return;
-        }
-
-        if (sqlType == SqlType.DECIMAL) {
-            if (precision > 0) {
-                builder.precision(
-                        precision);
-            }
-
-            if (scale >= 0) {
-                builder.scale(scale);
-            }
-
-            return;
-        }
-
-        if (sqlType == SqlType.TIME
-                || sqlType == SqlType.TIMESTAMP
-                || sqlType
-                        == SqlType.TIMESTAMP_TZ) {
-
-            if (scale > 0) {
-                builder.precision(scale);
-            }
-        }
-    }
-
-    private static String stringType(
-            Column column) {
-
-        Long length =
-                column.getLength();
-
-        if (length == null
-                || length <= 0) {
-
-            return "LONGTEXT";
-        }
-
-        if (length <= 255) {
-            return "VARCHAR(" + length + ")";
-        }
-
-        if (length <= 65_535) {
-            return "TEXT";
-        }
-
-        if (length <= 16_777_215) {
-            return "MEDIUMTEXT";
-        }
-
-        return "LONGTEXT";
-    }
-
-    private static String binaryType(
-            Column column) {
-
-        Long length =
-                column.getLength();
-
-        if (length == null
-                || length <= 0) {
-
-            return "LONGBLOB";
-        }
-
-        if (length <= 65_532) {
-            return "VARBINARY(" + length + ")";
-        }
-
-        if (length <= 16_777_215) {
-            return "MEDIUMBLOB";
-        }
-
-        return "LONGBLOB";
-    }
-
-    private static String decimalType(
-            Column column) {
-
-        int precision =
-                column.getPrecision() == null
-                        ? DEFAULT_DECIMAL_PRECISION
-                        : column.getPrecision();
-
-        int scale =
-                column.getScale() == null
-                        ? 0
-                        : column.getScale();
-
-        precision =
-                Math.max(
-                        1,
-                        Math.min(
-                                precision,
-                                65));
-
-        scale =
-                Math.max(
-                        0,
-                        Math.min(
-                                scale,
-                                Math.min(
-                                        30,
-                                        precision)));
-
-        return "DECIMAL("
-                + precision
-                + ","
-                + scale
-                + ")";
-    }
-
-    private static String temporalType(
-            String type,
-            Integer precision) {
-
-        if (precision == null
-                || precision <= 0) {
-
-            return type;
-        }
-
-        return type
-                + "("
-                + Math.min(
-                        precision,
-                        MAX_TIME_PRECISION)
-                + ")";
-    }
-
-    private static boolean isInteger(
-            SqlType sqlType) {
-
-        return sqlType == SqlType.TINYINT
-                || sqlType == SqlType.SMALLINT
-                || sqlType == SqlType.INT
-                || sqlType == SqlType.BIGINT;
-    }
-
-    private static boolean isNumeric(
-            SqlType sqlType) {
-
-        return isInteger(sqlType)
-                || sqlType == SqlType.FLOAT
-                || sqlType == SqlType.DOUBLE
-                || sqlType == SqlType.DECIMAL;
-    }
-
-    private static String normalizeType(
-            String value) {
-
-        String normalized =
-                normalize(value);
-
-        if (normalized == null) {
-            return "";
-        }
-
-        return normalized.toUpperCase(
-                Locale.ROOT);
-    }
-
-    private static String firstNonEmpty(
-            String first,
-            String second) {
-
-        String normalized =
-                normalize(first);
-
-        return normalized == null
-                ? normalize(second)
-                : normalized;
-    }
-
-    private static Integer getInteger(
-            ResultSet resultSet,
-            String column)
-            throws SQLException {
-
-        Object value =
-                resultSet.getObject(column);
-
-        return value == null
-                ? null
-                : ((Number) value)
-                        .intValue();
-    }
-
-    private static Long getLong(
-            ResultSet resultSet,
-            String column)
-            throws SQLException {
-
-        Object value =
-                resultSet.getObject(column);
-
-        return value == null
-                ? null
-                : ((Number) value)
-                        .longValue();
-    }
-
-    private static int valueOrDefault(
-            Integer value,
-            int defaultValue) {
-
-        return value == null
-                ? defaultValue
-                : value;
-    }
-
-    private static boolean hasText(
-            String value) {
-
-        return normalize(value) != null;
-    }
-
-    private static String normalize(
-            String value) {
-
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-
-        return normalized.isEmpty()
-                ? null
-                : normalized;
     }
 }

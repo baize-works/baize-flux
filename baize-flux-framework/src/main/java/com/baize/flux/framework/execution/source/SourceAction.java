@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * Source 执行动作。
- *
+ * <p>
  * Action 只描述要执行什么，不持有已打开的数据库资源。
  */
 public final class SourceAction<SplitT extends SourceSplit> {

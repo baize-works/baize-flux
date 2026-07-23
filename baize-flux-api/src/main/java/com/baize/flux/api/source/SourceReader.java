@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * 离线 Source 数据读取器。
  *
- * @param <T> 输出数据类型
+ * @param <T>      输出数据类型
  * @param <SplitT> Source 分片类型
  */
 public interface SourceReader<T, SplitT extends SourceSplit>
@@ -18,7 +18,7 @@ public interface SourceReader<T, SplitT extends SourceSplit>
 
     /**
      * 读取下一批数据。
-     *
+     * <p>
      * 当全部分片读取完成时，返回 RecordBatch.endOfInput()。
      */
     RecordBatch<T> readBatch() throws Exception;

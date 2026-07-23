@@ -1,14 +1,10 @@
 package com.baize.flux.api.table.catalog;
 
-import com.baize.flux.api.table.catalog.exception.CatalogException;
-import com.baize.flux.api.table.catalog.exception.DatabaseAlreadyExistsException;
-import com.baize.flux.api.table.catalog.exception.DatabaseNotFoundException;
-import com.baize.flux.api.table.catalog.exception.TableAlreadyExistsException;
-import com.baize.flux.api.table.catalog.exception.TableNotFoundException;
+import com.baize.flux.api.table.catalog.exception.*;
 
 /**
  * 支持 DDL 操作的 Catalog。
- *
+ * <p>
  * Source 只依赖 Catalog；
  * 需要自动建表的 Sink 才依赖 WritableCatalog。
  */
@@ -34,7 +30,7 @@ public interface WritableCatalog extends Catalog {
 
     /**
      * 创建表。
-     *
+     * <p>
      * 表路径直接从 CatalogTable 中获取，
      * 避免同时传入 TablePath 和 CatalogTable 导致不一致。
      */

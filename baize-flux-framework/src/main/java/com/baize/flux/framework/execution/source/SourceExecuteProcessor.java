@@ -11,7 +11,7 @@ import java.util.Objects;
 
 /**
  * 离线 Source 执行处理器。
- *
+ * <p>
  * 当前采用单 Reader 顺序读取全部分片。
  * 后续可扩展为多个 SourceTask 并行执行。
  */

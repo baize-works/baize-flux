@@ -1,13 +1,11 @@
 package com.baize.flux.connector.jdbc.catalog.mysql;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
-import com.baize.flux.api.configuration.util.OptionRule;
 import com.baize.flux.api.factory.Factory;
 import com.baize.flux.api.table.catalog.Catalog;
 import com.baize.flux.api.table.factory.CatalogFactory;
 import com.baize.flux.connector.jdbc.catalog.JdbcCatalogConfig;
 import com.baize.flux.connector.jdbc.config.JdbcCommonOptions;
-
 import com.google.auto.service.AutoService;
 
 import java.util.Collections;

@@ -9,11 +9,7 @@ import com.typesafe.config.ConfigRenderOptions;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 只读配置对象。
@@ -46,7 +42,8 @@ public final class ReadonlyConfig implements Serializable {
             Map<String, Object> data =
                     OBJECT_MAPPER.readValue(
                             json,
-                            new TypeReference<Map<String, Object>>() {});
+                            new TypeReference<Map<String, Object>>() {
+                            });
 
             return fromMap(data);
         } catch (JsonProcessingException e) {

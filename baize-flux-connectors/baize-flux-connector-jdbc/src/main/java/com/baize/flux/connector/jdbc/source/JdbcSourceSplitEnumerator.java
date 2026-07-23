@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * JDBC 静态分片生成器。
- *
+ * <p>
  * 任务启动时一次性计算所有分片，
  * 不再与 Reader 动态通信，也不保存 Checkpoint 状态。
  */

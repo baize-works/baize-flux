@@ -11,26 +11,21 @@ import com.baize.flux.connector.jdbc.config.JdbcSourceOptions;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.options.MultiTableCommonOptions;
-
 import com.baize.flux.connector.jdbc.utils.JdbcCatalogUtils;
 import com.google.auto.service.AutoService;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * JDBC Source 工厂。
- *
+ * <p>
  * 主要负责：
- *
+ * <p>
  * 1. 解析并校验 Source 配置；
  * 2. 校验数据库方言是否可用；
  * 3. 创建 JDBC Source；
  * 4. 发现源表结构。
- *
+ * <p>
  * 表读取、分片生成和连接管理不在 Factory 中处理。
  */
 @AutoService(TableSourceFactory.class)
@@ -130,7 +125,7 @@ public final class JdbcSourceFactory
 
     /**
      * 加载当前数据库方言。
-     *
+     * <p>
      * 这里只完成方言识别，不修改配置，也不建立数据库连接。
      */
     private JdbcDialect loadDialect(

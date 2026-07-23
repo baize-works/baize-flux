@@ -4,7 +4,6 @@ import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
 import com.baize.flux.connector.jdbc.core.dialect.DatabaseIdentifier;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectFactory;
-
 import com.google.auto.service.AutoService;
 
 /**
@@ -23,8 +22,8 @@ public final class MySqlDialectFactory
     public boolean acceptsUrl(String url) {
         return url != null
                 && url.trim()
-                        .toLowerCase()
-                        .startsWith("jdbc:mysql:");
+                .toLowerCase()
+                .startsWith("jdbc:mysql:");
     }
 
     @Override

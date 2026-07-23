@@ -5,15 +5,11 @@ import com.baize.flux.connector.jdbc.options.MultiTableCommonOptions;
 import com.baize.flux.connector.jdbc.options.MultiTableFailurePolicy;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * JDBC 离线 Source 运行配置。
- *
+ * <p>
  * 该类只保存已经解析和校验完成的运行配置，
  * 不承担 JDBC 连接、表结构发现或数据读取工作。
  */
@@ -34,16 +30,16 @@ public final class JdbcSourceConfig
 
     /**
      * 全局过滤条件。
-     *
+     * <p>
      * 内部统一不包含 WHERE 关键字，例如：
-     *
+     * <p>
      * id > 100
      */
     private final String whereCondition;
 
     /**
      * JDBC Statement FetchSize。
-     *
+     * <p>
      * 0 表示使用 JDBC Driver 默认值。
      */
     private final int fetchSize;
@@ -124,121 +120,6 @@ public final class JdbcSourceConfig
                                 .MULTI_TABLE_FAILURE_POLICY));
     }
 
-    public JdbcConnectionConfig getConnectionConfig() {
-        return connectionConfig;
-    }
-
-    public List<JdbcSourceTableConfig> getTableConfigs() {
-        return tableConfigs;
-    }
-
-    public String getWhereCondition() {
-        return whereCondition;
-    }
-
-    public int getFetchSize() {
-        return fetchSize;
-    }
-
-    public boolean isIntTypeNarrowing() {
-        return intTypeNarrowing;
-    }
-
-    public MultiTableFailurePolicy
-    getMultiTableFailurePolicy() {
-
-        return multiTableFailurePolicy;
-    }
-
-    /**
-     * 当前任务是否为多表同步。
-     */
-    public boolean isMultiTable() {
-        return tableConfigs.size() > 1;
-    }
-
-    /**
-     * 当前任务是否配置了全局过滤条件。
-     */
-    public boolean hasWhereCondition() {
-        return whereCondition != null;
-    }
-
-    /**
-     * 当前任务是否包含自定义查询。
-     */
-    public boolean hasCustomQuery() {
-        for (JdbcSourceTableConfig table :
-                tableConfigs) {
-
-            if (table.hasCustomQuery()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 当前任务是否启用了分片读取。
-     *
-     * 不再额外维护 enable_partition_read，
-     * 只要任意表配置 partition_column，即认为需要分片。
-     */
-    public boolean hasPartitionTable() {
-        for (JdbcSourceTableConfig table :
-                tableConfigs) {
-
-            if (table.hasPartition()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 获取单表配置。
-     *
-     * 仅用于明确要求单表的执行逻辑。
-     */
-    public JdbcSourceTableConfig getSingleTableConfig() {
-        if (isMultiTable()) {
-            throw new IllegalStateException(
-                    "当前任务不是单表任务，tableCount="
-                            + tableConfigs.size());
-        }
-
-        return tableConfigs.get(0);
-    }
-
-    /**
-     * 校验 Source 级别的配置关系。
-     */
-    private void validate() {
-        for (JdbcSourceTableConfig table :
-                tableConfigs) {
-
-            /*
-             * 分片参数属于单表配置，
-             * 由每张表自行校验。
-             */
-            table.validatePartition();
-
-            /*
-             * 自定义查询本身已经是一条完整 SQL，
-             * 不再向其后面拼接全局 where_condition。
-             */
-            if (whereCondition != null
-                    && table.hasCustomQuery()) {
-
-                throw new IllegalArgumentException(
-                        "query 不能与全局 where_condition 同时配置，table="
-                                + table.getTablePath());
-            }
-        }
-    }
-
     private static List<JdbcSourceTableConfig>
     immutableTableConfigs(
             List<JdbcSourceTableConfig> tables) {
@@ -268,13 +149,13 @@ public final class JdbcSourceConfig
 
     /**
      * 兼容以下两种写法：
-     *
+     * <p>
      * where id > 100
-     *
+     * <p>
      * id > 100
-     *
+     * <p>
      * 内部统一保存为：
-     *
+     * <p>
      * id > 100
      */
     private static String normalizeWhereCondition(
@@ -332,6 +213,121 @@ public final class JdbcSourceConfig
         return normalized.isEmpty()
                 ? null
                 : normalized;
+    }
+
+    public JdbcConnectionConfig getConnectionConfig() {
+        return connectionConfig;
+    }
+
+    public List<JdbcSourceTableConfig> getTableConfigs() {
+        return tableConfigs;
+    }
+
+    public String getWhereCondition() {
+        return whereCondition;
+    }
+
+    public int getFetchSize() {
+        return fetchSize;
+    }
+
+    public boolean isIntTypeNarrowing() {
+        return intTypeNarrowing;
+    }
+
+    public MultiTableFailurePolicy
+    getMultiTableFailurePolicy() {
+
+        return multiTableFailurePolicy;
+    }
+
+    /**
+     * 当前任务是否为多表同步。
+     */
+    public boolean isMultiTable() {
+        return tableConfigs.size() > 1;
+    }
+
+    /**
+     * 当前任务是否配置了全局过滤条件。
+     */
+    public boolean hasWhereCondition() {
+        return whereCondition != null;
+    }
+
+    /**
+     * 当前任务是否包含自定义查询。
+     */
+    public boolean hasCustomQuery() {
+        for (JdbcSourceTableConfig table :
+                tableConfigs) {
+
+            if (table.hasCustomQuery()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 当前任务是否启用了分片读取。
+     * <p>
+     * 不再额外维护 enable_partition_read，
+     * 只要任意表配置 partition_column，即认为需要分片。
+     */
+    public boolean hasPartitionTable() {
+        for (JdbcSourceTableConfig table :
+                tableConfigs) {
+
+            if (table.hasPartition()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 获取单表配置。
+     * <p>
+     * 仅用于明确要求单表的执行逻辑。
+     */
+    public JdbcSourceTableConfig getSingleTableConfig() {
+        if (isMultiTable()) {
+            throw new IllegalStateException(
+                    "当前任务不是单表任务，tableCount="
+                            + tableConfigs.size());
+        }
+
+        return tableConfigs.get(0);
+    }
+
+    /**
+     * 校验 Source 级别的配置关系。
+     */
+    private void validate() {
+        for (JdbcSourceTableConfig table :
+                tableConfigs) {
+
+            /*
+             * 分片参数属于单表配置，
+             * 由每张表自行校验。
+             */
+            table.validatePartition();
+
+            /*
+             * 自定义查询本身已经是一条完整 SQL，
+             * 不再向其后面拼接全局 where_condition。
+             */
+            if (whereCondition != null
+                    && table.hasCustomQuery()) {
+
+                throw new IllegalArgumentException(
+                        "query 不能与全局 where_condition 同时配置，table="
+                                + table.getTablePath());
+            }
+        }
     }
 
     @Override

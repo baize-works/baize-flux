@@ -4,26 +4,20 @@ import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.util.ConfigValidator;
 import com.baize.flux.api.factory.Factory;
 import com.baize.flux.api.source.Source;
+import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
-import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.table.factory.TableSourceFactory;
 import com.baize.flux.framework.factory.FactoryException;
 import com.baize.flux.framework.factory.PreparedSource;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Factory SPI 工具。
- *
+ * <p>
  * 只负责 Factory 的发现、校验和实例创建，
  * 不负责任务调度或数据读取。
  */

@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Creates the bounded JDBC splits for a prepared source. */
+/**
+ * Creates the bounded JDBC splits for a prepared source.
+ */
 final class JdbcSourceSplitGenerator {
 
     private JdbcSourceSplitGenerator() {

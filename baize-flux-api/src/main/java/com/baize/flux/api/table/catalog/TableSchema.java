@@ -4,16 +4,11 @@ import com.baize.flux.api.table.type.FluxDataType;
 import com.baize.flux.api.table.type.FluxRowType;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 数据库表结构。
- *
+ * <p>
  * TableSchema 是不可变对象，可以安全地在 Source、Channel 和 Sink
  * 之间共享。
  */
@@ -75,6 +70,25 @@ public final class TableSchema implements Serializable {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    private static void validatePrimaryKey(
+            PrimaryKey primaryKey,
+            Map<String, Integer> indexes) {
+
+        if (primaryKey == null) {
+            return;
+        }
+
+        for (String columnName :
+                primaryKey.getColumnNames()) {
+
+            if (!indexes.containsKey(columnName)) {
+                throw new IllegalArgumentException(
+                        "Primary key column does not exist: "
+                                + columnName);
+            }
+        }
     }
 
     public List<Column> getColumns() {
@@ -140,7 +154,7 @@ public final class TableSchema implements Serializable {
 
     /**
      * 根据字段列表生成投影后的表结构。
-     *
+     * <p>
      * 主键字段没有全部保留时，投影结果不再携带主键。
      */
     public TableSchema project(
@@ -167,25 +181,6 @@ public final class TableSchema implements Serializable {
         }
 
         return builder.build();
-    }
-
-    private static void validatePrimaryKey(
-            PrimaryKey primaryKey,
-            Map<String, Integer> indexes) {
-
-        if (primaryKey == null) {
-            return;
-        }
-
-        for (String columnName :
-                primaryKey.getColumnNames()) {
-
-            if (!indexes.containsKey(columnName)) {
-                throw new IllegalArgumentException(
-                        "Primary key column does not exist: "
-                                + columnName);
-            }
-        }
     }
 
     @Override

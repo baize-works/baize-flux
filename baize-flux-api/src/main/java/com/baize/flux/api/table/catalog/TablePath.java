@@ -7,17 +7,17 @@ import java.util.Objects;
 
 /**
  * 数据库表路径。
- *
+ * <p>
  * 支持以下形式：
- *
+ * <p>
  * 1. table
  * 2. database.table
  * 3. database.schema.table
- *
+ * <p>
  * 对于 PostgreSQL 这类使用 schema 的数据库，可通过：
- *
+ * <p>
  * TablePath.of(null, "public", "user")
- *
+ * <p>
  * 显式创建。
  */
 public final class TablePath implements Serializable {
@@ -65,7 +65,7 @@ public final class TablePath implements Serializable {
 
     /**
      * 按固定规则解析表路径：
-     *
+     * <p>
      * table
      * database.table
      * database.schema.table
@@ -88,65 +88,6 @@ public final class TablePath implements Serializable {
                 throw new IllegalArgumentException(
                         "非法表路径：" + fullName);
         }
-    }
-
-    public String getDatabaseName() {
-        return databaseName;
-    }
-
-    public String getSchemaName() {
-        return schemaName;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    /**
-     * 获取 schema.table。
-     *
-     * 如果没有 schema，则只返回 table。
-     */
-    public String getSchemaAndTableName() {
-        return join(
-                null,
-                schemaName,
-                tableName,
-                null,
-                null);
-    }
-
-    /**
-     * 获取 database.schema.table。
-     */
-    public String getFullName() {
-        return join(
-                databaseName,
-                schemaName,
-                tableName,
-                null,
-                null);
-    }
-
-    /**
-     * 获取带引号的完整表名。
-     *
-     * MySQL：
-     * getFullNameQuoted("`", "`")
-     *
-     * PostgreSQL：
-     * getFullNameQuoted("\"", "\"")
-     */
-    public String getFullNameQuoted(
-            String quoteLeft,
-            String quoteRight) {
-
-        return join(
-                databaseName,
-                schemaName,
-                tableName,
-                quoteLeft,
-                quoteRight);
     }
 
     private static String join(
@@ -197,6 +138,65 @@ public final class TablePath implements Serializable {
         }
 
         return normalized;
+    }
+
+    public String getDatabaseName() {
+        return databaseName;
+    }
+
+    public String getSchemaName() {
+        return schemaName;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    /**
+     * 获取 schema.table。
+     * <p>
+     * 如果没有 schema，则只返回 table。
+     */
+    public String getSchemaAndTableName() {
+        return join(
+                null,
+                schemaName,
+                tableName,
+                null,
+                null);
+    }
+
+    /**
+     * 获取 database.schema.table。
+     */
+    public String getFullName() {
+        return join(
+                databaseName,
+                schemaName,
+                tableName,
+                null,
+                null);
+    }
+
+    /**
+     * 获取带引号的完整表名。
+     * <p>
+     * MySQL：
+     * getFullNameQuoted("`", "`")
+     * <p>
+     * PostgreSQL：
+     * getFullNameQuoted("\"", "\"")
+     */
+    public String getFullNameQuoted(
+            String quoteLeft,
+            String quoteRight) {
+
+        return join(
+                databaseName,
+                schemaName,
+                tableName,
+                quoteLeft,
+                quoteRight);
     }
 
     @Override

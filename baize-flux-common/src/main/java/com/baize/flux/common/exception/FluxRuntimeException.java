@@ -7,7 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Flux global exception, used to tell user more clearly error messages */
+/**
+ * Flux global exception, used to tell user more clearly error messages
+ */
 public class FluxRuntimeException extends RuntimeException {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -67,7 +69,8 @@ public class FluxRuntimeException extends RuntimeException {
     public Map<String, String> getParamsValueAsMap(String key) {
         try {
             return OBJECT_MAPPER.readValue(
-                    params.get(key), new TypeReference<Map<String, String>>() {});
+                    params.get(key), new TypeReference<Map<String, String>>() {
+                    });
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -75,7 +78,8 @@ public class FluxRuntimeException extends RuntimeException {
 
     public <T> T getParamsValueAs(String key) {
         try {
-            return OBJECT_MAPPER.readValue(params.get(key), new TypeReference<T>() {});
+            return OBJECT_MAPPER.readValue(params.get(key), new TypeReference<T>() {
+            });
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

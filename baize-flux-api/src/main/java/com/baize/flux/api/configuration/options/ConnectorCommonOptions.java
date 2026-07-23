@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public class ConnectorCommonOptions implements
-                Serializable {
+        Serializable {
 
     public static Option<String> PLUGIN_NAME =
             Options.key("plugin_name")

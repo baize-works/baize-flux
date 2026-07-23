@@ -13,7 +13,7 @@ import java.util.Objects;
 
 /**
  * JDBC 离线 Source。
- *
+ * <p>
  * Source 本身只保存不可变配置，不直接持有 JDBC 连接。
  */
 public final class JdbcSource

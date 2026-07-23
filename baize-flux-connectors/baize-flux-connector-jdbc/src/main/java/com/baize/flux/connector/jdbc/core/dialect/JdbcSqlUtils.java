@@ -10,7 +10,8 @@ import java.sql.Statement;
  */
 public final class JdbcSqlUtils {
 
-    private JdbcSqlUtils() {}
+    private JdbcSqlUtils() {
+    }
 
     /**
      * 统计物理表行数。
@@ -52,9 +53,9 @@ public final class JdbcSqlUtils {
             throws SQLException {
 
         try (Statement statement =
-                        connection.createStatement();
-                ResultSet resultSet =
-                        statement.executeQuery(sql)) {
+                     connection.createStatement();
+             ResultSet resultSet =
+                     statement.executeQuery(sql)) {
 
             if (!resultSet.next()) {
                 throw new SQLException(
@@ -78,8 +79,8 @@ public final class JdbcSqlUtils {
         while (normalized.endsWith(";")) {
             normalized =
                     normalized.substring(
-                                    0,
-                                    normalized.length() - 1)
+                            0,
+                            normalized.length() - 1)
                             .trim();
         }
 

@@ -7,7 +7,8 @@ import java.util.Objects;
  */
 public final class TypeUtil {
 
-    private TypeUtil() {}
+    private TypeUtil() {
+    }
 
     /**
      * 判断一个类型是否可以安全或常规地转换为另一个类型。

@@ -14,13 +14,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -96,7 +90,7 @@ public final class MySqlDialect
 
         return "`"
                 + identifier.trim()
-                        .replace("`", "``")
+                .replace("`", "``")
                 + "`";
     }
 
@@ -120,7 +114,7 @@ public final class MySqlDialect
         return quoteIdentifier(database)
                 + "."
                 + quoteIdentifier(
-                        tablePath.getTableName());
+                tablePath.getTableName());
     }
 
     @Override
@@ -170,8 +164,8 @@ public final class MySqlDialect
 
         return Optional.of(
                 buildInsertSql(
-                                tablePath,
-                                fieldNames)
+                        tablePath,
+                        fieldNames)
                         + " ON DUPLICATE KEY UPDATE "
                         + updateClause);
     }
@@ -198,7 +192,7 @@ public final class MySqlDialect
 
     @Override
     public Map<String, String>
-            defaultConnectionProperties() {
+    defaultConnectionProperties() {
 
         Map<String, String> result =
                 new LinkedHashMap<>();

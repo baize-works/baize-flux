@@ -11,9 +11,9 @@ import java.util.List;
 
 /**
  * JDBC 元数据与 Flux 字段类型之间的转换器。
- *
+ * <p>
  * 同一个实现同时服务于：
- *
+ * <p>
  * 1. Source 自定义查询结果结构发现；
  * 2. Catalog 字段发现；
  * 3. Sink 自动建表字段类型生成。
@@ -45,8 +45,8 @@ public interface JdbcTypeMapper extends Serializable {
                         metadata.getColumnCount());
 
         for (int i = 1;
-                i <= metadata.getColumnCount();
-                i++) {
+             i <= metadata.getColumnCount();
+             i++) {
 
             columns.add(map(metadata, i));
         }

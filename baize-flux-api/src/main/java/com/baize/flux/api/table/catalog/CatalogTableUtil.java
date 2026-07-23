@@ -8,12 +8,13 @@ import java.util.Objects;
 
 /**
  * CatalogTable 工具类。
- *
+ * <p>
  * 这里只提供无状态、无连接、无配置依赖的纯转换方法。
  */
 public final class CatalogTableUtil {
 
-    private CatalogTableUtil() {}
+    private CatalogTableUtil() {
+    }
 
     /**
      * 根据 FluxRowType 创建最小表结构。
@@ -53,7 +54,7 @@ public final class CatalogTableUtil {
 
     /**
      * 使用新的 FluxRowType 更新 CatalogTable。
-     *
+     * <p>
      * 同名字段保留原有长度、默认值、注释等元数据，
      * 只替换字段类型。
      */

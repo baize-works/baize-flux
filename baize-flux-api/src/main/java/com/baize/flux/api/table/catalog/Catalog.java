@@ -3,17 +3,13 @@ package com.baize.flux.api.table.catalog;
 import com.baize.flux.api.table.catalog.exception.CatalogException;
 import com.baize.flux.api.table.catalog.exception.TableNotFoundException;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 离线表 Catalog。
- *
+ * <p>
  * Catalog 只负责数据库和表元数据发现。
- *
+ * <p>
  * 多表失败策略、配置解析、日志记录等逻辑不属于 Catalog，
  * 应由 JdbcSource 或任务校验层处理。
  */
@@ -21,9 +17,9 @@ public interface Catalog extends AutoCloseable {
 
     /**
      * Catalog 名称。
-     *
+     * <p>
      * 例如：
-     *
+     * <p>
      * mysql
      * postgresql
      * oracle
@@ -37,7 +33,7 @@ public interface Catalog extends AutoCloseable {
 
     /**
      * 获取默认数据库。
-     *
+     * <p>
      * 部分数据库可能没有默认数据库，因此使用 Optional。
      */
     default Optional<String> getDefaultDatabase()
@@ -54,7 +50,7 @@ public interface Catalog extends AutoCloseable {
 
     /**
      * 获取指定数据库下的所有 Schema。
-     *
+     * <p>
      * MySQL 等没有独立 Schema 概念的数据库可以返回空集合。
      */
     default List<String> listSchemas(
@@ -66,7 +62,7 @@ public interface Catalog extends AutoCloseable {
 
     /**
      * 获取指定数据库和 Schema 下的表路径。
-     *
+     * <p>
      * schemaName 可以为空。
      */
     List<TablePath> listTables(
@@ -89,10 +85,10 @@ public interface Catalog extends AutoCloseable {
 
     /**
      * 获取多张表的元数据。
-     *
+     * <p>
      * 默认采用严格模式：
      * 任意一张表获取失败，立即抛出异常。
-     *
+     * <p>
      * 跳过失败表的策略应在 JdbcSource 层处理，
      * 不应污染 Catalog 接口。
      */

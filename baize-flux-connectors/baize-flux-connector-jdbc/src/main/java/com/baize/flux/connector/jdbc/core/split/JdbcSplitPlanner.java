@@ -7,16 +7,15 @@ import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.source.JdbcSourceSplit;
 import com.baize.flux.connector.jdbc.source.JdbcSourceTable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
-/** Plans the static, table-level splits used by the bounded JDBC source. */
+/**
+ * Plans the static, table-level splits used by the bounded JDBC source.
+ */
 public final class JdbcSplitPlanner {
 
-    private JdbcSplitPlanner() {}
+    private JdbcSplitPlanner() {
+    }
 
     public static List<JdbcSourceSplit> plan(
             JdbcSourceConfig config,

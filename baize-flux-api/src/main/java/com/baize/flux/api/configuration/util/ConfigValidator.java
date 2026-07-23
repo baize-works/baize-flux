@@ -4,18 +4,10 @@ import com.baize.flux.api.configuration.Option;
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.SingleChoiceOption;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.baize.flux.api.configuration.util.OptionUtil.formatError;
-import static com.baize.flux.api.configuration.util.OptionUtil.formatOptionsError;
-import static com.baize.flux.api.configuration.util.OptionUtil.getOptionKeys;
+import static com.baize.flux.api.configuration.util.OptionUtil.*;
 
 /**
  * 配置规则校验器。
@@ -94,6 +86,146 @@ public final class ConfigValidator {
                     declaredKeys.stream()
                             .sorted()
                             .collect(Collectors.toList()));
+        }
+    }
+
+    private static Set<String> collectDeclaredKeys(
+            OptionRule rule) {
+
+        Set<String> keys =
+                new HashSet<>();
+
+        if (rule == null) {
+            return keys;
+        }
+
+        collectKeys(
+                keys,
+                rule.getOptionalOptions());
+
+        for (RequiredOption required :
+                rule.getRequiredOptions()) {
+            collectKeys(
+                    keys,
+                    required.getOptions());
+
+            if (required
+                    instanceof
+                    RequiredOption
+                            .ConditionalRequiredOptions) {
+
+                collectConditionKeys(
+                        keys,
+                        ((RequiredOption
+                                .ConditionalRequiredOptions)
+                                required)
+                                .getCondition());
+            }
+        }
+
+        for (ConditionRule conditionRule :
+                rule.getConditionRules()) {
+
+            collectConditionKeys(
+                    keys,
+                    conditionRule.getCondition());
+
+            keys.addAll(
+                    collectDeclaredKeys(
+                            conditionRule
+                                    .getOptionRule()));
+        }
+
+        for (Condition<?> constraint :
+                rule.getValueConstraints()) {
+
+            collectConditionKeys(
+                    keys,
+                    constraint);
+        }
+
+        return keys;
+    }
+
+    private static void collectConditionKeys(
+            Set<String> keys,
+            Condition<?> condition) {
+
+        Condition<?> current = condition;
+
+        while (current != null) {
+            addOptionKeys(
+                    keys,
+                    current.getOption());
+
+            if (current.getCompareOption()
+                    != null) {
+                addOptionKeys(
+                        keys,
+                        current.getCompareOption());
+            }
+
+            current = current.getNext();
+        }
+    }
+
+    private static void collectKeys(
+            Set<String> keys,
+            List<? extends Option<?>> options) {
+
+        for (Option<?> option : options) {
+            addOptionKeys(keys, option);
+        }
+    }
+
+    private static void addOptionKeys(
+            Set<String> keys,
+            Option<?> option) {
+
+        keys.add(option.key());
+        keys.addAll(
+                option.getFallbackKeys());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void validatePaths(
+            Map<String, Object> map,
+            String prefix,
+            Set<String> declaredKeys,
+            List<String> unknownKeys) {
+
+        for (Map.Entry<String, Object> entry :
+                map.entrySet()) {
+
+            String fullKey =
+                    prefix.isEmpty()
+                            ? entry.getKey()
+                            : prefix
+                            + "."
+                            + entry.getKey();
+
+            boolean valid =
+                    declaredKeys.contains(fullKey)
+                            || declaredKeys.stream()
+                            .anyMatch(key ->
+                                    key.startsWith(
+                                            fullKey + "."));
+
+            if (!valid) {
+                unknownKeys.add(fullKey);
+                continue;
+            }
+
+            if (entry.getValue() instanceof Map
+                    && !declaredKeys.contains(fullKey)) {
+
+                validatePaths(
+                        (Map<String, Object>)
+                                entry.getValue(),
+                        fullKey,
+                        declaredKeys,
+                        unknownKeys);
+            }
         }
     }
 
@@ -634,146 +766,6 @@ public final class ConfigValidator {
                         required.getOptions())) {
 
             absentKeys.add(option.key());
-        }
-    }
-
-    private static Set<String> collectDeclaredKeys(
-            OptionRule rule) {
-
-        Set<String> keys =
-                new HashSet<>();
-
-        if (rule == null) {
-            return keys;
-        }
-
-        collectKeys(
-                keys,
-                rule.getOptionalOptions());
-
-        for (RequiredOption required :
-                rule.getRequiredOptions()) {
-            collectKeys(
-                    keys,
-                    required.getOptions());
-
-            if (required
-                    instanceof
-                    RequiredOption
-                            .ConditionalRequiredOptions) {
-
-                collectConditionKeys(
-                        keys,
-                        ((RequiredOption
-                                .ConditionalRequiredOptions)
-                                required)
-                                .getCondition());
-            }
-        }
-
-        for (ConditionRule conditionRule :
-                rule.getConditionRules()) {
-
-            collectConditionKeys(
-                    keys,
-                    conditionRule.getCondition());
-
-            keys.addAll(
-                    collectDeclaredKeys(
-                            conditionRule
-                                    .getOptionRule()));
-        }
-
-        for (Condition<?> constraint :
-                rule.getValueConstraints()) {
-
-            collectConditionKeys(
-                    keys,
-                    constraint);
-        }
-
-        return keys;
-    }
-
-    private static void collectConditionKeys(
-            Set<String> keys,
-            Condition<?> condition) {
-
-        Condition<?> current = condition;
-
-        while (current != null) {
-            addOptionKeys(
-                    keys,
-                    current.getOption());
-
-            if (current.getCompareOption()
-                    != null) {
-                addOptionKeys(
-                        keys,
-                        current.getCompareOption());
-            }
-
-            current = current.getNext();
-        }
-    }
-
-    private static void collectKeys(
-            Set<String> keys,
-            List<? extends Option<?>> options) {
-
-        for (Option<?> option : options) {
-            addOptionKeys(keys, option);
-        }
-    }
-
-    private static void addOptionKeys(
-            Set<String> keys,
-            Option<?> option) {
-
-        keys.add(option.key());
-        keys.addAll(
-                option.getFallbackKeys());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void validatePaths(
-            Map<String, Object> map,
-            String prefix,
-            Set<String> declaredKeys,
-            List<String> unknownKeys) {
-
-        for (Map.Entry<String, Object> entry :
-                map.entrySet()) {
-
-            String fullKey =
-                    prefix.isEmpty()
-                            ? entry.getKey()
-                            : prefix
-                            + "."
-                            + entry.getKey();
-
-            boolean valid =
-                    declaredKeys.contains(fullKey)
-                            || declaredKeys.stream()
-                            .anyMatch(key ->
-                                    key.startsWith(
-                                            fullKey + "."));
-
-            if (!valid) {
-                unknownKeys.add(fullKey);
-                continue;
-            }
-
-            if (entry.getValue() instanceof Map
-                    && !declaredKeys.contains(fullKey)) {
-
-                validatePaths(
-                        (Map<String, Object>)
-                                entry.getValue(),
-                        fullKey,
-                        declaredKeys,
-                        unknownKeys);
-            }
         }
     }
 }

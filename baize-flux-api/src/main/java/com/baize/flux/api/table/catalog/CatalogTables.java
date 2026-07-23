@@ -1,18 +1,11 @@
 package com.baize.flux.api.table.catalog;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 单表或多表 Catalog 元数据集合。
- *
+ * <p>
  * 单表场景 size() == 1；
  * 多表场景 size() > 1。
  */

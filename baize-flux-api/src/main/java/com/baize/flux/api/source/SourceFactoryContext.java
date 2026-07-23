@@ -6,7 +6,7 @@ import java.util.Objects;
 
 /**
  * Source 工厂上下文。
- *
+ * <p>
  * 封装创建 Source 时所需的配置和类加载器。
  */
 public final class SourceFactoryContext {
@@ -18,7 +18,7 @@ public final class SourceFactoryContext {
 
     /**
      * 当前 Connector 使用的类加载器。
-     *
+     * <p>
      * 可用于加载 JDBC Driver、SPI 实现和 Connector 内部资源。
      */
     private final ClassLoader classLoader;

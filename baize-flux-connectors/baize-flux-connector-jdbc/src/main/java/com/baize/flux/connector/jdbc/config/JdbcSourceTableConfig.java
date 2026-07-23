@@ -1,23 +1,17 @@
 package com.baize.flux.connector.jdbc.config;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.Getter;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 单张 JDBC 表的读取配置。
- *
+ * <p>
  * tablePath 既是物理表路径，也是多表任务中的数据集标识。
  * query 不为空时，使用 query 替代默认的 SELECT 语句。
  */
@@ -139,6 +133,37 @@ public final class JdbcSourceTableConfig
                 new ArrayList<>(result));
     }
 
+    private static void validateUniqueTablePath(
+            List<JdbcSourceTableConfig> tables) {
+
+        Set<String> tablePaths =
+                new HashSet<>();
+
+        for (JdbcSourceTableConfig table :
+                tables) {
+
+            if (!tablePaths.add(
+                    table.getTablePath())) {
+
+                throw new IllegalArgumentException(
+                        "table_path 不允许重复："
+                                + table.getTablePath());
+            }
+        }
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        return normalized.isEmpty()
+                ? null
+                : normalized;
+    }
+
     /**
      * 校验分片配置。
      */
@@ -197,10 +222,9 @@ public final class JdbcSourceTableConfig
         }
     }
 
-
     /**
      * 校验当前表的分片配置。
-     *
+     * <p>
      * 未配置 partition_column 时按单分片读取；
      * 配置 partition_column 时自动启用分片读取。
      */
@@ -266,36 +290,5 @@ public final class JdbcSourceTableConfig
             throw new IllegalArgumentException(
                     "partition_num must be greater than 0");
         }
-    }
-
-    private static void validateUniqueTablePath(
-            List<JdbcSourceTableConfig> tables) {
-
-        Set<String> tablePaths =
-                new HashSet<>();
-
-        for (JdbcSourceTableConfig table :
-                tables) {
-
-            if (!tablePaths.add(
-                    table.getTablePath())) {
-
-                throw new IllegalArgumentException(
-                        "table_path 不允许重复："
-                                + table.getTablePath());
-            }
-        }
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-
-        return normalized.isEmpty()
-                ? null
-                : normalized;
     }
 }

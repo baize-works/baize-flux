@@ -1,6 +1,7 @@
 package com.baize.flux.launcher;
 
-import com.baize.flux.api.configuration.*;
+import com.baize.flux.api.configuration.Option;
+import com.baize.flux.api.configuration.Options;
 
 import java.util.Map;
 

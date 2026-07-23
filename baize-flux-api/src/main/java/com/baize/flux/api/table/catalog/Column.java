@@ -10,7 +10,7 @@ import java.util.Objects;
 
 /**
  * 数据库物理列。
- *
+ * <p>
  * Catalog 层只描述实际存在于数据库表中的字段，
  * 不包含 CDC 元数据字段或运行时计算字段。
  */
@@ -43,9 +43,9 @@ public final class Column implements Serializable {
 
     /**
      * 数据库原始字段类型。
-     *
+     * <p>
      * 例如：
-     *
+     * <p>
      * varchar(255)
      * int unsigned
      * numeric(20, 4)
@@ -55,9 +55,9 @@ public final class Column implements Serializable {
 
     /**
      * 数据库厂商特有属性。
-     *
+     * <p>
      * 例如：
-     *
+     * <p>
      * unsigned=true
      * charset=utf8mb4
      * collation=utf8mb4_general_ci
@@ -116,6 +116,41 @@ public final class Column implements Serializable {
             FluxDataType<?> dataType) {
 
         return new Builder(name, dataType);
+    }
+
+    private static void validateNonNegative(
+            Number value,
+            String fieldName) {
+
+        if (value != null
+                && value.longValue() < 0) {
+
+            throw new IllegalArgumentException(
+                    fieldName + " must not be negative");
+        }
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String requireText(
+            String value,
+            String fieldName) {
+
+        String normalized = normalize(value);
+
+        if (normalized == null) {
+            throw new IllegalArgumentException(
+                    fieldName + " must not be empty");
+        }
+
+        return normalized;
     }
 
     public String getName() {
@@ -193,41 +228,6 @@ public final class Column implements Serializable {
                 .comment(comment)
                 .sourceType(sourceType)
                 .attributes(attributes);
-    }
-
-    private static void validateNonNegative(
-            Number value,
-            String fieldName) {
-
-        if (value != null
-                && value.longValue() < 0) {
-
-            throw new IllegalArgumentException(
-                    fieldName + " must not be negative");
-        }
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
-    }
-
-    private static String requireText(
-            String value,
-            String fieldName) {
-
-        String normalized = normalize(value);
-
-        if (normalized == null) {
-            throw new IllegalArgumentException(
-                    fieldName + " must not be empty");
-        }
-
-        return normalized;
     }
 
     @Override

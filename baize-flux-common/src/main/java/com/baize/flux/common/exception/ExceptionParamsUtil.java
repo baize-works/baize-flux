@@ -47,7 +47,7 @@ public final class ExceptionParamsUtil {
      * 根据参数值替换异常描述模板中的占位参数。
      *
      * @param descriptionTemplate 异常描述模板
-     * @param params 参数名称与参数值的映射
+     * @param params              参数名称与参数值的映射
      * @return 替换参数后的异常描述
      */
     public static String getDescription(
@@ -71,7 +71,7 @@ public final class ExceptionParamsUtil {
      * 校验异常描述模板中声明的参数是否都已设置。
      *
      * @param descriptionTemplate 异常描述模板
-     * @param params 参数名称与参数值的映射
+     * @param params              参数名称与参数值的映射
      * @throws IllegalArgumentException 模板中的参数未设置时抛出
      */
     public static void assertParamsMatchWithDescription(

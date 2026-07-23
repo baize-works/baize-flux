@@ -10,11 +10,18 @@ import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 import com.baize.flux.connector.jdbc.config.JdbcSinkOptions;
 import com.google.auto.service.AutoService;
 
-/** JDBC Sink SPI factory. */
+/**
+ * JDBC Sink SPI factory.
+ */
 @AutoService(SinkFactory.class)
 public final class JdbcSinkFactory implements SinkFactory {
-    @Override public String factoryIdentifier() { return "jdbc"; }
-    @Override public OptionRule optionRule() {
+    @Override
+    public String factoryIdentifier() {
+        return "jdbc";
+    }
+
+    @Override
+    public OptionRule optionRule() {
         return JdbcCommonOptions.baseConnectionRule().optional(
                 JdbcSinkOptions.TABLE_PATH, JdbcSinkOptions.SCHEMA_SAVE_MODE,
                 JdbcSinkOptions.DATA_SAVE_MODE, JdbcSinkOptions.WRITE_MODE,
@@ -22,5 +29,9 @@ public final class JdbcSinkFactory implements SinkFactory {
                 JdbcSinkOptions.BATCH_SIZE, JdbcSinkOptions.MAX_RETRIES,
                 JdbcSinkOptions.CREATE_PRIMARY_KEY).build();
     }
-    @Override public SinkWriter<FluxRow> createSink(ReadonlyConfig config) { return new JdbcSinkWriter(JdbcSinkConfig.of(config)); }
+
+    @Override
+    public SinkWriter<FluxRow> createSink(ReadonlyConfig config) {
+        return new JdbcSinkWriter(JdbcSinkConfig.of(config));
+    }
 }

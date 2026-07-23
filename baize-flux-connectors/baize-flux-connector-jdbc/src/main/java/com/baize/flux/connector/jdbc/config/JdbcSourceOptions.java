@@ -13,9 +13,9 @@ public final class JdbcSourceOptions
 
     /**
      * 数据表路径。
-     *
+     * <p>
      * 例如：
-     *
+     * <p>
      * database.table
      * database.schema.table
      */
@@ -27,7 +27,7 @@ public final class JdbcSourceOptions
 
     /**
      * 自定义查询 SQL。
-     *
+     * <p>
      * 配置 query 时仍建议配置 table_path，
      * table_path 作为该查询结果的数据集标识。
      */
@@ -50,11 +50,11 @@ public final class JdbcSourceOptions
 
     /**
      * 公共过滤条件。
-     *
+     * <p>
      * 推荐只配置条件主体：
-     *
+     * <p>
      * id > 100
-     *
+     * <p>
      * 不需要写 where。
      */
     public static final Option<String> WHERE_CONDITION =
@@ -71,7 +71,7 @@ public final class JdbcSourceOptions
 
     /**
      * 是否启用字段范围分片读取。
-     *
+     * <p>
      * 默认关闭，保证第一版行为简单、稳定。
      */
     public static final Option<Boolean>

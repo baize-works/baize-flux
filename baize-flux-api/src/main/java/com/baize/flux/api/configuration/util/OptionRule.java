@@ -2,11 +2,7 @@ package com.baize.flux.api.configuration.util;
 
 import com.baize.flux.api.configuration.Option;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 配置项规则。
@@ -112,6 +108,41 @@ public final class OptionRule {
                 new ArrayList<>();
 
         private Builder() {
+        }
+
+        private static <T> List<T> merge(
+                List<T> first,
+                List<T> second) {
+
+            List<T> result =
+                    new ArrayList<>(first);
+
+            result.addAll(second);
+            return result;
+        }
+
+        private static void requireOptions(
+                Option<?>[] options) {
+
+            if (options == null
+                    || options.length == 0) {
+                throw new OptionValidationException(
+                        "Options must not be empty");
+            }
+
+            for (Option<?> option : options) {
+                Objects.requireNonNull(
+                        option,
+                        "option");
+            }
+        }
+
+        private static OptionValidationException duplicate(
+                Option<?> option) {
+
+            return new OptionValidationException(
+                    "Option '%s' is declared repeatedly",
+                    option.key());
         }
 
         public Builder optional(Option<?>... options) {
@@ -482,17 +513,6 @@ public final class OptionRule {
                             newRule));
         }
 
-        private static <T> List<T> merge(
-                List<T> first,
-                List<T> second) {
-
-            List<T> result =
-                    new ArrayList<>(first);
-
-            result.addAll(second);
-            return result;
-        }
-
         private void verifyOptionalDuplicate(
                 Option<?> option) {
 
@@ -577,30 +597,6 @@ public final class OptionRule {
             throw new OptionValidationException(
                     "Conditional option '%s' is not declared",
                     conditionOption.key());
-        }
-
-        private static void requireOptions(
-                Option<?>[] options) {
-
-            if (options == null
-                    || options.length == 0) {
-                throw new OptionValidationException(
-                        "Options must not be empty");
-            }
-
-            for (Option<?> option : options) {
-                Objects.requireNonNull(
-                        option,
-                        "option");
-            }
-        }
-
-        private static OptionValidationException duplicate(
-                Option<?> option) {
-
-            return new OptionValidationException(
-                    "Option '%s' is declared repeatedly",
-                    option.key());
         }
     }
 }

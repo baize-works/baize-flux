@@ -1,7 +1,6 @@
 package com.baize.flux.connector.jdbc.config;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
-
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 import lombok.Getter;
@@ -14,14 +13,14 @@ import java.util.Objects;
 
 /**
  * JDBC 离线 Sink 运行配置。
- *
+ * <p>
  * Sink 固定使用显式事务：
- *
+ * <p>
  * 1. connection.setAutoCommit(false)；
  * 2. executeBatch；
  * 3. commit；
  * 4. 失败时 rollback。
- *
+ * <p>
  * 因此不再对外暴露 auto_commit、XA、Exactly Once 等配置。
  */
 @Getter
@@ -34,7 +33,7 @@ public final class JdbcSinkConfig
 
     /**
      * 目标表或多表目标模板。
-     *
+     * <p>
      * 为空时默认沿用 Source TablePath。
      */
     private final String targetTablePath;
@@ -143,19 +142,6 @@ public final class JdbcSinkConfig
                                 .CREATE_PRIMARY_KEY));
     }
 
-    public boolean isUpsert() {
-        return writeMode
-                == JdbcWriteMode.UPSERT;
-    }
-
-    public boolean hasCustomSql() {
-        return customSql != null;
-    }
-
-    public boolean hasConfiguredPrimaryKeys() {
-        return !primaryKeys.isEmpty();
-    }
-
     private static List<String> normalizePrimaryKeys(
             List<String> primaryKeys) {
 
@@ -194,5 +180,18 @@ public final class JdbcSinkConfig
         return normalized.isEmpty()
                 ? null
                 : normalized;
+    }
+
+    public boolean isUpsert() {
+        return writeMode
+                == JdbcWriteMode.UPSERT;
+    }
+
+    public boolean hasCustomSql() {
+        return customSql != null;
+    }
+
+    public boolean hasConfiguredPrimaryKeys() {
+        return !primaryKeys.isEmpty();
     }
 }

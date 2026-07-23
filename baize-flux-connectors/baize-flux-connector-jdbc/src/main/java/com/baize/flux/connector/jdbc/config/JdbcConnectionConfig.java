@@ -1,21 +1,16 @@
 package com.baize.flux.connector.jdbc.config;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
-
 import lombok.Getter;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * JDBC 连接配置。
- *
+ * <p>
  * 该类只负责数据库连接，不包含：
- *
+ * <p>
  * 1. Source 分片配置；
  * 2. Sink 批次配置；
  * 3. Exactly Once；
@@ -137,9 +132,34 @@ public final class JdbcConnectionConfig
                         .orElse(Collections.emptyMap()));
     }
 
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty()
+                ? null
+                : normalized;
+    }
+
+    private static String requireText(
+            String value,
+            String fieldName) {
+
+        String normalized = normalize(value);
+
+        if (normalized == null) {
+            throw new IllegalArgumentException(
+                    fieldName + " must not be empty");
+        }
+
+        return normalized;
+    }
+
     /**
      * 构造 DriverManager 使用的连接属性。
-     *
+     * <p>
      * connectTimeout、socketTimeout 的具体参数名由不同数据库
      * Driver 决定，因此不在公共层自动写入。
      */
@@ -167,30 +187,5 @@ public final class JdbcConnectionConfig
         }
 
         return result;
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty()
-                ? null
-                : normalized;
-    }
-
-    private static String requireText(
-            String value,
-            String fieldName) {
-
-        String normalized = normalize(value);
-
-        if (normalized == null) {
-            throw new IllegalArgumentException(
-                    fieldName + " must not be empty");
-        }
-
-        return normalized;
     }
 }

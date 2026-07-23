@@ -1,16 +1,7 @@
 package com.baize.flux.connector.jdbc.catalog.mysql;
 
-import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.api.table.catalog.Column;
-import com.baize.flux.api.table.catalog.PrimaryKey;
-import com.baize.flux.api.table.catalog.TablePath;
-import com.baize.flux.api.table.catalog.TableSchema;
-import com.baize.flux.api.table.catalog.WritableCatalog;
-import com.baize.flux.api.table.catalog.exception.CatalogException;
-import com.baize.flux.api.table.catalog.exception.DatabaseAlreadyExistsException;
-import com.baize.flux.api.table.catalog.exception.DatabaseNotFoundException;
-import com.baize.flux.api.table.catalog.exception.TableAlreadyExistsException;
-import com.baize.flux.api.table.catalog.exception.TableNotFoundException;
+import com.baize.flux.api.table.catalog.*;
+import com.baize.flux.api.table.catalog.exception.*;
 import com.baize.flux.connector.jdbc.catalog.AbstractJdbcCatalog;
 import com.baize.flux.connector.jdbc.catalog.JdbcCatalogConfig;
 
@@ -24,9 +15,9 @@ import java.util.List;
 
 /**
  * MySQL Catalog。
- *
+ * <p>
  * 当前支持：
- *
+ * <p>
  * 1. 数据库发现；
  * 2. 数据表发现；
  * 3. 表结构读取；
@@ -125,6 +116,26 @@ public final class MySqlCatalog
         this.typeMapper =
                 new MySqlTypeMapper(
                         config.isIntTypeNarrowing());
+    }
+
+    private static String normalize(
+            String value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        return normalized.isEmpty()
+                ? null
+                : normalized;
+    }
+
+    private static boolean hasText(
+            String value) {
+
+        return normalize(value) != null;
     }
 
     @Override
@@ -729,26 +740,6 @@ public final class MySqlCatalog
                         () ->
                                 new IllegalArgumentException(
                                         "没有指定 MySQL 数据库"));
-    }
-
-    private static String normalize(
-            String value) {
-
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-
-        return normalized.isEmpty()
-                ? null
-                : normalized;
-    }
-
-    private static boolean hasText(
-            String value) {
-
-        return normalize(value) != null;
     }
 
     private static final class TableMeta {

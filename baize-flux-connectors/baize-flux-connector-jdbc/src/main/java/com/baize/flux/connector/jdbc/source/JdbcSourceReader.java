@@ -15,7 +15,7 @@ import java.util.Map;
 
 /**
  * JDBC 离线数据读取器。
- *
+ * <p>
  * Reader 依次读取分配给自己的分片，并按批次输出 FluxRow。
  */
 public final class JdbcSourceReader

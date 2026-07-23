@@ -24,7 +24,7 @@ public final class RecordBatch<T> implements Serializable {
 
     /**
      * 当前批次所属的数据集。
-     *
+     * <p>
      * JDBC Source 中通常对应表名。
      */
     private final String dataSetId;

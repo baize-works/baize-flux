@@ -14,20 +14,28 @@ import java.util.Objects;
  */
 public class Option<T> {
 
-    /** 配置键。 */
+    /**
+     * 配置键。
+     */
     private final String key;
 
-    /** 配置值类型。 */
+    /**
+     * 配置值类型。
+     */
     private final TypeReference<T> typeReference;
 
-    /** 默认值。 */
+    /**
+     * 默认值。
+     */
     private final T defaultValue;
-
-    /** 配置说明。 */
-    private String description = "";
-
-    /** 兼容的旧配置键。 */
+    /**
+     * 兼容的旧配置键。
+     */
     private final List<String> fallbackKeys = new ArrayList<>();
+    /**
+     * 配置说明。
+     */
+    private String description = "";
 
     public Option(String key, TypeReference<T> typeReference, T defaultValue) {
         this.key = Objects.requireNonNull(key, "key");

@@ -14,7 +14,9 @@ import java.sql.ResultSet;
 import java.util.Map;
 import java.util.Objects;
 
-/** Owns the JDBC resources required to read one source split at a time. */
+/**
+ * Owns the JDBC resources required to read one source split at a time.
+ */
 public final class JdbcInputFormat {
 
     private final JdbcSourceConfig config;
@@ -65,8 +67,14 @@ public final class JdbcInputFormat {
     }
 
     public void close() throws Exception {
-        if (resultSet != null) { resultSet.close(); resultSet = null; }
-        if (statement != null) { statement.close(); statement = null; }
+        if (resultSet != null) {
+            resultSet.close();
+            resultSet = null;
+        }
+        if (statement != null) {
+            statement.close();
+            statement = null;
+        }
         currentTable = null;
         exhausted = false;
     }

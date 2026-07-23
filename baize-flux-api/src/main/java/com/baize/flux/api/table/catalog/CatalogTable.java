@@ -51,6 +51,15 @@ public final class CatalogTable implements Serializable {
                 tableSchema);
     }
 
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     public TablePath getTablePath() {
         return tablePath;
     }
@@ -84,7 +93,7 @@ public final class CatalogTable implements Serializable {
 
     /**
      * 将当前表映射到新的表路径。
-     *
+     * <p>
      * 可用于 Source 表到 Sink 表的结构复制。
      */
     public CatalogTable withPath(
@@ -101,15 +110,6 @@ public final class CatalogTable implements Serializable {
                 tableSchema)
                 .comment(comment)
                 .options(options);
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
     }
 
     @Override

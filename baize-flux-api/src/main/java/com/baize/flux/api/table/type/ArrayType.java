@@ -5,7 +5,7 @@ import java.util.Objects;
 
 /**
  * 数组数据类型。
- *
+ * <p>
  * 使用统一的 ArrayType 即可，不再为 Decimal、时间等类型
  * 分别创建独立的数组类型。
  *

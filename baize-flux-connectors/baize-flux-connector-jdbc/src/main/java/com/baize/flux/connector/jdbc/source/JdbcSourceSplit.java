@@ -8,9 +8,9 @@ import java.util.Objects;
 
 /**
  * JDBC 数据读取分片。
- *
+ * <p>
  * 一个分片通常对应一段查询范围，例如：
- *
+ * <p>
  * id >= 1 and id < 10000
  */
 public final class JdbcSourceSplit implements SourceSplit {
@@ -86,7 +86,7 @@ public final class JdbcSourceSplit implements SourceSplit {
 
     /**
      * 使用表路径作为数据集标识。
-     *
+     * <p>
      * 后续 Sink 可以根据 dataSetId 找到对应的目标表。
      */
     @Override

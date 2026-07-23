@@ -35,35 +35,43 @@ public final class Options {
         }
 
         public TypedOptionBuilder<Boolean> booleanType() {
-            return type(new TypeReference<Boolean>() {});
+            return type(new TypeReference<Boolean>() {
+            });
         }
 
         public TypedOptionBuilder<Integer> intType() {
-            return type(new TypeReference<Integer>() {});
+            return type(new TypeReference<Integer>() {
+            });
         }
 
         public TypedOptionBuilder<Long> longType() {
-            return type(new TypeReference<Long>() {});
+            return type(new TypeReference<Long>() {
+            });
         }
 
         public TypedOptionBuilder<BigDecimal> bigDecimalType() {
-            return type(new TypeReference<BigDecimal>() {});
+            return type(new TypeReference<BigDecimal>() {
+            });
         }
 
         public TypedOptionBuilder<Float> floatType() {
-            return type(new TypeReference<Float>() {});
+            return type(new TypeReference<Float>() {
+            });
         }
 
         public TypedOptionBuilder<Double> doubleType() {
-            return type(new TypeReference<Double>() {});
+            return type(new TypeReference<Double>() {
+            });
         }
 
         public TypedOptionBuilder<String> stringType() {
-            return type(new TypeReference<String>() {});
+            return type(new TypeReference<String>() {
+            });
         }
 
         public TypedOptionBuilder<Duration> durationType() {
-            return type(new TypeReference<Duration>() {});
+            return type(new TypeReference<Duration>() {
+            });
         }
 
         public <T extends Enum<T>> TypedOptionBuilder<T> enumType(Class<T> enumClass) {
@@ -79,15 +87,18 @@ public final class Options {
         }
 
         public TypedOptionBuilder<Map<String, String>> mapType() {
-            return type(new TypeReference<Map<String, String>>() {});
+            return type(new TypeReference<Map<String, String>>() {
+            });
         }
 
         public TypedOptionBuilder<Map<String, Object>> mapObjectType() {
-            return type(new TypeReference<Map<String, Object>>() {});
+            return type(new TypeReference<Map<String, Object>>() {
+            });
         }
 
         public TypedOptionBuilder<List<String>> listType() {
-            return type(new TypeReference<List<String>>() {});
+            return type(new TypeReference<List<String>>() {
+            });
         }
 
         public <T> TypedOptionBuilder<List<T>> listType(Class<T> elementType) {
@@ -100,7 +111,7 @@ public final class Options {
                             return new ParameterizedType() {
                                 @Override
                                 public Type[] getActualTypeArguments() {
-                                    return new Type[] {elementType};
+                                    return new Type[]{elementType};
                                 }
 
                                 @Override

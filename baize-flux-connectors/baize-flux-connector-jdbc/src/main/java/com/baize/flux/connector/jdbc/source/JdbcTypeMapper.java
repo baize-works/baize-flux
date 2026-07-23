@@ -15,7 +15,8 @@ import java.sql.Types;
  */
 public final class JdbcTypeMapper {
 
-    private JdbcTypeMapper() {}
+    private JdbcTypeMapper() {
+    }
 
     /**
      * 根据 ResultSetMetaData 自动生成 FluxRowType。

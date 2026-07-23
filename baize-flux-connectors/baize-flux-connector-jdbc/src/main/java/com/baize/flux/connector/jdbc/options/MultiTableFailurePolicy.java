@@ -1,6 +1,8 @@
 package com.baize.flux.connector.jdbc.options;
 
-/** Failure handling policy for multi-table jobs. */
+/**
+ * Failure handling policy for multi-table jobs.
+ */
 public enum MultiTableFailurePolicy {
     FAIL_FAST,
     CONTINUE_OTHER_TABLES;

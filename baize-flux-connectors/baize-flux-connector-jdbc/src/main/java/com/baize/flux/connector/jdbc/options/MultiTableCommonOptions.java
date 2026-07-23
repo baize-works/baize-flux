@@ -24,5 +24,6 @@ public class MultiTableCommonOptions {
                     .withDescription(
                             "Internal option used to propagate pre-runtime failed-table metadata into MultiTableSink.");
 
-    private MultiTableCommonOptions() {}
+    private MultiTableCommonOptions() {
+    }
 }

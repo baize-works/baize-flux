@@ -15,7 +15,7 @@ public final class PrimaryKey implements Serializable {
 
     /**
      * 主键名称。
-     *
+     * <p>
      * 部分数据库可能无法获取主键名称，因此允许为空。
      */
     private final String name;
@@ -72,6 +72,15 @@ public final class PrimaryKey implements Serializable {
                 columnNames);
     }
 
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     public String getName() {
         return name;
     }
@@ -82,15 +91,6 @@ public final class PrimaryKey implements Serializable {
 
     public boolean contains(String fieldName) {
         return columnNames.contains(fieldName);
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
     }
 
     @Override

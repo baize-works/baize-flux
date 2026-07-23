@@ -1,14 +1,10 @@
 package com.baize.flux.api.table.type;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * FluxRow 对应的字段结构。
- *
+ * <p>
  * 一个同步任务通常只维护一个 FluxRowType，
  * 不需要在每一条 FluxRow 中重复保存 Schema。
  */

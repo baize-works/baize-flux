@@ -1,8 +1,7 @@
 # JDBC source connector
 
-The `jdbc` source executes one SQL query and emits its result set once. It is a
-bounded source intended for offline synchronization; it does not poll for
-changes or implement CDC.
+The `jdbc` source executes one SQL query and emits its result set once. It is a bounded source intended for offline
+synchronization; it does not poll for changes or implement CDC.
 
 ## Options
 

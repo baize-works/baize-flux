@@ -11,11 +11,11 @@ import java.util.Map;
 
 /**
  * JDBC Source、Sink、Catalog 共用配置。
- *
+ * <p>
  * 这里只保留真正属于 JDBC 连接层的配置，
  * 不放 Source 分片、Sink 批次或数据库专属能力。
  */
-public  class JdbcCommonOptions {
+public class JdbcCommonOptions {
 
 
     public static final Option<String> URL =
@@ -45,7 +45,7 @@ public  class JdbcCommonOptions {
 
     /**
      * 显式指定数据库方言。
-     *
+     * <p>
      * 未配置时，可以根据 JDBC URL 自动识别。
      */
     public static final Option<String> DIALECT =
@@ -65,7 +65,7 @@ public  class JdbcCommonOptions {
 
     /**
      * 默认 Schema。
-     *
+     * <p>
      * MySQL 中通常不使用；
      * PostgreSQL、Oracle 等数据库可能需要。
      */
@@ -104,7 +104,7 @@ public  class JdbcCommonOptions {
 
     /**
      * MySQL 类型映射选项。
-     *
+     * <p>
      * 该配置虽然不是连接参数，但 Source、Catalog 都可能使用，
      * 暂时放在 JDBC 公共选项中。
      */
@@ -141,7 +141,7 @@ public  class JdbcCommonOptions {
 
     /**
      * 这里只做 JDBC URL 基础格式校验。
-     *
+     * <p>
      * MySQL、Oracle 等数据库的精确格式由各自 Factory 校验。
      */
     static final class JdbcUrlValidator

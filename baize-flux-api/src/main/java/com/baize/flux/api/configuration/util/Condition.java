@@ -2,12 +2,7 @@ package com.baize.flux.api.configuration.util;
 
 import com.baize.flux.api.configuration.Option;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 配置条件，支持 AND 和 OR 链式组合。
@@ -119,6 +114,41 @@ public final class Condition<T> {
                 operator,
                 expectedValue,
                 null);
+    }
+
+    private static String conditionToString(Condition<?> condition) {
+        ConditionOperator operator = condition.operator;
+        String key = "'" + condition.option.key() + "'";
+
+        if (operator == ConditionOperator.EXTENSION) {
+            return key + " " + condition.extension.description();
+        }
+
+        if (operator.getSource() == ConditionOperator.Source.FIELD) {
+            return key
+                    + " "
+                    + operator.getSymbol()
+                    + " '"
+                    + condition.compareOption.key()
+                    + "'";
+        }
+
+        if (operator.getArity() == ConditionOperator.Arity.UNARY) {
+            return key + " " + operator.getSymbol();
+        }
+
+        return key
+                + " "
+                + operator.getSymbol()
+                + " "
+                + formatValue(condition.expectedValue);
+    }
+
+    private static String formatValue(Object value) {
+        if (value instanceof String) {
+            return "'" + value + "'";
+        }
+        return String.valueOf(value);
     }
 
     public Option<T> getOption() {
@@ -337,40 +367,5 @@ public final class Condition<T> {
         }
 
         return result.toString();
-    }
-
-    private static String conditionToString(Condition<?> condition) {
-        ConditionOperator operator = condition.operator;
-        String key = "'" + condition.option.key() + "'";
-
-        if (operator == ConditionOperator.EXTENSION) {
-            return key + " " + condition.extension.description();
-        }
-
-        if (operator.getSource() == ConditionOperator.Source.FIELD) {
-            return key
-                    + " "
-                    + operator.getSymbol()
-                    + " '"
-                    + condition.compareOption.key()
-                    + "'";
-        }
-
-        if (operator.getArity() == ConditionOperator.Arity.UNARY) {
-            return key + " " + operator.getSymbol();
-        }
-
-        return key
-                + " "
-                + operator.getSymbol()
-                + " "
-                + formatValue(condition.expectedValue);
-    }
-
-    private static String formatValue(Object value) {
-        if (value instanceof String) {
-            return "'" + value + "'";
-        }
-        return String.valueOf(value);
     }
 }

@@ -1,11 +1,7 @@
 package com.baize.flux.connector.jdbc.catalog;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * JDBC Catalog 连接配置。
@@ -22,12 +18,12 @@ public final class JdbcCatalogConfig implements Serializable {
 
     /**
      * 是否按照字段范围缩小整数类型。
-     *
+     * <p>
      * 例如：
-     *
+     * <p>
      * tinyint  -> Byte
      * smallint -> Short
-     *
+     * <p>
      * 关闭后，tinyint/smallint 通常统一映射为 Integer，
      * 可以减少不同数据库之间的类型兼容问题。
      */
@@ -55,6 +51,29 @@ public final class JdbcCatalogConfig implements Serializable {
                 Collections.unmodifiableMap(safeProperties);
 
         this.intTypeNarrowing = intTypeNarrowing;
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String requireText(
+            String value,
+            String fieldName) {
+
+        String normalized = normalize(value);
+
+        if (normalized == null) {
+            throw new IllegalArgumentException(
+                    fieldName + " must not be empty");
+        }
+
+        return normalized;
     }
 
     public String getUrl() {
@@ -112,29 +131,6 @@ public final class JdbcCatalogConfig implements Serializable {
                 "false");
 
         return result;
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
-    }
-
-    private static String requireText(
-            String value,
-            String fieldName) {
-
-        String normalized = normalize(value);
-
-        if (normalized == null) {
-            throw new IllegalArgumentException(
-                    fieldName + " must not be empty");
-        }
-
-        return normalized;
     }
 
     @Override

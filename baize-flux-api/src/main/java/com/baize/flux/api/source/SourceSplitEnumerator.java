@@ -4,7 +4,6 @@ import java.util.List;
 
 /**
  * 离线 Source 分片生成器。
- *
  */
 public interface SourceSplitEnumerator<SplitT extends SourceSplit>
         extends AutoCloseable {

@@ -2,7 +2,7 @@ package com.baize.flux.api.table.type;
 
 /**
  * Flux 支持的数据类型。
- *
+ * <p>
  * 这里只保留离线 JDBC 数据同步需要的常见类型。
  */
 public enum SqlType {

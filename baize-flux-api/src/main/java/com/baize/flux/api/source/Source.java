@@ -25,7 +25,7 @@ public interface Source<SplitT extends SourceSplit>
 
     /**
      * 创建 SourceReader。
-     *
+     * <p>
      * 每个执行任务必须使用独立 Reader，
      * Reader 不应在多个线程之间共享。
      */

@@ -3,7 +3,6 @@ package com.baize.flux.connector.jdbc.catalog;
 import com.baize.flux.api.table.catalog.Catalog;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.catalog.exception.CatalogException;
-
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Connection;
@@ -15,17 +14,17 @@ import java.util.Properties;
 
 /**
  * JDBC Catalog 基础实现。
- *
+ * <p>
  * 主要负责：
- *
+ * <p>
  * 1. JDBC Driver 加载；
  * 2. JDBC URL 解析；
  * 3. 连接创建；
  * 4. Catalog 生命周期校验；
  * 5. 通用 SQL 执行。
- *
+ * <p>
  * 不缓存 Connection，避免：
- *
+ * <p>
  * 1. 长连接失效；
  * 2. 多线程共享 Connection；
  * 3. Catalog 长时间占用数据库资源。
@@ -55,6 +54,40 @@ public abstract class AbstractJdbcCatalog
         this.config = config;
         this.urlInfo =
                 JdbcUrlInfo.parseMySql(config.getUrl());
+    }
+
+    protected static String quoteIdentifier(
+            String identifier) {
+
+        if (identifier == null
+                || identifier.trim().isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "identifier must not be empty");
+        }
+
+        return "`"
+                + identifier.replace("`", "``")
+                + "`";
+    }
+
+    protected static String quoteTable(
+            TablePath tablePath) {
+
+        return quoteIdentifier(
+                tablePath.getDatabaseName())
+                + "."
+                + quoteIdentifier(
+                tablePath.getTableName());
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     @Override
@@ -125,9 +158,9 @@ public abstract class AbstractJdbcCatalog
 
     /**
      * 创建不指定数据库的连接。
-     *
+     * <p>
      * 主要用于：
-     *
+     * <p>
      * 1. 查询数据库列表；
      * 2. 创建数据库；
      * 3. 删除数据库；
@@ -161,7 +194,7 @@ public abstract class AbstractJdbcCatalog
 
     /**
      * 获取 TablePath 中的数据库。
-     *
+     * <p>
      * 如果没有显式指定，则使用 JDBC URL 中的默认数据库。
      */
     protected final String resolveDatabase(
@@ -256,40 +289,6 @@ public abstract class AbstractJdbcCatalog
             throw new IllegalStateException(
                     "Catalog 尚未打开，请先调用 open()");
         }
-    }
-
-    protected static String quoteIdentifier(
-            String identifier) {
-
-        if (identifier == null
-                || identifier.trim().isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "identifier must not be empty");
-        }
-
-        return "`"
-                + identifier.replace("`", "``")
-                + "`";
-    }
-
-    protected static String quoteTable(
-            TablePath tablePath) {
-
-        return quoteIdentifier(
-                tablePath.getDatabaseName())
-                + "."
-                + quoteIdentifier(
-                tablePath.getTableName());
-    }
-
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
     }
 
     /**

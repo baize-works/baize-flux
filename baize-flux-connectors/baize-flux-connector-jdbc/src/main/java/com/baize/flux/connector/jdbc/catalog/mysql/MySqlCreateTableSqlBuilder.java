@@ -1,10 +1,6 @@
 package com.baize.flux.connector.jdbc.catalog.mysql;
 
-import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.api.table.catalog.Column;
-import com.baize.flux.api.table.catalog.PrimaryKey;
-import com.baize.flux.api.table.catalog.TablePath;
-import com.baize.flux.api.table.catalog.TableSchema;
+import com.baize.flux.api.table.catalog.*;
 import com.baize.flux.api.table.type.SqlType;
 
 import java.util.ArrayList;
@@ -16,9 +12,9 @@ import java.util.stream.Collectors;
 
 /**
  * MySQL CREATE TABLE SQL 构造器。
- *
+ * <p>
  * 第一版只生成：
- *
+ * <p>
  * 1. 字段；
  * 2. 非空约束；
  * 3. 默认值；
@@ -45,6 +41,63 @@ public final class MySqlCreateTableSqlBuilder {
         this.tablePath = tablePath;
         this.catalogTable = catalogTable;
         this.typeMapper = typeMapper;
+    }
+
+    private static boolean isNumeric(
+            SqlType sqlType) {
+
+        return sqlType == SqlType.TINYINT
+                || sqlType == SqlType.SMALLINT
+                || sqlType == SqlType.INT
+                || sqlType == SqlType.BIGINT
+                || sqlType == SqlType.FLOAT
+                || sqlType == SqlType.DOUBLE
+                || sqlType == SqlType.DECIMAL;
+    }
+
+    private static String quoteTable(
+            TablePath tablePath) {
+
+        return quoteIdentifier(
+                tablePath.getDatabaseName())
+                + "."
+                + quoteIdentifier(
+                tablePath.getTableName());
+    }
+
+    private static String quoteIdentifier(
+            String value) {
+
+        return "`"
+                + value.replace("`", "``")
+                + "`";
+    }
+
+    private static String escapeString(
+            String value) {
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("'", "''");
+    }
+
+    private static String getOrDefault(
+            Map<String, String> options,
+            String key,
+            String defaultValue) {
+
+        String value = options.get(key);
+
+        return hasText(value)
+                ? value
+                : defaultValue;
+    }
+
+    private static boolean hasText(
+            String value) {
+
+        return value != null
+                && !value.trim().isEmpty();
     }
 
     public String build() {
@@ -257,62 +310,5 @@ public final class MySqlCreateTableSqlBuilder {
         return "'"
                 + escapeString(text)
                 + "'";
-    }
-
-    private static boolean isNumeric(
-            SqlType sqlType) {
-
-        return sqlType == SqlType.TINYINT
-                || sqlType == SqlType.SMALLINT
-                || sqlType == SqlType.INT
-                || sqlType == SqlType.BIGINT
-                || sqlType == SqlType.FLOAT
-                || sqlType == SqlType.DOUBLE
-                || sqlType == SqlType.DECIMAL;
-    }
-
-    private static String quoteTable(
-            TablePath tablePath) {
-
-        return quoteIdentifier(
-                tablePath.getDatabaseName())
-                + "."
-                + quoteIdentifier(
-                tablePath.getTableName());
-    }
-
-    private static String quoteIdentifier(
-            String value) {
-
-        return "`"
-                + value.replace("`", "``")
-                + "`";
-    }
-
-    private static String escapeString(
-            String value) {
-
-        return value
-                .replace("\\", "\\\\")
-                .replace("'", "''");
-    }
-
-    private static String getOrDefault(
-            Map<String, String> options,
-            String key,
-            String defaultValue) {
-
-        String value = options.get(key);
-
-        return hasText(value)
-                ? value
-                : defaultValue;
-    }
-
-    private static boolean hasText(
-            String value) {
-
-        return value != null
-                && !value.trim().isEmpty();
     }
 }

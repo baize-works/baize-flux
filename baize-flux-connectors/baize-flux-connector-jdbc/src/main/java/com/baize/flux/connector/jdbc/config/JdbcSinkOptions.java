@@ -16,14 +16,14 @@ public final class JdbcSinkOptions
 
     /**
      * 目标表路径。
-     *
+     * <p>
      * 单表：
-     *
+     * <p>
      * database.table
-     *
+     * <p>
      * 多表可以不配置，默认沿用 Source 表路径；
      * 后续也可以支持占位符：
-     *
+     * <p>
      * target_${table}
      */
     public static final Option<String> TABLE_PATH =
@@ -73,7 +73,7 @@ public final class JdbcSinkOptions
 
     /**
      * 用户显式指定的主键。
-     *
+     * <p>
      * 未配置时可以使用 CatalogTable 中发现的主键。
      */
     public static final Option<List<String>>
@@ -97,7 +97,7 @@ public final class JdbcSinkOptions
 
     /**
      * 自动创建目标表时是否创建主键。
-     *
+     * <p>
      * 当前 Catalog 第一版只支持主键，不处理普通索引。
      */
     public static final Option<Boolean>

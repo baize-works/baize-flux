@@ -10,9 +10,9 @@ import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.Channel;
 import com.baize.flux.framework.channel.MemoryFluxChannel;
+import com.baize.flux.framework.execution.sink.SinkExecuteProcessor;
 import com.baize.flux.framework.execution.source.SourceAction;
 import com.baize.flux.framework.execution.source.SourceExecuteProcessor;
-import com.baize.flux.framework.execution.sink.SinkExecuteProcessor;
 import com.baize.flux.framework.factory.PreparedSource;
 import com.baize.flux.framework.util.FactoryUtil;
 import com.typesafe.config.Config;
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 本地离线同步启动器。
- *
+ * <p>
  * 未传入启动参数时使用内置 JDBC 测试配置；
  * 传入一个参数时，将该参数作为完整 HOCON 配置执行。
  */
@@ -32,9 +32,9 @@ public final class LocalSyncLauncher {
 
     /**
      * 本地测试配置。
-     *
+     * <p>
      * 使用前需要根据本地数据库修改：
-     *
+     * <p>
      * 1. 数据库地址；
      * 2. 用户名和密码；
      * 3. 表路径。
@@ -157,7 +157,8 @@ public final class LocalSyncLauncher {
         SinkWriter<FluxRow> sinkWriter = null;
         if (root.hasPath("sink")) {
             Config sinkConfig = root.getConfig("sink");
-            if (!sinkConfig.hasPath("type")) throw new IllegalArgumentException("HOCON configuration must contain 'sink.type'");
+            if (!sinkConfig.hasPath("type"))
+                throw new IllegalArgumentException("HOCON configuration must contain 'sink.type'");
             String sinkType = sinkConfig.getString("type").trim();
             ReadonlyConfig sinkOptions = ReadonlyConfig.fromConfig(sinkConfig.withoutPath("type"));
             SinkFactory sinkFactory = FactoryUtil.discoverFactory(classLoader, SinkFactory.class, sinkType);
@@ -172,7 +173,9 @@ public final class LocalSyncLauncher {
                                 connectorConfig),
                         classLoader);
 
-        try (SinkWriter<FluxRow> writer = sinkWriter) { executeAndPrint(preparedSource, batchSize, writer); }
+        try (SinkWriter<FluxRow> writer = sinkWriter) {
+            executeAndPrint(preparedSource, batchSize, writer);
+        }
     }
 
     /**

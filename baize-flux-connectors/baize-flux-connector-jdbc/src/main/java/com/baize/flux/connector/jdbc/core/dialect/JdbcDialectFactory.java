@@ -4,7 +4,7 @@ import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
 
 /**
  * JDBC 方言工厂。
- *
+ * <p>
  * 每一种数据库通过 SPI 提供一个实现。
  */
 public interface JdbcDialectFactory {

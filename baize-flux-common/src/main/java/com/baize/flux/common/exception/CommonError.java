@@ -1,8 +1,8 @@
 package com.baize.flux.common.exception;
 
-import org.apache.commons.collections4.map.SingletonMap;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.collections4.map.SingletonMap;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,7 +40,6 @@ public class CommonError {
         params.put("fileName", fileName);
         return new FluxRuntimeException(FILE_NOT_EXISTED, params);
     }
-
 
 
     public static FluxRuntimeException unsupportedDataType(

@@ -7,29 +7,19 @@ import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.api.table.type.SqlType;
 
 import java.math.BigDecimal;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.sql.*;
+import java.time.*;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * JDBC 行转换器基础实现。
- *
+ * <p>
  * 当前支持关系型数据库常用基础类型：
- *
+ * <p>
  * STRING、BOOLEAN、整数、浮点数、DECIMAL、
  * DATE、TIME、TIMESTAMP、TIMESTAMP_TZ、BYTES。
- *
+ * <p>
  * ARRAY、MAP、ROW 等复杂类型由具体数据库方言按需扩展。
  */
 public abstract class AbstractJdbcRowConverter
@@ -182,7 +172,7 @@ public abstract class AbstractJdbcRowConverter
 
     /**
      * 读取一个 JDBC 字段。
-     *
+     * <p>
      * 数据库存在特殊类型时，子类可以覆盖该方法。
      */
     protected Object readValue(
@@ -277,7 +267,7 @@ public abstract class AbstractJdbcRowConverter
 
     /**
      * 写入一个非空 JDBC 参数。
-     *
+     * <p>
      * 数据库存在特殊写入逻辑时，子类可以覆盖该方法。
      */
     protected void writeValue(
@@ -398,7 +388,7 @@ public abstract class AbstractJdbcRowConverter
 
     /**
      * 写入空值。
-     *
+     * <p>
      * 默认根据 Flux SqlType 选择 JDBC Types。
      * 数据库存在特殊 Null 类型要求时可以覆盖。
      */
@@ -685,7 +675,7 @@ public abstract class AbstractJdbcRowConverter
 
     /**
      * 默认 TIME 写入方式。
-     *
+     * <p>
      * MySQL 可以覆盖该方法，使用 Timestamp 保留小数秒。
      */
     protected void writeTime(

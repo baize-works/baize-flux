@@ -3,13 +3,7 @@ package com.baize.flux.api.configuration.util;
 import com.baize.flux.api.configuration.ReadonlyConfig;
 
 import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -17,19 +11,11 @@ import java.util.regex.PatternSyntaxException;
  */
 public final class ConditionEvaluators {
 
-    private ConditionEvaluators() {
-    }
-
-    @FunctionalInterface
-    private interface Evaluator {
-        boolean evaluate(
-                Object value,
-                Condition<?> condition,
-                ReadonlyConfig config);
-    }
-
     private static final Map<ConditionOperator, Evaluator> REGISTRY =
             createRegistry();
+
+    private ConditionEvaluators() {
+    }
 
     static boolean evaluate(
             Condition<?> condition,
@@ -343,5 +329,13 @@ public final class ConditionEvaluators {
         return Long.compare(
                 left.longValue(),
                 right.longValue());
+    }
+
+    @FunctionalInterface
+    private interface Evaluator {
+        boolean evaluate(
+                Object value,
+                Condition<?> condition,
+                ReadonlyConfig config);
     }
 }

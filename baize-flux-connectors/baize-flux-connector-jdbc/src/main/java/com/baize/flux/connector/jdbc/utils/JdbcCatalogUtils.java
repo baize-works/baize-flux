@@ -11,40 +11,26 @@ import com.baize.flux.connector.jdbc.config.JdbcSourceTableConfig;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.options.MultiTableFailurePolicy;
 import com.baize.flux.connector.jdbc.source.JdbcSourceTable;
-
 import lombok.extern.slf4j.Slf4j;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.sql.*;
+import java.util.*;
 
 /**
  * JDBC Catalog 工具类。
- *
+ * <p>
  * 负责把 JDBC Source 配置转换成运行时使用的 JdbcSourceTable。
- *
+ * <p>
  * 当前支持：
- *
+ * <p>
  * 1. 单表元数据发现；
  * 2. 多表元数据发现；
  * 3. 自定义查询字段投影；
  * 4. 多表失败跳过策略；
  * 5. 分片参数组装。
- *
+ * <p>
  * 当前不支持：
- *
+ * <p>
  * 1. 正则表达式批量选表；
  * 2. 没有 table_path 的匿名查询；
  * 3. 自定义查询中的字段别名和表达式；
@@ -54,14 +40,15 @@ import java.util.Set;
 @Slf4j
 public final class JdbcCatalogUtils {
 
-    private JdbcCatalogUtils() {}
+    private JdbcCatalogUtils() {
+    }
 
     /**
      * 根据 Source 配置加载表元数据。
-     *
+     * <p>
      * 该方法负责创建、打开和关闭 Catalog。
      *
-     * @param config JDBC Source 配置
+     * @param config  JDBC Source 配置
      * @param dialect JDBC 数据库方言
      * @return 按配置顺序排列的 Source 表
      */
@@ -99,7 +86,7 @@ public final class JdbcCatalogUtils {
 
     /**
      * 使用已经创建的 Catalog 加载表元数据。
-     *
+     * <p>
      * 该重载不会打开或关闭 Catalog，
      * 生命周期由调用方负责。
      */
@@ -232,9 +219,9 @@ public final class JdbcCatalogUtils {
 
     /**
      * 解析并规范化表路径。
-     *
+     * <p>
      * table_path 是必填项，即使配置了 query，也需要作为：
-     *
+     * <p>
      * 1. Catalog 元数据标识；
      * 2. RecordBatch 数据集标识；
      * 3. 多表 Sink 路由标识。
@@ -265,17 +252,17 @@ public final class JdbcCatalogUtils {
 
     /**
      * 根据自定义查询结果投影 CatalogTable。
-     *
+     * <p>
      * 当前查询字段必须来自 table_path 对应的物理表，并且字段标签必须和
      * 物理字段名称一致。
-     *
+     * <p>
      * 支持：
-     *
+     * <p>
      * SELECT id, name FROM user
      * SELECT name, id FROM user
-     *
+     * <p>
      * 暂不支持：
-     *
+     * <p>
      * SELECT id AS user_id FROM user
      * SELECT COUNT(*) AS total FROM user
      * SELECT CONCAT(first_name, last_name) AS name FROM user
@@ -322,10 +309,10 @@ public final class JdbcCatalogUtils {
 
     /**
      * 读取自定义查询的结果字段。
-     *
+     * <p>
      * 优先使用 PreparedStatement.getMetaData()，
      * 避免真正执行 SQL。
-     *
+     * <p>
      * 部分 JDBC Driver 在未执行前不返回元数据，
      * 此时最多查询一行以获取 ResultSetMetaData。
      */
@@ -380,7 +367,7 @@ public final class JdbcCatalogUtils {
 
     /**
      * 从查询结果元数据读取字段标签。
-     *
+     * <p>
      * 优先使用 columnLabel，可以正确反映查询返回的字段名。
      */
     private static List<String> readFieldNames(
@@ -428,7 +415,7 @@ public final class JdbcCatalogUtils {
 
     /**
      * 自定义查询仅允许 SELECT 或 WITH 查询。
-     *
+     * <p>
      * Catalog 阶段不能执行更新、删除或 DDL。
      */
     private static void validateQuery(

@@ -18,7 +18,7 @@ public interface ConditionExtension<T> {
      * 执行校验。
      *
      * @param config 完整配置
-     * @param value 当前配置值
+     * @param value  当前配置值
      * @return 是否通过
      */
     boolean evaluate(

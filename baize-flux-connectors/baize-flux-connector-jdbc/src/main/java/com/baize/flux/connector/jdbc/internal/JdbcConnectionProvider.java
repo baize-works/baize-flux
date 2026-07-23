@@ -34,7 +34,29 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
         this.dialect = Objects.requireNonNull(dialect, "dialect must not be null");
     }
 
-    /** Returns the managed connection, creating it when necessary. */
+    private static Driver loadDriver(String driverName) throws ClassNotFoundException, SQLException {
+        Enumeration<Driver> drivers = DriverManager.getDrivers();
+        while (drivers.hasMoreElements()) {
+            Driver driver = drivers.nextElement();
+            if (driver.getClass().getName().equals(driverName)) {
+                return driver;
+            }
+        }
+
+        Class<?> driverClass = Class.forName(driverName, true, Thread.currentThread().getContextClassLoader());
+        if (!Driver.class.isAssignableFrom(driverClass)) {
+            throw new SQLException("Configured JDBC driver does not implement java.sql.Driver: " + driverName);
+        }
+        try {
+            return (Driver) driverClass.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new SQLException("Unable to create JDBC driver: " + driverName, e);
+        }
+    }
+
+    /**
+     * Returns the managed connection, creating it when necessary.
+     */
     public synchronized Connection getOrEstablishConnection() throws SQLException, ClassNotFoundException {
         if (isConnectionValid()) {
             return connection;
@@ -48,7 +70,9 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
         return connection;
     }
 
-    /** Returns the currently managed connection, or {@code null} before it has been opened. */
+    /**
+     * Returns the currently managed connection, or {@code null} before it has been opened.
+     */
     public synchronized Connection getConnection() {
         return connection;
     }
@@ -65,7 +89,9 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
         }
     }
 
-    /** Closes any managed connection and creates a replacement. */
+    /**
+     * Closes any managed connection and creates a replacement.
+     */
     public synchronized Connection reestablishConnection() throws SQLException, ClassNotFoundException {
         closeConnection();
         return getOrEstablishConnection();
@@ -102,25 +128,5 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
             loadedDriver = loadDriver(config.getDriverName());
         }
         return loadedDriver;
-    }
-
-    private static Driver loadDriver(String driverName) throws ClassNotFoundException, SQLException {
-        Enumeration<Driver> drivers = DriverManager.getDrivers();
-        while (drivers.hasMoreElements()) {
-            Driver driver = drivers.nextElement();
-            if (driver.getClass().getName().equals(driverName)) {
-                return driver;
-            }
-        }
-
-        Class<?> driverClass = Class.forName(driverName, true, Thread.currentThread().getContextClassLoader());
-        if (!Driver.class.isAssignableFrom(driverClass)) {
-            throw new SQLException("Configured JDBC driver does not implement java.sql.Driver: " + driverName);
-        }
-        try {
-            return (Driver) driverClass.getDeclaredConstructor().newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new SQLException("Unable to create JDBC driver: " + driverName, e);
-        }
     }
 }

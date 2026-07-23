@@ -27,6 +27,40 @@ public final class MySqlTypeMapper {
                 intTypeNarrowing;
     }
 
+    private static boolean isInteger(
+            SqlType type) {
+
+        return type == SqlType.TINYINT
+                || type == SqlType.SMALLINT
+                || type == SqlType.INT
+                || type == SqlType.BIGINT;
+    }
+
+    private static boolean isNumeric(
+            SqlType type) {
+
+        return isInteger(type)
+                || type == SqlType.FLOAT
+                || type == SqlType.DOUBLE
+                || type == SqlType.DECIMAL;
+    }
+
+    private static int valueOrDefault(
+            Integer value,
+            int defaultValue) {
+
+        return value == null
+                ? defaultValue
+                : value;
+    }
+
+    private static boolean hasText(
+            String value) {
+
+        return value != null
+                && !value.trim().isEmpty();
+    }
+
     /**
      * 将 INFORMATION_SCHEMA.COLUMNS 当前行转换为 Flux Column。
      */
@@ -457,40 +491,6 @@ public final class MySqlTypeMapper {
         return Boolean.parseBoolean(
                 column.getAttributes()
                         .get("unsigned"));
-    }
-
-    private static boolean isInteger(
-            SqlType type) {
-
-        return type == SqlType.TINYINT
-                || type == SqlType.SMALLINT
-                || type == SqlType.INT
-                || type == SqlType.BIGINT;
-    }
-
-    private static boolean isNumeric(
-            SqlType type) {
-
-        return isInteger(type)
-                || type == SqlType.FLOAT
-                || type == SqlType.DOUBLE
-                || type == SqlType.DECIMAL;
-    }
-
-    private static int valueOrDefault(
-            Integer value,
-            int defaultValue) {
-
-        return value == null
-                ? defaultValue
-                : value;
-    }
-
-    private static boolean hasText(
-            String value) {
-
-        return value != null
-                && !value.trim().isEmpty();
     }
 
     /**

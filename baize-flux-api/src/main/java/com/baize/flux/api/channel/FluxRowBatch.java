@@ -10,7 +10,7 @@ import java.util.Objects;
 
 /**
  * FluxRow 数据批次。
- *
+ * <p>
  * 离线同步按批传输，减少线程切换和队列操作次数。
  */
 public final class FluxRowBatch implements Serializable {
@@ -50,7 +50,7 @@ public final class FluxRowBatch implements Serializable {
 
     /**
      * 创建数据读取结束标记。
-     *
+     * <p>
      * 离线模式只需要结束标记，不需要 Checkpoint Barrier。
      */
     public static FluxRowBatch endOfInput() {

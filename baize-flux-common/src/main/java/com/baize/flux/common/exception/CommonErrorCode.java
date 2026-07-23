@@ -1,8 +1,5 @@
 package com.baize.flux.common.exception;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
 /**
  * Baize Flux 公共错误码。
  *

@@ -2,11 +2,7 @@ package com.baize.flux.connector.jdbc.core.dialect;
 
 import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -14,7 +10,8 @@ import java.util.stream.Collectors;
  */
 public final class JdbcDialectLoader {
 
-    private JdbcDialectLoader() {}
+    private JdbcDialectLoader() {
+    }
 
     /**
      * 优先根据 dialect 配置加载；未配置时根据 JDBC URL 自动识别。
@@ -49,7 +46,7 @@ public final class JdbcDialectLoader {
                                 factory ->
                                         configuredDialect != null
                                                 ? factory.identifier()
-                                                        .equalsIgnoreCase(configuredDialect)
+                                                .equalsIgnoreCase(configuredDialect)
                                                 : factory.acceptsUrl(config.getUrl()))
                         .collect(Collectors.toList());
 
@@ -87,8 +84,8 @@ public final class JdbcDialectLoader {
             List<JdbcDialectFactory> result = new ArrayList<>();
 
             ServiceLoader.load(
-                            JdbcDialectFactory.class,
-                            classLoader)
+                    JdbcDialectFactory.class,
+                    classLoader)
                     .forEach(result::add);
 
             result.sort(

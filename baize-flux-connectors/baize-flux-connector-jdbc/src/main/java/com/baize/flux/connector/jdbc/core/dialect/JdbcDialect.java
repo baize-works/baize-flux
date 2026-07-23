@@ -12,24 +12,54 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * 离线 JDBC 数据库方言。
- *
+ * <p>
  * 方言对象应当保持无状态和不可变。
- *
+ * <p>
  * 当前只提供离线读取、批量写入、表路径解析、类型映射和 Catalog
  * 创建所需能力，不包含 CDC Schema Change、动态采样和实时事件处理。
  */
 public interface JdbcDialect extends Serializable {
+
+    static void validateFields(
+            List<String> fieldNames) {
+
+        if (fieldNames == null
+                || fieldNames.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "fieldNames must not be empty");
+        }
+
+        for (String fieldName : fieldNames) {
+            if (!hasText(fieldName)) {
+                throw new IllegalArgumentException(
+                        "fieldName must not be empty");
+            }
+        }
+    }
+
+    static Set<String> normalizeFields(
+            List<String> fields) {
+
+        if (fields == null) {
+            return Collections.emptySet();
+        }
+
+        return fields.stream()
+                .filter(JdbcDialect::hasText)
+                .map(String::trim)
+                .collect(Collectors.toSet());
+    }
+
+    static boolean hasText(String value) {
+        return value != null
+                && !value.trim().isEmpty();
+    }
 
     /**
      * 方言标识。
@@ -102,15 +132,15 @@ public interface JdbcDialect extends Serializable {
 
         if (hasText(tablePath.getDatabaseName())) {
             result.append(
-                            quoteIdentifier(
-                                    tablePath.getDatabaseName()))
+                    quoteIdentifier(
+                            tablePath.getDatabaseName()))
                     .append('.');
         }
 
         if (hasText(tablePath.getSchemaName())) {
             result.append(
-                            quoteIdentifier(
-                                    tablePath.getSchemaName()))
+                    quoteIdentifier(
+                            tablePath.getSchemaName()))
                     .append('.');
         }
 
@@ -123,7 +153,7 @@ public interface JdbcDialect extends Serializable {
 
     /**
      * 为物理表生成 SELECT SQL。
-     *
+     * <p>
      * 自定义 query 直接使用配置值。
      */
     default String buildSelectSql(
@@ -170,7 +200,7 @@ public interface JdbcDialect extends Serializable {
 
     /**
      * 生成标准 JDBC INSERT SQL。
-     *
+     * <p>
      * PreparedStatement 使用 ? 占位符，不使用命名参数。
      */
     default String buildInsertSql(
@@ -200,7 +230,7 @@ public interface JdbcDialect extends Serializable {
 
     /**
      * 生成数据库原生 UPSERT SQL。
-     *
+     * <p>
      * 不支持时返回 Optional.empty()。
      */
     default Optional<String> buildUpsertSql(
@@ -235,7 +265,7 @@ public interface JdbcDialect extends Serializable {
 
     /**
      * 统计 Source 表或自定义查询行数。
-     *
+     * <p>
      * 该能力只用于显式分片分析，不应默认执行。
      */
     default long countRows(
@@ -257,12 +287,12 @@ public interface JdbcDialect extends Serializable {
 
     /**
      * 方言建议的默认连接属性。
-     *
+     * <p>
      * ConnectionProvider 创建连接时应先加入这些默认值，
      * 再使用用户 properties 覆盖。
      */
     default Map<String, String>
-            defaultConnectionProperties() {
+    defaultConnectionProperties() {
 
         return Collections.emptyMap();
     }
@@ -271,8 +301,8 @@ public interface JdbcDialect extends Serializable {
      * 合并方言默认连接参数和用户连接参数。
      */
     default Map<String, String>
-            resolveConnectionProperties(
-                    Map<String, String> userProperties) {
+    resolveConnectionProperties(
+            Map<String, String> userProperties) {
 
         Map<String, String> result =
                 new LinkedHashMap<>(
@@ -283,41 +313,5 @@ public interface JdbcDialect extends Serializable {
         }
 
         return Collections.unmodifiableMap(result);
-    }
-
-    static void validateFields(
-            List<String> fieldNames) {
-
-        if (fieldNames == null
-                || fieldNames.isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "fieldNames must not be empty");
-        }
-
-        for (String fieldName : fieldNames) {
-            if (!hasText(fieldName)) {
-                throw new IllegalArgumentException(
-                        "fieldName must not be empty");
-            }
-        }
-    }
-
-    static Set<String> normalizeFields(
-            List<String> fields) {
-
-        if (fields == null) {
-            return Collections.emptySet();
-        }
-
-        return fields.stream()
-                .filter(JdbcDialect::hasText)
-                .map(String::trim)
-                .collect(Collectors.toSet());
-    }
-
-    static boolean hasText(String value) {
-        return value != null
-                && !value.trim().isEmpty();
     }
 }
