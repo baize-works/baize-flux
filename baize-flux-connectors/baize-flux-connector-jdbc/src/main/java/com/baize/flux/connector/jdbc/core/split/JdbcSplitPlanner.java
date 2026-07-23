@@ -65,9 +65,18 @@ public final class JdbcSplitPlanner {
         throw new IllegalArgumentException("partition_column does not exist in source table: " + name + ", table=" + table.getTablePath());
     }
     private static List<? extends Chunk<?>> splitChunks(JdbcSourceTable table, Column column, int parallelism) {
-        int count = table.getPartitionNumber() == null ? parallelism : table.getPartitionNumber();
-        if (String.class.equals(column.getDataType().getTypeClass())) return new DynamicChunkSplitter<String>(new AsciiStringRangeSplitter(), count).split(table.getPartitionStart(), table.getPartitionEnd(), count);
-        try { return new DynamicChunkSplitter<BigDecimal>(new FixedChunkSplitter(), count).split(new BigDecimal(table.getPartitionStart()), new BigDecimal(table.getPartitionEnd()), count); }
+        int requestedChunks = table.getPartitionNumber() == null ? parallelism : table.getPartitionNumber();
+        if (String.class.equals(column.getDataType().getTypeClass())) {
+            return new DynamicChunkSplitter<String>(new AsciiStringRangeSplitter(), parallelism)
+                    .split(table.getPartitionStart(), table.getPartitionEnd(), requestedChunks);
+        }
+        try {
+            return new DynamicChunkSplitter<BigDecimal>(new FixedChunkSplitter(), parallelism)
+                    .split(
+                            new BigDecimal(table.getPartitionStart()),
+                            new BigDecimal(table.getPartitionEnd()),
+                            requestedChunks);
+        }
         catch (NumberFormatException e) { throw new IllegalArgumentException("partition bounds must be numeric for column " + column.getName(), e); }
     }
     private static String appendPredicate(String query, String predicate) { return "SELECT * FROM (" + query + ") AS flux_split WHERE " + predicate; }

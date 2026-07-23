@@ -30,9 +30,30 @@ public class ChunkSplitterTest {
     }
 
     @Test
+    public void asciiSplitterKeepsIntermediateBoundsPrintable() {
+        List<Chunk<String>> chunks = new AsciiStringRangeSplitter().split("A~", "B~", 4);
+        for (Chunk<String> chunk : chunks) {
+            for (char c : (chunk.getStart() + chunk.getEnd()).toCharArray()) {
+                assertTrue(c >= ' ' && c <= '~');
+            }
+        }
+    }
+
+    @Test
     public void dynamicSplitterCapsRequestedChunks() {
         List<Chunk<BigDecimal>> chunks = new DynamicChunkSplitter<BigDecimal>(new FixedChunkSplitter(), 2)
                 .split(BigDecimal.ZERO, new BigDecimal("10"), 8);
         assertEquals(2, chunks.size());
+    }
+
+    @Test
+    public void dynamicSplitterUsesParallelismAsTheHardCap() {
+        assertEquals(4, DynamicChunkSplitter.effectiveChunkCount(10, 4));
+        assertEquals(3, DynamicChunkSplitter.effectiveChunkCount(3, 4));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void dynamicSplitterRejectsInvalidParallelism() {
+        DynamicChunkSplitter.effectiveChunkCount(1, 0);
     }
 }
