@@ -1,280 +1,171 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.baize.flux.api.configuration;
 
-import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigRenderOptions;
+
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
-/**
- * 只读配置。
- * <p>
- * 基于原始配置数据提供不可变、类型安全的配置访问能力。
- * 支持点分隔路径、备用配置项名称以及配置项默认值。
- *
- * @author weifuwan
- */
-public final class ReadonlyConfig {
+import static com.baize.flux.api.configuration.util.ConfigUtil.convertToJsonString;
+import static com.baize.flux.api.configuration.util.ConfigUtil.convertValue;
 
-    /**
-     * 不可修改的配置数据。
-     */
-    private final Map<String, Object> values;
+@Slf4j
+public class ReadonlyConfig implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final ObjectMapper JACKSON_MAPPER = new ObjectMapper();
 
-    /**
-     * 根据配置数据创建只读配置。
-     * <p>
-     * 配置数据将在构造时进行深度不可变处理。
-     *
-     * @param values 原始配置数据
-     */
-    private ReadonlyConfig(Map<String, Object> values) {
-        this.values = deepImmutableMap(values);
+    /** Stores the concrete key/value pairs of this configuration object. */
+    protected final Map<String, Object> confData;
+
+    private ReadonlyConfig(Map<String, Object> confData) {
+        this.confData = confData;
+    }
+
+    public static ReadonlyConfig fromMap(Map<String, Object> map) {
+        return new ReadonlyConfig(map);
+    }
+
+    public static ReadonlyConfig fromConfig(Config config) {
+        try {
+            return fromMap(
+                    JACKSON_MAPPER.readValue(
+                            config.root().render(ConfigRenderOptions.concise()),
+                            new TypeReference<Map<String, Object>>() {}));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Json parsing exception.", e);
+        }
+    }
+
+    public <T> T get(Option<T> option) {
+        return getOptional(option).orElseGet(option::defaultValue);
     }
 
     /**
-     * 根据 Map 创建只读配置。
+     * Transform to Config todo: This method should be removed after we remove Config
      *
-     * @param values 原始配置数据
-     * @return 只读配置
+     * @return Config
+     * @deprecated Please use ReadonlyConfig directly
      */
-    public static ReadonlyConfig fromMap(
-            Map<String, Object> values) {
-        return new ReadonlyConfig(
-                Objects.requireNonNull(
-                        values,
-                        "values"
-                )
-        );
+    @Deprecated
+    public Config toConfig() {
+        return ConfigFactory.parseMap(confData);
     }
 
-    /**
-     * 创建深度不可修改的配置 Map。
-     * <p>
-     * Map 中嵌套的 Map 和 List 会被递归复制并转换为不可修改结构。
-     *
-     * @param source 原始 Map
-     * @return 深度不可修改的配置 Map
-     */
-    private static Map<String, Object> deepImmutableMap(
-            Map<?, ?> source) {
-        Map<String, Object> result =
-                new LinkedHashMap<>();
-
-        source.forEach(
-                (key, value) ->
-                        result.put(
-                                String.valueOf(key),
-                                deepImmutableValue(value)
-                        )
-        );
-
-        return Collections.unmodifiableMap(result);
-    }
-
-    /**
-     * 将配置值转换为不可修改结构。
-     * <p>
-     * Map 和 List 将被递归复制并转换为不可修改结构，
-     * 其他类型的值保持不变。
-     *
-     * @param value 原始配置值
-     * @return 不可修改的配置值
-     */
-    private static Object deepImmutableValue(
-            Object value) {
-        if (value instanceof Map) {
-            return deepImmutableMap(
-                    (Map<?, ?>) value
-            );
+    public Map<String, String> toMap() {
+        if (confData.isEmpty()) {
+            return Collections.emptyMap();
         }
 
-        if (value instanceof List) {
-            List<?> list = (List<?>) value;
-            List<Object> result =
-                    new ArrayList<>(list.size());
-
-            list.forEach(
-                    item ->
-                            result.add(
-                                    deepImmutableValue(item)
-                            )
-            );
-
-            return Collections.unmodifiableList(result);
-        }
-
-        return value;
+        Map<String, String> result = new LinkedHashMap<>();
+        toMap(result);
+        return result;
     }
 
-    /**
-     * 获取显式配置的配置值。
-     * <p>
-     * 按照配置项名称和备用配置项名称依次查找，但不使用默认值。
-     *
-     * @param option 配置项
-     * @param <T>    配置值类型
-     * @return 显式配置的配置值，不存在时返回空
-     */
-    public <T> Optional<T> getOptional(
-            Option<T> option) {
-        Objects.requireNonNull(
-                option,
-                "option"
-        );
+    public void toMap(Map<String, String> result) {
+        if (confData.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : confData.entrySet()) {
+            result.put(entry.getKey(), convertToJsonString(entry.getValue()));
+        }
+    }
 
-        Object rawValue = findValue(option.key());
+    public Map<String, Object> getSourceMap() {
+        return confData;
+    }
 
-        if (rawValue == null) {
-            for (String fallbackKey : option.fallbackKeys()) {
-                rawValue = findValue(fallbackKey);
-
-                if (rawValue != null) {
+    public <T> Optional<T> getOptional(Option<T> option) {
+        if (option == null) {
+            throw new NullPointerException("Option not be null.");
+        }
+        Object value = getValue(option.key());
+        if (value == null) {
+            for (String fallbackKey : option.getFallbackKeys()) {
+                value = getValue(fallbackKey);
+                if (value != null) {
+                    log.warn(
+                            "Please use the new key '{}' instead of the deprecated key '{}'.",
+                            option.key(),
+                            fallbackKey);
                     break;
                 }
             }
         }
-
-        return rawValue == null
-                ? Optional.empty()
-                : Optional.of(
-                option.convert(rawValue)
-        );
-    }
-
-    /**
-     * 获取解析后的配置值。
-     * <p>
-     * 优先返回显式配置的值；不存在时返回配置项声明的默认值。
-     *
-     * @param option 配置项
-     * @param <T>    配置值类型
-     * @return 显式配置值或默认值，均不存在时返回空
-     */
-    public <T> Optional<T> getResolvedOptional(
-            Option<T> option) {
-        Optional<T> configured = getOptional(option);
-
-        if (configured.isPresent()) {
-            return configured;
+        if (value == null) {
+            return Optional.empty();
         }
-
-        return option.defaultValueOptional();
+        return Optional.of(convertValue(value, option));
     }
 
-    /**
-     * 获取配置值。
-     * <p>
-     * 优先返回显式配置的值，其次返回配置项默认值。
-     * 当配置项不存在且未声明默认值时抛出异常。
-     *
-     * @param option 配置项
-     * @param <T>    配置值类型
-     * @return 配置值
-     * @throws ConfigAccessException 配置项不存在且未声明默认值时抛出
-     */
-    public <T> T get(Option<T> option) {
-        return getResolvedOptional(option)
-                .orElseThrow(
-                        () -> new ConfigAccessException(
-                                option.key(),
-                                "Option '"
-                                        + option.key()
-                                        + "' is not configured"
-                        )
-                );
+    private Object getValue(String key) {
+        if (this.confData.containsKey(key)) {
+            return this.confData.get(key);
+        } else {
+            String[] keys = key.split("\\.");
+            Map<String, Object> data = this.confData;
+            Object value = null;
+            for (int i = 0; i < keys.length; i++) {
+                value = data.get(keys[i]);
+                if (i < keys.length - 1) {
+                    if (!(value instanceof Map)) {
+                        return null;
+                    } else {
+                        data = (Map<String, Object>) value;
+                    }
+                }
+            }
+            return value;
+        }
     }
 
-    /**
-     * 判断配置项是否存在显式配置值。
-     * <p>
-     * 配置项名称或任意备用配置项名称存在时均返回 {@code true}，
-     * 不考虑配置项默认值。
-     *
-     * @param option 配置项
-     * @return 存在显式配置值时返回 {@code true}
-     */
-    public boolean contains(Option<?> option) {
-        if (findValue(option.key()) != null) {
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        for (String s : this.confData.keySet()) {
+            hash ^= s.hashCode();
+        }
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
             return true;
         }
-
-        return option.fallbackKeys()
-                .stream()
-                .anyMatch(
-                        key -> findValue(key) != null
-                );
-    }
-
-    /**
-     * 判断指定配置项名称是否存在配置值。
-     * <p>
-     * 支持使用点分隔路径访问嵌套配置。
-     *
-     * @param key 配置项名称
-     * @return 存在配置值时返回 {@code true}
-     */
-    public boolean contains(String key) {
-        return findValue(key) != null;
-    }
-
-    /**
-     * 获取未经类型转换的原始配置值。
-     * <p>
-     * 支持使用点分隔路径访问嵌套配置。
-     *
-     * @param key 配置项名称
-     * @return 原始配置值，不存在时返回空
-     */
-    public Optional<Object> getRaw(String key) {
-        return Optional.ofNullable(
-                findValue(key)
-        );
-    }
-
-    /**
-     * 获取完整配置数据。
-     * <p>
-     * 返回的 Map 及其内部嵌套的 Map 和 List 均不可修改。
-     *
-     * @return 不可修改的配置数据
-     */
-    public Map<String, Object> asMap() {
-        return values;
-    }
-
-    /**
-     * 根据配置项名称查找原始配置值。
-     * <p>
-     * 优先查找顶层完整键名。当不存在完整键名时，
-     * 再按照点分隔路径逐层查找嵌套配置。
-     *
-     * @param key 配置项名称
-     * @return 原始配置值，不存在时返回 {@code null}
-     */
-    private Object findValue(String key) {
-        if (values.containsKey(key)) {
-            return values.get(key);
+        if (!(obj instanceof ReadonlyConfig)) {
+            return false;
         }
+        Map<String, Object> otherConf = ((ReadonlyConfig) obj).confData;
+        return this.confData.equals(otherConf);
+    }
 
-        String[] parts = key.split("\\.");
-        Object current = values;
-
-        for (String part : parts) {
-            if (!(current instanceof Map)) {
-                return null;
-            }
-
-            current =
-                    ((Map<?, ?>) current).get(part);
-
-            if (current == null) {
-                return null;
-            }
-        }
-
-        return current;
+    @Override
+    public String toString() {
+        return convertToJsonString(this.confData);
     }
 }
