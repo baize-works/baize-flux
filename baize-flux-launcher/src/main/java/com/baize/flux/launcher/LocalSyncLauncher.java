@@ -17,6 +17,7 @@ import com.baize.flux.framework.factory.PreparedSource;
 import com.baize.flux.framework.util.FactoryUtil;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigResolveOptions;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -107,9 +108,18 @@ public final class LocalSyncLauncher {
                     "HOCON configuration must not be blank");
         }
 
+        /*
+         * The JDBC sink uses ${schema_name} and ${table_name} as its own
+         * per-source-table routing placeholders.  Resolving HOCON with the
+         * default options treats those values as HOCON substitutions and
+         * prevents the sink from receiving the template.  Allow unresolved
+         * substitutions so that connector-level placeholders survive parsing.
+         */
         Config root =
                 ConfigFactory.parseString(hocon)
-                        .resolve();
+                        .resolve(
+                                ConfigResolveOptions.defaults()
+                                        .setAllowUnresolved(true));
 
         if (!root.hasPath("source")) {
             throw new IllegalArgumentException(

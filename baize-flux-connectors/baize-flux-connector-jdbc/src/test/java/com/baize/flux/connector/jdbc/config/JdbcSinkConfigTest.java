@@ -3,6 +3,7 @@ package com.baize.flux.connector.jdbc.config;
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigResolveOptions;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -35,6 +36,22 @@ public class JdbcSinkConfigTest {
 
         assertFalse(config.hasCustomSql());
         assertTrue(config.resolveTargetTablePath(TablePath.of("orders")).equals("sink_orders"));
+    }
+
+    @Test
+    public void shouldRetainSinkTemplateWhenHoconAllowsUnresolvedSubstitutions() {
+        JdbcSinkConfig config = JdbcSinkConfig.of(
+                ReadonlyConfig.fromConfig(
+                        ConfigFactory.parseString(
+                                        "url = \"jdbc:mysql://localhost:3306/test1\"\n"
+                                                + "table = \"test1.sink_${table_name}\"")
+                                .resolve(
+                                        ConfigResolveOptions.defaults()
+                                                .setAllowUnresolved(true))));
+
+        assertEquals(
+                "test1.sink_orders",
+                config.resolveTargetTablePath(TablePath.of("flux_test", "orders")));
     }
 
     private JdbcSinkConfig config(String sinkOptions) {
