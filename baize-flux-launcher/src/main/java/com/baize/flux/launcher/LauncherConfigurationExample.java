@@ -1,7 +1,6 @@
 package com.baize.flux.launcher;
 
 import com.baize.flux.api.configuration.*;
-import com.baize.flux.api.job.Boundedness;
 import com.baize.flux.api.job.JobDefinition;
 import com.baize.flux.framework.configuration.HoconConfigLoader;
 import com.baize.flux.framework.execution.JobResult;
@@ -36,6 +35,6 @@ public final class LauncherConfigurationExample {
 
     public static JobDefinition toJobDefinition(ReadonlyConfig config) {
         ConfigValidator.strict().validate(config, JOB_RULE).throwIfInvalid();
-        return new JobDefinition(config.get(NAME), Boundedness.BOUNDED, config.get(BATCH_SIZE), config.get(SOURCE_TYPE), ReadonlyConfig.fromMap(config.get(SOURCE_OPTIONS)), config.get(SINK_TYPE), ReadonlyConfig.fromMap(config.get(SINK_OPTIONS)));
+        return new JobDefinition(config.get(NAME), config.get(BATCH_SIZE), config.get(SOURCE_TYPE), ReadonlyConfig.fromMap(config.get(SOURCE_OPTIONS)), config.get(SINK_TYPE), ReadonlyConfig.fromMap(config.get(SINK_OPTIONS)));
     }
 }
