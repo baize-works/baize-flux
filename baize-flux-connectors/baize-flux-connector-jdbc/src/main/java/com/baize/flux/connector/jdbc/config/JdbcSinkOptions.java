@@ -21,17 +21,19 @@ public final class JdbcSinkOptions
      * <p>
      * database.table
      * <p>
-     * 多表可以不配置，默认沿用 Source 表路径；
-     * 后续也可以支持占位符：
+     * 多表可以不配置，默认沿用 Source 表路径。支持
+     * {@code ${schema_name}} 和 {@code ${table_name}} 占位符，例如
+     * {@code archive.${schema_name}_${table_name}}。
      * <p>
-     * target_${table}
+     * 配置目标表时优先使用自动生成的 INSERT/UPSERT SQL，忽略
+     * {@code custom_sql}（以及其 {@code query} 别名）。
      */
     public static final Option<String> TABLE_PATH =
             Options.key("table_path")
                     .stringType()
                     .noDefaultValue()
                     .withFallbackKeys("table")
-                    .withDescription("目标表路径或目标表模板");
+                    .withDescription("目标表路径或多表目标模板，支持 ${schema_name} 和 ${table_name}");
 
     public static final Option<SchemaSaveMode>
             SCHEMA_SAVE_MODE =

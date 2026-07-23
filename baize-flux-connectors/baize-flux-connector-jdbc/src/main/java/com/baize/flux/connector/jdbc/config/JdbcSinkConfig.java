@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.config;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
+import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 import lombok.Getter;
@@ -188,7 +189,43 @@ public final class JdbcSinkConfig
     }
 
     public boolean hasCustomSql() {
-        return customSql != null;
+        // A configured table is the authoritative routing instruction for a
+        // multi-table job.  In that case SQL must be generated for each
+        // resolved target table instead of reusing a statement that can only
+        // address one table.
+        return customSql != null && targetTablePath == null;
+    }
+
+    /**
+     * Resolves the configured target-table template for one source table.
+     *
+     * <p>{@code ${table_name}} is replaced with the source table name. {@code
+     * ${schema_name}} is replaced with the source schema; for two-part paths
+     * (the usual MySQL {@code database.table} form), the database is used as
+     * the schema name. A target table without placeholders remains a fixed
+     * target, which is useful for single-table jobs.
+     *
+     * @param sourceTablePath the table that produced the current batch
+     * @return the configured and expanded target table path, or {@code null}
+     *     when the source path should be retained
+     */
+    public String resolveTargetTablePath(TablePath sourceTablePath) {
+        if (targetTablePath == null) {
+            return null;
+        }
+        Objects.requireNonNull(sourceTablePath, "sourceTablePath must not be null");
+
+        String schemaName = sourceTablePath.getSchemaName();
+        if (schemaName == null) {
+            schemaName = sourceTablePath.getDatabaseName();
+        }
+        if (schemaName == null) {
+            schemaName = "";
+        }
+
+        return targetTablePath
+                .replace("${schema_name}", schemaName)
+                .replace("${table_name}", sourceTablePath.getTableName());
     }
 
     public boolean hasConfiguredPrimaryKeys() {
