@@ -1,214 +1,347 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.baize.flux.api.configuration.util;
-
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.regex.PatternSyntaxException;
 
 /**
- * Registry of per-{@link ConditionOperator} evaluation logic. Stateless; every evaluator is a pure
- * function of (value, condition, config).
+ * 条件执行器。
  */
 public final class ConditionEvaluators {
 
-    @FunctionalInterface
-    interface Evaluator {
-        boolean evaluate(Object value, Condition<?> condition, ReadonlyConfig config);
+    private ConditionEvaluators() {
     }
 
-    private static final Map<ConditionOperator, Evaluator> REGISTRY = createRegistry();
+    @FunctionalInterface
+    private interface Evaluator {
+        boolean evaluate(
+                Object value,
+                Condition<?> condition,
+                ReadonlyConfig config);
+    }
 
-    static boolean evaluate(Condition<?> condition, ReadonlyConfig config) {
+    private static final Map<ConditionOperator, Evaluator> REGISTRY =
+            createRegistry();
+
+    static boolean evaluate(
+            Condition<?> condition,
+            ReadonlyConfig config) {
+
+        Objects.requireNonNull(condition, "condition");
+        Objects.requireNonNull(config, "config");
+
         ConditionOperator operator = condition.getOperator();
-        if (operator == null) {
+        Evaluator evaluator = REGISTRY.get(operator);
+
+        if (evaluator == null) {
             throw new OptionValidationException(
-                    "Condition for option '%s' has a null operator", condition.getOption().key());
+                    "Missing evaluator for operator %s",
+                    operator);
         }
 
         Object value = config.get(condition.getOption());
-        Evaluator evaluator = REGISTRY.get(operator);
         return evaluator.evaluate(value, condition, config);
     }
 
-    @SuppressWarnings({"rawtypes"})
+    @SuppressWarnings("unchecked")
     private static Map<ConditionOperator, Evaluator> createRegistry() {
-        Map<ConditionOperator, Evaluator> m = new EnumMap<>(ConditionOperator.class);
+        Map<ConditionOperator, Evaluator> registry =
+                new EnumMap<>(ConditionOperator.class);
 
-        // Equality
-        m.put(ConditionOperator.EQUAL, (v, c, cfg) -> Objects.equals(c.getExpectValue(), v));
-        m.put(ConditionOperator.NOT_EQUAL, (v, c, cfg) -> !Objects.equals(c.getExpectValue(), v));
+        registry.put(
+                ConditionOperator.EQUAL,
+                (value, condition, config) ->
+                        Objects.equals(
+                                condition.getExpectedValue(),
+                                value));
 
-        // Numeric (null value -> false, preserving or() short-circuit)
-        m.put(
+        registry.put(
+                ConditionOperator.NOT_EQUAL,
+                (value, condition, config) ->
+                        !Objects.equals(
+                                condition.getExpectedValue(),
+                                value));
+
+        registry.put(
                 ConditionOperator.GREATER_THAN,
-                (v, c, cfg) -> v != null && compareNumbers(v, c.getExpectValue()) > 0);
-        m.put(
+                (value, condition, config) ->
+                        value != null
+                                && compareValues(
+                                value,
+                                condition.getExpectedValue()) > 0);
+
+        registry.put(
                 ConditionOperator.GREATER_OR_EQUAL,
-                (v, c, cfg) -> v != null && compareNumbers(v, c.getExpectValue()) >= 0);
-        m.put(
+                (value, condition, config) ->
+                        value != null
+                                && compareValues(
+                                value,
+                                condition.getExpectedValue()) >= 0);
+
+        registry.put(
                 ConditionOperator.LESS_THAN,
-                (v, c, cfg) -> v != null && compareNumbers(v, c.getExpectValue()) < 0);
-        m.put(
+                (value, condition, config) ->
+                        value != null
+                                && compareValues(
+                                value,
+                                condition.getExpectedValue()) < 0);
+
+        registry.put(
                 ConditionOperator.LESS_OR_EQUAL,
-                (v, c, cfg) -> v != null && compareNumbers(v, c.getExpectValue()) <= 0);
+                (value, condition, config) ->
+                        value != null
+                                && compareValues(
+                                value,
+                                condition.getExpectedValue()) <= 0);
 
-        // String
-        m.put(
+        registry.put(
                 ConditionOperator.NOT_BLANK,
-                (v, c, cfg) -> v instanceof String && !((String) v).trim().isEmpty());
-        m.put(
+                (value, condition, config) ->
+                        value instanceof String
+                                && !((String) value).trim().isEmpty());
+
+        registry.put(
                 ConditionOperator.STARTS_WITH,
-                (v, c, cfg) ->
-                        v instanceof String
-                                && ((String) v).startsWith(String.valueOf(c.getExpectValue())));
-        m.put(
+                (value, condition, config) ->
+                        value instanceof String
+                                && ((String) value).startsWith(
+                                String.valueOf(
+                                        condition.getExpectedValue())));
+
+        registry.put(
                 ConditionOperator.CONTAINS,
-                (v, c, cfg) ->
-                        v instanceof String
-                                && ((String) v).contains(String.valueOf(c.getExpectValue())));
-        m.put(
+                (value, condition, config) ->
+                        value instanceof String
+                                && ((String) value).contains(
+                                String.valueOf(
+                                        condition.getExpectedValue())));
+
+        registry.put(
                 ConditionOperator.MATCHES,
-                (v, c, cfg) ->
-                        v instanceof String
-                                && ((String) v).matches(String.valueOf(c.getExpectValue())));
-        m.put(
-                ConditionOperator.UPPER_CASE,
-                (v, c, cfg) -> v instanceof String && v.equals(((String) v).toUpperCase()));
-        m.put(
-                ConditionOperator.LOWER_CASE,
-                (v, c, cfg) -> v instanceof String && v.equals(((String) v).toLowerCase()));
-
-        // Collection
-        m.put(
-                ConditionOperator.NOT_EMPTY,
-                (v, c, cfg) -> v instanceof Collection && !((Collection) v).isEmpty());
-        m.put(
-                ConditionOperator.COLLECTION_UNIQUE,
-                (v, c, cfg) -> {
-                    if (v instanceof Collection) {
-                        Collection col = (Collection) v;
-                        return col.size() == new HashSet<>(col).size();
+                (value, condition, config) -> {
+                    if (!(value instanceof String)) {
+                        return false;
                     }
-                    return false;
+
+                    try {
+                        return ((String) value).matches(
+                                String.valueOf(
+                                        condition.getExpectedValue()));
+                    } catch (PatternSyntaxException e) {
+                        throw new OptionValidationException(
+                                "Invalid regular expression: %s",
+                                condition.getExpectedValue());
+                    }
                 });
 
-        // Map
-        m.put(
+        registry.put(
+                ConditionOperator.UPPER_CASE,
+                (value, condition, config) ->
+                        value instanceof String
+                                && value.equals(
+                                ((String) value)
+                                        .toUpperCase(Locale.ROOT)));
+
+        registry.put(
+                ConditionOperator.LOWER_CASE,
+                (value, condition, config) ->
+                        value instanceof String
+                                && value.equals(
+                                ((String) value)
+                                        .toLowerCase(Locale.ROOT)));
+
+        registry.put(
+                ConditionOperator.NOT_EMPTY,
+                (value, condition, config) ->
+                        value instanceof Collection
+                                && !((Collection<?>) value).isEmpty());
+
+        registry.put(
+                ConditionOperator.COLLECTION_UNIQUE,
+                (value, condition, config) -> {
+                    if (!(value instanceof Collection)) {
+                        return false;
+                    }
+
+                    Collection<?> collection =
+                            (Collection<?>) value;
+
+                    return collection.size()
+                            == new HashSet<>(collection).size();
+                });
+
+        registry.put(
                 ConditionOperator.MAP_NOT_EMPTY,
-                (v, c, cfg) -> v instanceof Map && !((Map) v).isEmpty());
-        m.put(
+                (value, condition, config) ->
+                        value instanceof Map
+                                && !((Map<?, ?>) value).isEmpty());
+
+        registry.put(
                 ConditionOperator.MAP_CONTAINS_KEY,
-                (v, c, cfg) -> v instanceof Map && ((Map) v).containsKey(c.getExpectValue()));
-        m.put(
+                (value, condition, config) ->
+                        value instanceof Map
+                                && ((Map<?, ?>) value).containsKey(
+                                condition.getExpectedValue()));
+
+        registry.put(
                 ConditionOperator.MAP_CONTAINS_KEYS,
-                (v, c, cfg) -> {
-                    if (!(v instanceof Map)) return false;
-                    Object expect = c.getExpectValue();
-                    if (!(expect instanceof Collection)) return false;
-                    return ((Map) v).keySet().containsAll((Collection) expect);
+                (value, condition, config) -> {
+                    if (!(value instanceof Map)
+                            || !(condition.getExpectedValue()
+                            instanceof Collection)) {
+                        return false;
+                    }
+
+                    Map<?, ?> map = (Map<?, ?>) value;
+                    Collection<?> keys =
+                            (Collection<?>) condition.getExpectedValue();
+
+                    return map.keySet().containsAll(keys);
                 });
 
-        // Cross-field (null on either side -> false, preserving or() short-circuit)
-        m.put(
+        registry.put(
                 ConditionOperator.FIELD_LESS_THAN,
-                (v, c, cfg) -> {
-                    if (v == null) return false;
-                    Object other = cfg.get(c.getCompareOption());
-                    if (other == null) return false;
-                    return compareNumbers(v, other) < 0;
-                });
-        m.put(
+                (value, condition, config) ->
+                        compareField(
+                                value,
+                                condition,
+                                config) < 0);
+
+        registry.put(
                 ConditionOperator.FIELD_LESS_OR_EQUAL,
-                (v, c, cfg) -> {
-                    if (v == null) return false;
-                    Object other = cfg.get(c.getCompareOption());
-                    if (other == null) return false;
-                    return compareNumbers(v, other) <= 0;
-                });
-        m.put(
+                (value, condition, config) ->
+                        compareField(
+                                value,
+                                condition,
+                                config) <= 0);
+
+        registry.put(
                 ConditionOperator.FIELD_GREATER_THAN,
-                (v, c, cfg) -> {
-                    if (v == null) return false;
-                    Object other = cfg.get(c.getCompareOption());
-                    if (other == null) return false;
-                    return compareNumbers(v, other) > 0;
-                });
-        m.put(
+                (value, condition, config) ->
+                        compareField(
+                                value,
+                                condition,
+                                config) > 0);
+
+        registry.put(
                 ConditionOperator.FIELD_GREATER_OR_EQUAL,
-                (v, c, cfg) -> {
-                    if (v == null) return false;
-                    Object other = cfg.get(c.getCompareOption());
-                    if (other == null) return false;
-                    return compareNumbers(v, other) >= 0;
-                });
+                (value, condition, config) ->
+                        compareField(
+                                value,
+                                condition,
+                                config) >= 0);
 
-        // Extension (custom logic delegated to ConditionExtension)
-        m.put(
+        registry.put(
                 ConditionOperator.EXTENSION,
-                (v, c, cfg) -> {
-                    ConditionExtension<Object> ext = (ConditionExtension<Object>) c.getExtension();
-                    return ext.evaluate(cfg, v);
+                (value, condition, config) -> {
+                    ConditionExtension<Object> extension =
+                            (ConditionExtension<Object>)
+                                    condition.getExtension();
+
+                    return extension.evaluate(config, value);
                 });
 
-        for (ConditionOperator op : ConditionOperator.values()) {
-            if (!m.containsKey(op)) {
+        for (ConditionOperator operator :
+                ConditionOperator.values()) {
+            if (!registry.containsKey(operator)) {
                 throw new IllegalStateException(
-                        "Missing evaluator for ConditionOperator." + op.name());
+                        "Missing evaluator for "
+                                + operator.name());
             }
         }
-        return Collections.unmodifiableMap(m);
+
+        return Collections.unmodifiableMap(registry);
     }
 
-    @SuppressWarnings({"rawtypes"})
-    static int compareNumbers(Object a, Object b) {
-        if (a == null || b == null) {
+    private static int compareField(
+            Object value,
+            Condition<?> condition,
+            ReadonlyConfig config) {
+
+        if (value == null) {
+            return Integer.MIN_VALUE;
+        }
+
+        Object other = config.get(
+                condition.getCompareOption());
+
+        if (other == null) {
+            return Integer.MIN_VALUE;
+        }
+
+        return compareValues(value, other);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static int compareValues(Object left, Object right) {
+        if (left == null || right == null) {
             throw new OptionValidationException(
-                    "Cannot compare null values in numeric comparison: leftPresent=%s, rightPresent=%s",
-                    a != null, b != null);
+                    "Cannot compare null values");
         }
-        if (a instanceof Number && b instanceof Number) {
-            return compareNumberValues((Number) a, (Number) b);
+
+        if (left instanceof Number
+                && right instanceof Number) {
+            return compareNumbers(
+                    (Number) left,
+                    (Number) right);
         }
-        if (a instanceof Comparable && b instanceof Comparable) {
-            return ((Comparable) a).compareTo(b);
+
+        if (left instanceof Comparable
+                && left.getClass().isInstance(right)) {
+            try {
+                return ((Comparable) left).compareTo(right);
+            } catch (RuntimeException e) {
+                throw new OptionValidationException(
+                        "Cannot compare values of type %s and %s",
+                        left.getClass().getSimpleName(),
+                        right.getClass().getSimpleName());
+            }
         }
+
         throw new OptionValidationException(
                 "Cannot compare values of type %s and %s",
-                a.getClass().getSimpleName(), b.getClass().getSimpleName());
+                left.getClass().getSimpleName(),
+                right.getClass().getSimpleName());
     }
 
-    private static int compareNumberValues(Number a, Number b) {
-        if (a instanceof BigDecimal || b instanceof BigDecimal) {
-            BigDecimal bdA =
-                    a instanceof BigDecimal ? (BigDecimal) a : new BigDecimal(a.toString());
-            BigDecimal bdB =
-                    b instanceof BigDecimal ? (BigDecimal) b : new BigDecimal(b.toString());
-            return bdA.compareTo(bdB);
+    private static int compareNumbers(
+            Number left,
+            Number right) {
+
+        if (left instanceof BigDecimal
+                || right instanceof BigDecimal) {
+            BigDecimal leftValue =
+                    left instanceof BigDecimal
+                            ? (BigDecimal) left
+                            : new BigDecimal(left.toString());
+
+            BigDecimal rightValue =
+                    right instanceof BigDecimal
+                            ? (BigDecimal) right
+                            : new BigDecimal(right.toString());
+
+            return leftValue.compareTo(rightValue);
         }
-        if (a instanceof Double
-                || a instanceof Float
-                || b instanceof Double
-                || b instanceof Float) {
-            return Double.compare(a.doubleValue(), b.doubleValue());
+
+        if (left instanceof Double
+                || left instanceof Float
+                || right instanceof Double
+                || right instanceof Float) {
+            return Double.compare(
+                    left.doubleValue(),
+                    right.doubleValue());
         }
-        return Long.compare(a.longValue(), b.longValue());
+
+        return Long.compare(
+                left.longValue(),
+                right.longValue());
     }
 }

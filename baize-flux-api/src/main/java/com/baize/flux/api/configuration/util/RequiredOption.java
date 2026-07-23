@@ -1,73 +1,47 @@
 package com.baize.flux.api.configuration.util;
 
 import com.baize.flux.api.configuration.Option;
-import lombok.Getter;
-import lombok.NonNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static com.baize.flux.api.configuration.util.OptionUtil.getOptionKeys;
 
-
+/**
+ * 必填配置规则。
+ */
 public interface RequiredOption {
 
     List<Option<?>> getOptions();
 
-    /** These options are mutually exclusive, allowing only one set of options to be configured. */
-    @Getter
-    class ExclusiveRequiredOptions implements RequiredOption {
-        private final List<Option<?>> exclusiveOptions;
+    /**
+     * 必须配置的选项。
+     */
+    final class AbsolutelyRequiredOptions
+            implements RequiredOption {
 
-        public ExclusiveRequiredOptions(@NonNull List<Option<?>> exclusiveOptions) {
-            this.exclusiveOptions = exclusiveOptions;
+        private final List<Option<?>> options;
+
+        private AbsolutelyRequiredOptions(
+                List<Option<?>> options) {
+            this.options = Collections.unmodifiableList(
+                    new ArrayList<>(options)
+            );
         }
 
-        public static ExclusiveRequiredOptions of(Option<?>... options) {
-            return new ExclusiveRequiredOptions(new ArrayList<>(Arrays.asList(options)));
+        public static AbsolutelyRequiredOptions of(
+                Option<?>... options) {
+
+            return new AbsolutelyRequiredOptions(
+                    Arrays.asList(options));
         }
 
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (!(obj instanceof ExclusiveRequiredOptions)) {
-                return false;
-            }
-            ExclusiveRequiredOptions that = (ExclusiveRequiredOptions) obj;
-            return Objects.equals(this.exclusiveOptions, that.exclusiveOptions);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(exclusiveOptions);
-        }
-
-        @Override
-        public String toString() {
-            return String.format(
-                    "Exclusive required set options: %s", getOptionKeys(exclusiveOptions));
+        public List<Option<?>> getRequiredOption() {
+            return options;
         }
 
         @Override
         public List<Option<?>> getOptions() {
-            return exclusiveOptions;
-        }
-    }
-
-    /** The option is required. */
-    class AbsolutelyRequiredOptions implements RequiredOption {
-        @Getter private final List<Option<?>> requiredOption;
-
-        AbsolutelyRequiredOptions(List<Option<?>> requiredOption) {
-            this.requiredOption = requiredOption;
-        }
-
-        public static AbsolutelyRequiredOptions of(Option<?>... requiredOption) {
-            return new AbsolutelyRequiredOptions(new ArrayList<>(Arrays.asList(requiredOption)));
+            return options;
         }
 
         @Override
@@ -78,52 +52,54 @@ public interface RequiredOption {
             if (!(obj instanceof AbsolutelyRequiredOptions)) {
                 return false;
             }
-            AbsolutelyRequiredOptions that = (AbsolutelyRequiredOptions) obj;
-            return Objects.equals(this.requiredOption, that.requiredOption);
+
+            AbsolutelyRequiredOptions that =
+                    (AbsolutelyRequiredOptions) obj;
+
+            return Objects.equals(options, that.options);
         }
 
         @Override
         public int hashCode() {
-            return this.requiredOption.hashCode();
+            return options.hashCode();
         }
 
         @Override
         public String toString() {
-            return String.format(
-                    "Absolutely required options: '%s'", getOptionKeys(requiredOption));
+            return "Required options: "
+                    + getOptionKeys(options);
+        }
+    }
+
+    /**
+     * 互斥选项，只能配置一个。
+     */
+    final class ExclusiveRequiredOptions
+            implements RequiredOption {
+
+        private final List<Option<?>> options;
+
+        private ExclusiveRequiredOptions(
+                List<Option<?>> options) {
+            this.options = Collections.unmodifiableList(
+                    new ArrayList<>(options)
+            );
+        }
+
+        public static ExclusiveRequiredOptions of(
+                Option<?>... options) {
+
+            return new ExclusiveRequiredOptions(
+                    Arrays.asList(options));
+        }
+
+        public List<Option<?>> getExclusiveOptions() {
+            return options;
         }
 
         @Override
         public List<Option<?>> getOptions() {
-            return requiredOption;
-        }
-    }
-
-    class ConditionalRequiredOptions implements RequiredOption {
-        private final Expression expression;
-        private final List<Option<?>> requiredOption;
-
-        ConditionalRequiredOptions(Expression expression, List<Option<?>> requiredOption) {
-            this.expression = expression;
-            this.requiredOption = requiredOption;
-        }
-
-        public static ConditionalRequiredOptions of(
-                Expression expression, List<Option<?>> requiredOption) {
-            return new ConditionalRequiredOptions(expression, requiredOption);
-        }
-
-        public static ConditionalRequiredOptions of(
-                Condition<?> condition, List<Option<?>> requiredOption) {
-            return new ConditionalRequiredOptions(Expression.of(condition), requiredOption);
-        }
-
-        public Expression getExpression() {
-            return expression;
-        }
-
-        public List<Option<?>> getRequiredOption() {
-            return requiredOption;
+            return options;
         }
 
         @Override
@@ -131,50 +107,63 @@ public interface RequiredOption {
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof ConditionalRequiredOptions)) {
+            if (!(obj instanceof ExclusiveRequiredOptions)) {
                 return false;
             }
-            ConditionalRequiredOptions that = (ConditionalRequiredOptions) obj;
-            return Objects.equals(this.expression, that.expression)
-                    && Objects.equals(this.requiredOption, that.requiredOption);
+
+            ExclusiveRequiredOptions that =
+                    (ExclusiveRequiredOptions) obj;
+
+            return Objects.equals(options, that.options);
         }
 
         @Override
         public int hashCode() {
-            return this.requiredOption.hashCode();
+            return options.hashCode();
         }
 
         @Override
         public String toString() {
-            return String.format(
-                    "Condition expression: %s, Required options: %s",
-                    expression, getOptionKeys(requiredOption));
+            return "Exclusive options: "
+                    + getOptionKeys(options);
+        }
+    }
+
+    /**
+     * 绑定选项，必须同时存在或同时不存在。
+     */
+    final class BundledRequiredOptions
+            implements RequiredOption {
+
+        private final List<Option<?>> options;
+
+        private BundledRequiredOptions(
+                List<Option<?>> options) {
+            this.options = Collections.unmodifiableList(
+                    new ArrayList<>(options)
+            );
+        }
+
+        public static BundledRequiredOptions of(
+                Option<?>... options) {
+
+            return new BundledRequiredOptions(
+                    Arrays.asList(options));
+        }
+
+        public static BundledRequiredOptions of(
+                List<Option<?>> options) {
+
+            return new BundledRequiredOptions(options);
+        }
+
+        public List<Option<?>> getRequiredOption() {
+            return options;
         }
 
         @Override
         public List<Option<?>> getOptions() {
-            return requiredOption;
-        }
-    }
-
-    /** These options are bundled, must be present or absent together. */
-    class BundledRequiredOptions implements RequiredOption {
-        private final List<Option<?>> requiredOption;
-
-        BundledRequiredOptions(List<Option<?>> requiredOption) {
-            this.requiredOption = requiredOption;
-        }
-
-        public static BundledRequiredOptions of(Option<?>... requiredOption) {
-            return new BundledRequiredOptions(new ArrayList<>(Arrays.asList(requiredOption)));
-        }
-
-        public static BundledRequiredOptions of(List<Option<?>> requiredOption) {
-            return new BundledRequiredOptions(requiredOption);
-        }
-
-        public List<Option<?>> getRequiredOption() {
-            return requiredOption;
+            return options;
         }
 
         @Override
@@ -185,23 +174,96 @@ public interface RequiredOption {
             if (!(obj instanceof BundledRequiredOptions)) {
                 return false;
             }
-            BundledRequiredOptions that = (BundledRequiredOptions) obj;
-            return Objects.equals(this.requiredOption, that.requiredOption);
+
+            BundledRequiredOptions that =
+                    (BundledRequiredOptions) obj;
+
+            return Objects.equals(options, that.options);
         }
 
         @Override
         public int hashCode() {
-            return this.requiredOption.hashCode();
+            return options.hashCode();
         }
 
         @Override
         public String toString() {
-            return String.format("Bundled Required options: %s", getOptionKeys(requiredOption));
+            return "Bundled options: "
+                    + getOptionKeys(options);
+        }
+    }
+
+    /**
+     * 条件成立时必填的选项。
+     */
+    final class ConditionalRequiredOptions
+            implements RequiredOption {
+
+        private final Condition<?> condition;
+        private final List<Option<?>> options;
+
+        private ConditionalRequiredOptions(
+                Condition<?> condition,
+                List<Option<?>> options) {
+
+            this.condition = Objects.requireNonNull(
+                    condition,
+                    "condition");
+
+            this.options = Collections.unmodifiableList(
+                    new ArrayList<>(options)
+            );
+        }
+
+        public static ConditionalRequiredOptions of(
+                Condition<?> condition,
+                List<Option<?>> options) {
+
+            return new ConditionalRequiredOptions(
+                    condition,
+                    options);
+        }
+
+        public Condition<?> getCondition() {
+            return condition;
+        }
+
+        public List<Option<?>> getRequiredOption() {
+            return options;
         }
 
         @Override
         public List<Option<?>> getOptions() {
-            return requiredOption;
+            return options;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof ConditionalRequiredOptions)) {
+                return false;
+            }
+
+            ConditionalRequiredOptions that =
+                    (ConditionalRequiredOptions) obj;
+
+            return Objects.equals(condition, that.condition)
+                    && Objects.equals(options, that.options);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(condition, options);
+        }
+
+        @Override
+        public String toString() {
+            return String.format(
+                    "Condition: %s, required options: %s",
+                    condition,
+                    getOptionKeys(options));
         }
     }
 }

@@ -3,499 +3,777 @@ package com.baize.flux.api.configuration.util;
 import com.baize.flux.api.configuration.Option;
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.SingleChoiceOption;
-import com.baize.flux.api.configuration.options.ConnectorCommonOptions;
-import org.apache.commons.collections4.CollectionUtils;
 
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.baize.flux.api.configuration.util.OptionUtil.*;
+import static com.baize.flux.api.configuration.util.OptionUtil.formatError;
+import static com.baize.flux.api.configuration.util.OptionUtil.formatOptionsError;
+import static com.baize.flux.api.configuration.util.OptionUtil.getOptionKeys;
 
+/**
+ * 配置规则校验器。
+ */
+public final class ConfigValidator {
 
-public class ConfigValidator {
+    private static final String TYPE_REQUIRED =
+            "required";
+
+    private static final String TYPE_VALUE =
+            "value";
+
+    private static final String TYPE_BUNDLED =
+            "bundled";
+
+    private static final String TYPE_EXCLUSIVE =
+            "exclusive";
+
+    private static final String TYPE_CONDITIONAL =
+            "conditional";
+
+    private static final String TYPE_SINGLE_CHOICE =
+            "singleChoice";
+
     private final ReadonlyConfig config;
 
-    /** Closed set of validation error categories used in formatted error messages. */
-    private static final String TYPE_REQUIRED = "required";
-
-    private static final String TYPE_VALUE = "value";
-    private static final String TYPE_BUNDLED = "bundled";
-    private static final String TYPE_EXCLUSIVE = "exclusive";
-    private static final String TYPE_CONDITIONAL = "conditional";
-    private static final String TYPE_SINGLE_CHOICE = "singleChoice";
-
-    private static final Set<String> COMMON_KEYS = new HashSet<>();
-
-
-    static {
-        collectKeys(
-                COMMON_KEYS,
-                Arrays.asList(
-                        ConnectorCommonOptions.PLUGIN_NAME,
-                        ConnectorCommonOptions.PLUGIN_INPUT,
-                        ConnectorCommonOptions.PLUGIN_OUTPUT,
-                        ConnectorCommonOptions.METADATA_DATASOURCE_ID));
-    }
-
     private ConfigValidator(ReadonlyConfig config) {
+        if (config == null) {
+            throw new IllegalArgumentException(
+                    "config must not be null");
+        }
+
         this.config = config;
     }
 
-    public static ConfigValidator of(ReadonlyConfig config) {
+    public static ConfigValidator of(
+            ReadonlyConfig config) {
+
         return new ConfigValidator(config);
     }
 
     /**
-     * Validates that all user-provided config keys are declared in the connector's OptionRule.
-     * Unknown keys are treated as errors to catch typos and misconfigured options early.
+     * 校验未声明的配置键。
      *
-     * @param config the user-provided configuration
-     * @param rule the connector's declared option rule
-     * @param connectorName the connector name for error messages
-     * @throws OptionValidationException if unknown keys are detected
+     * @param commonOptions 通用配置项，可为空
      */
     public static void validateUnknownKeys(
-            ReadonlyConfig config, OptionRule rule, String connectorName) {
-        Set<String> declaredKeys = collectDeclaredKeys(rule);
-        declaredKeys.addAll(COMMON_KEYS);
+            ReadonlyConfig config,
+            OptionRule rule,
+            String connectorName,
+            Option<?>... commonOptions) {
 
-        List<String> unknownKeys = new ArrayList<>();
-        validatePaths(config.getSourceMap(), "", declaredKeys, unknownKeys);
+        Set<String> declaredKeys =
+                collectDeclaredKeys(rule);
+
+        if (commonOptions != null) {
+            collectKeys(
+                    declaredKeys,
+                    Arrays.asList(commonOptions));
+        }
+
+        List<String> unknownKeys =
+                new ArrayList<>();
+
+        validatePaths(
+                config.getSourceMap(),
+                "",
+                declaredKeys,
+                unknownKeys);
 
         if (!unknownKeys.isEmpty()) {
             throw new OptionValidationException(
-                    "Connector '%s' has unknown option keys: %s. "
-                            + "Please check for typos. Declared options are: %s",
+                    "Connector '%s' has unknown option keys: %s. Declared options are: %s",
                     connectorName,
                     unknownKeys,
-                    declaredKeys.stream().sorted().collect(Collectors.toList()));
-        }
-    }
-
-    private static void validatePaths(
-            Map<String, Object> map,
-            String prefix,
-            Set<String> declaredKeys,
-            List<String> unknownKeys) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            String fullKey = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
-
-            boolean isValid =
-                    declaredKeys.contains(fullKey)
-                            || declaredKeys.stream().anyMatch(dk -> dk.startsWith(fullKey + "."));
-
-            if (!isValid) {
-                unknownKeys.add(fullKey);
-            } else if (entry.getValue() instanceof Map && !declaredKeys.contains(fullKey)) {
-                validatePaths(
-                        (Map<String, Object>) entry.getValue(), fullKey, declaredKeys, unknownKeys);
-            }
-        }
-    }
-
-    private static Set<String> collectDeclaredKeys(OptionRule rule) {
-        Set<String> keys = new HashSet<>();
-
-        if (rule != null) {
-            collectKeys(keys, rule.getOptionalOptions());
-            for (RequiredOption requiredOption : rule.getRequiredOptions()) {
-                collectKeys(keys, requiredOption.getOptions());
-            }
-            for (ConditionRule conditionRule : rule.getConditionRules()) {
-                keys.addAll(collectDeclaredKeys(conditionRule.getOptionRule()));
-            }
-            for (Condition<?> constraint : rule.getValueConstraints()) {
-                collectConditionKeys(keys, constraint);
-            }
-        }
-        return keys;
-    }
-
-    private static void collectConditionKeys(Set<String> keys, Condition<?> condition) {
-        if (condition == null) {
-            return;
-        }
-        keys.add(condition.getOption().key());
-        keys.addAll(condition.getOption().getFallbackKeys());
-        if (condition.getCompareOption() != null) {
-            keys.add(condition.getCompareOption().key());
-            keys.addAll(condition.getCompareOption().getFallbackKeys());
-        }
-        if (condition.hasNext()) {
-            collectConditionKeys(keys, condition.getNext());
-        }
-    }
-
-    private static void collectKeys(Set<String> keys, List<? extends Option<?>> options) {
-        for (Option<?> option : options) {
-            keys.add(option.key());
-            keys.addAll(option.getFallbackKeys());
+                    declaredKeys.stream()
+                            .sorted()
+                            .collect(Collectors.toList()));
         }
     }
 
     public void validate(OptionRule rule) {
-        validate(rule, null);
-    }
-
-    public void validate(OptionRule rule, Expression expression) {
-        List<String> errors = new ArrayList<>();
-        collectErrors(rule, expression, errors);
-        if (!errors.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(
-                    String.format(
-                            "Option validation failed (%d error%s):",
-                            errors.size(), errors.size() > 1 ? "s" : ""));
-            for (int i = 0; i < errors.size(); i++) {
-                sb.append(String.format("\n  [%d] %s", i + 1, errors.get(i)));
-            }
-            throw new OptionValidationException(sb.toString());
+        if (rule == null) {
+            return;
         }
+
+        List<String> errors =
+                new ArrayList<>();
+
+        collectErrors(
+                rule,
+                null,
+                errors);
+
+        if (errors.isEmpty()) {
+            return;
+        }
+
+        StringBuilder message =
+                new StringBuilder();
+
+        message.append(
+                String.format(
+                        "Option validation failed (%d error%s):",
+                        errors.size(),
+                        errors.size() > 1 ? "s" : ""));
+
+        for (int i = 0;
+             i < errors.size();
+             i++) {
+
+            message.append(
+                    String.format(
+                            "\n  [%d] %s",
+                            i + 1,
+                            errors.get(i)));
+        }
+
+        throw new OptionValidationException(
+                message.toString());
     }
 
-    private void collectErrors(OptionRule rule, Expression expression, List<String> errors) {
-        Set<String> structurallyAbsentKeys = new HashSet<>();
+    private void collectErrors(
+            OptionRule rule,
+            Condition<?> activeCondition,
+            List<String> errors) {
 
-        for (RequiredOption requiredOption : rule.getRequiredOptions()) {
-            String error = checkRequiredOption(requiredOption, expression);
+        Set<String> structurallyAbsentKeys =
+                new HashSet<>();
+
+        for (RequiredOption requiredOption :
+                rule.getRequiredOptions()) {
+
+            String error =
+                    checkRequiredOption(
+                            requiredOption,
+                            activeCondition);
+
             if (error != null) {
                 errors.add(error);
-                collectAbsentKeys(requiredOption, structurallyAbsentKeys);
+
+                collectAbsentKeys(
+                        requiredOption,
+                        structurallyAbsentKeys);
             }
 
-            for (Option<?> option : requiredOption.getOptions()) {
-                if (SingleChoiceOption.class.isAssignableFrom(option.getClass())) {
-                    if (isConditionOption(requiredOption)
-                            && !matchCondition(
-                                    (RequiredOption.ConditionalRequiredOptions) requiredOption)) {
-                        continue;
-                    }
-                    validateSingleChoice(option, errors);
+            if (requiredOption
+                    instanceof
+                    RequiredOption
+                            .ConditionalRequiredOptions
+                    && !matchCondition(
+                    (RequiredOption
+                            .ConditionalRequiredOptions)
+                            requiredOption)) {
+                continue;
+            }
+
+            for (Option<?> option :
+                    requiredOption.getOptions()) {
+
+                if (option
+                        instanceof SingleChoiceOption) {
+                    validateSingleChoice(
+                            (SingleChoiceOption<?>) option,
+                            errors);
                 }
             }
         }
 
-        for (Option option : rule.getOptionalOptions()) {
-            if (SingleChoiceOption.class.isAssignableFrom(option.getClass())) {
-                validateSingleChoice(option, errors);
+        for (Option<?> option :
+                rule.getOptionalOptions()) {
+
+            if (option instanceof SingleChoiceOption) {
+                validateSingleChoice(
+                        (SingleChoiceOption<?>) option,
+                        errors);
             }
         }
 
-        for (ConditionRule conditionRule : rule.getConditionRules()) {
+        for (ConditionRule conditionRule :
+                rule.getConditionRules()) {
+
+            Condition<?> condition =
+                    conditionRule.getCondition();
+
             try {
-                if (validate(conditionRule.getExpression())) {
+                if (validate(condition)) {
                     collectErrors(
-                            conditionRule.getOptionRule(), conditionRule.getExpression(), errors);
+                            conditionRule.getOptionRule(),
+                            condition,
+                            errors);
                 }
             } catch (OptionValidationException e) {
                 errors.add(
                         formatError(
-                                conditionRule.getExpression().toString(),
+                                condition.toString(),
                                 TYPE_CONDITIONAL,
                                 e.getRawMessage()));
             }
         }
 
-        for (Condition<?> constraint : rule.getValueConstraints()) {
-            if (structurallyAbsentKeys.contains(constraint.getOption().key())) {
+        for (Condition<?> constraint :
+                rule.getValueConstraints()) {
+
+            if (structurallyAbsentKeys.contains(
+                    constraint.getOption().key())) {
                 continue;
             }
-            if (!isConstraintApplicable(constraint, rule)) {
+
+            if (!isConstraintApplicable(
+                    constraint,
+                    rule)) {
                 continue;
             }
+
             try {
                 if (!validate(constraint)) {
                     errors.add(
                             formatError(
-                                    constraint.getOption().key(),
+                                    constraint
+                                            .getOption()
+                                            .key(),
                                     TYPE_VALUE,
                                     constraint.toString()));
                 }
             } catch (OptionValidationException e) {
                 errors.add(
-                        formatError(constraint.getOption().key(), TYPE_VALUE, e.getRawMessage()));
+                        formatError(
+                                constraint
+                                        .getOption()
+                                        .key(),
+                                TYPE_VALUE,
+                                e.getRawMessage()));
             }
         }
     }
 
-    private void collectAbsentKeys(RequiredOption requiredOption, Set<String> keys) {
-        if (requiredOption instanceof RequiredOption.AbsolutelyRequiredOptions) {
-            for (Option<?> opt :
-                    getAbsentOptions(
-                            ((RequiredOption.AbsolutelyRequiredOptions) requiredOption)
-                                    .getRequiredOption())) {
-                keys.add(opt.key());
-            }
-        } else if (isConditionOption(requiredOption)) {
-            RequiredOption.ConditionalRequiredOptions cond =
-                    (RequiredOption.ConditionalRequiredOptions) requiredOption;
-            if (matchCondition(cond)) {
-                for (Option<?> opt : getAbsentOptions(cond.getRequiredOption())) {
-                    keys.add(opt.key());
-                }
-            }
-        }
-    }
+    private String checkRequiredOption(
+            RequiredOption requiredOption,
+            Condition<?> activeCondition) {
 
-    /**
-     * Determines whether a value constraint should be evaluated.
-     *
-     * <p>If the constraint's head option is absolutely required, the constraint is always
-     * applicable. Only the head option (the option the constraint is "about") is checked — compare
-     * fields referenced by cross-field operators do not force applicability. This ensures that
-     * {@code optional(MAX, lessThanField(MAX, START_TS))} correctly skips when MAX is absent, even
-     * if START_TS is required elsewhere.
-     *
-     * <p>For optional constraints, the chain is split into OR-separated AND segments. Each AND
-     * segment requires ALL its options to be present. The constraint is applicable if ANY segment
-     * has all options present. This ensures:
-     *
-     * <ul>
-     *   <li>Cross-field within one AND segment: both fields must exist (no false positive)
-     *   <li>OR chains: each branch evaluated independently (no false negative)
-     *   <li>All absent: every segment fails → constraint skipped
-     * </ul>
-     */
-    private boolean isConstraintApplicable(Condition<?> condition, OptionRule rule) {
-        Option<?> headOption = condition.getOption();
-        for (RequiredOption requiredOption : rule.getRequiredOptions()) {
-            if (requiredOption instanceof RequiredOption.AbsolutelyRequiredOptions
-                    && requiredOption.getOptions().contains(headOption)) {
-                return true;
-            }
-        }
-        return anyOrSegmentFullyPresent(condition);
-    }
+        if (requiredOption
+                instanceof
+                RequiredOption
+                        .AbsolutelyRequiredOptions) {
 
-    /**
-     * Splits the condition chain at OR boundaries into AND segments, and returns true if any
-     * segment has all of its referenced options present in the config.
-     */
-    private boolean anyOrSegmentFullyPresent(Condition<?> condition) {
-        Condition<?> cur = condition;
-        while (cur != null) {
-            Set<Option<?>> segmentOptions = new HashSet<>();
-            while (cur != null) {
-                segmentOptions.add(cur.getOption());
-                if (cur.getCompareOption() != null) {
-                    segmentOptions.add(cur.getCompareOption());
-                }
-                if (!cur.hasNext()) {
-                    cur = null;
-                    break;
-                }
-                if (Boolean.TRUE.equals(cur.and())) {
-                    cur = cur.getNext();
-                } else {
-                    cur = cur.getNext();
-                    break;
-                }
-            }
-            boolean allPresent = true;
-            for (Option<?> opt : segmentOptions) {
-                if (!hasOption(opt)) {
-                    allPresent = false;
-                    break;
-                }
-            }
-            if (allPresent) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void validateSingleChoice(Option option, List<String> errors) {
-        SingleChoiceOption singleChoiceOption = (SingleChoiceOption) option;
-        List optionValues = singleChoiceOption.getOptionValues();
-        if (CollectionUtils.isEmpty(optionValues)) {
-            errors.add(
-                    formatError(
-                            option.key(), TYPE_SINGLE_CHOICE, "optionValues must not be empty"));
-            return;
-        }
-
-        Object o = singleChoiceOption.defaultValue();
-        if (o != null && !optionValues.contains(o)) {
-            errors.add(
-                    formatError(
-                            option.key(),
-                            TYPE_SINGLE_CHOICE,
-                            String.format("defaultValue(%s) must be one of %s", o, optionValues)));
-        }
-
-        Object value = config.get(option);
-        if (value != null && !optionValues.contains(value)) {
-            errors.add(
-                    formatError(
-                            option.key(),
-                            TYPE_SINGLE_CHOICE,
-                            String.format("value(%s) must be one of %s", value, optionValues)));
-        }
-    }
-
-    String checkRequiredOption(RequiredOption requiredOption, Expression expression) {
-        if (requiredOption instanceof RequiredOption.AbsolutelyRequiredOptions) {
             return checkAbsolutelyRequired(
-                    (RequiredOption.AbsolutelyRequiredOptions) requiredOption, expression);
+                    (RequiredOption
+                            .AbsolutelyRequiredOptions)
+                            requiredOption,
+                    activeCondition);
         }
-        if (requiredOption instanceof RequiredOption.BundledRequiredOptions) {
-            return checkBundled((RequiredOption.BundledRequiredOptions) requiredOption);
+
+        if (requiredOption
+                instanceof
+                RequiredOption
+                        .BundledRequiredOptions) {
+
+            return checkBundled(
+                    (RequiredOption
+                            .BundledRequiredOptions)
+                            requiredOption);
         }
-        if (requiredOption instanceof RequiredOption.ExclusiveRequiredOptions) {
-            return checkExclusive((RequiredOption.ExclusiveRequiredOptions) requiredOption);
+
+        if (requiredOption
+                instanceof
+                RequiredOption
+                        .ExclusiveRequiredOptions) {
+
+            return checkExclusive(
+                    (RequiredOption
+                            .ExclusiveRequiredOptions)
+                            requiredOption);
         }
-        if (isConditionOption(requiredOption)) {
-            return checkConditional((RequiredOption.ConditionalRequiredOptions) requiredOption);
+
+        if (requiredOption
+                instanceof
+                RequiredOption
+                        .ConditionalRequiredOptions) {
+
+            return checkConditional(
+                    (RequiredOption
+                            .ConditionalRequiredOptions)
+                            requiredOption);
         }
+
         throw new UnsupportedOperationException(
-                String.format(
-                        "This type option(%s) of validation is not supported",
-                        requiredOption.getClass()));
+                "Unsupported required option type: "
+                        + requiredOption.getClass()
+                        .getName());
     }
 
-    private List<Option<?>> getAbsentOptions(List<Option<?>> requiredOption) {
-        List<Option<?>> absent = new ArrayList<>();
-        for (Option<?> option : requiredOption) {
-            if (!hasOption(option) && option.defaultValue() == null) {
-                absent.add(option);
-            }
-        }
-        return absent;
-    }
+    private String checkAbsolutelyRequired(
+            RequiredOption.AbsolutelyRequiredOptions required,
+            Condition<?> activeCondition) {
 
-    String checkAbsolutelyRequired(
-            RequiredOption.AbsolutelyRequiredOptions requiredOption, Expression expression) {
-        List<Option<?>> absentOptions = getAbsentOptions(requiredOption.getRequiredOption());
-        if (absentOptions.isEmpty()) {
+        List<Option<?>> absent =
+                getAbsentOptions(
+                        required.getRequiredOption());
+
+        if (absent.isEmpty()) {
             return null;
         }
-        String hint = expression == null ? "" : " when [" + expression + "]";
+
+        String hint =
+                activeCondition == null
+                        ? ""
+                        : " when ["
+                        + activeCondition
+                        + "]";
+
         return formatError(
-                getOptionKeys(absentOptions),
+                getOptionKeys(absent),
                 TYPE_REQUIRED,
-                "required option is not configured" + hint);
+                "required option is not configured"
+                        + hint);
     }
 
-    boolean hasOption(Option<?> option) {
-        return config.getOptional(option).isPresent();
-    }
+    private String checkBundled(
+            RequiredOption.BundledRequiredOptions bundled) {
 
-    String checkBundled(RequiredOption.BundledRequiredOptions bundledRequiredOptions) {
-        List<Option<?>> bundledOptions = bundledRequiredOptions.getRequiredOption();
-        List<Option<?>> present = new ArrayList<>();
-        List<Option<?>> absent = new ArrayList<>();
-        for (Option<?> option : bundledOptions) {
+        List<Option<?>> present =
+                new ArrayList<>();
+
+        List<Option<?>> absent =
+                new ArrayList<>();
+
+        for (Option<?> option :
+                bundled.getRequiredOption()) {
+
             if (hasOption(option)) {
                 present.add(option);
             } else {
                 absent.add(option);
             }
         }
-        if (present.size() == bundledOptions.size() || absent.size() == bundledOptions.size()) {
+
+        if (present.isEmpty()
+                || absent.isEmpty()) {
             return null;
         }
+
         return formatOptionsError(
-                getOptionKeys(bundledOptions),
+                getOptionKeys(
+                        bundled.getRequiredOption()),
                 TYPE_BUNDLED,
                 String.format(
-                        "bundled options must be present or absent together (present: [%s], absent: [%s])",
-                        getOptionKeys(present), getOptionKeys(absent)));
+                        "bundled options must be present or absent together "
+                                + "(present: [%s], absent: [%s])",
+                        getOptionKeys(present),
+                        getOptionKeys(absent)));
     }
 
-    String checkExclusive(RequiredOption.ExclusiveRequiredOptions exclusiveRequiredOptions) {
-        List<Option<?>> presentOptions = new ArrayList<>();
-        for (Option<?> option : exclusiveRequiredOptions.getExclusiveOptions()) {
-            if (hasOption(option)) {
-                presentOptions.add(option);
-            }
-        }
-        int count = presentOptions.size();
-        if (count == 1) {
+    private String checkExclusive(
+            RequiredOption.ExclusiveRequiredOptions exclusive) {
+
+        List<Option<?>> present =
+                exclusive.getExclusiveOptions()
+                        .stream()
+                        .filter(this::hasOption)
+                        .collect(Collectors.toList());
+
+        if (present.size() == 1) {
             return null;
         }
-        if (count == 0) {
+
+        if (present.isEmpty()) {
             return formatOptionsError(
-                    getOptionKeys(exclusiveRequiredOptions.getExclusiveOptions()),
+                    getOptionKeys(
+                            exclusive
+                                    .getExclusiveOptions()),
                     TYPE_EXCLUSIVE,
-                    "exactly one option must be set, but none are configured");
+                    "exactly one option must be configured");
         }
+
         return formatOptionsError(
-                getOptionKeys(exclusiveRequiredOptions.getExclusiveOptions()),
+                getOptionKeys(
+                        exclusive.getExclusiveOptions()),
                 TYPE_EXCLUSIVE,
-                String.format(
-                        "mutually exclusive, but multiple are set: [%s]",
-                        getOptionKeys(presentOptions)));
+                "multiple exclusive options are configured: "
+                        + getOptionKeys(present));
     }
 
-    String checkConditional(RequiredOption.ConditionalRequiredOptions conditionalRequiredOptions) {
-        boolean match = matchCondition(conditionalRequiredOptions);
-        if (!match) {
+    private String checkConditional(
+            RequiredOption.ConditionalRequiredOptions conditional) {
+
+        if (!matchCondition(conditional)) {
             return null;
         }
-        List<Option<?>> absentOptions =
-                getAbsentOptions(conditionalRequiredOptions.getRequiredOption());
-        if (absentOptions.isEmpty()) {
+
+        List<Option<?>> absent =
+                getAbsentOptions(
+                        conditional.getRequiredOption());
+
+        if (absent.isEmpty()) {
             return null;
         }
+
         return formatError(
-                getOptionKeys(absentOptions),
+                getOptionKeys(absent),
                 TYPE_CONDITIONAL,
                 String.format(
                         "required because [%s] is true",
-                        conditionalRequiredOptions.getExpression().toString()));
+                        conditional.getCondition()));
     }
 
-    private boolean validate(Expression expression) {
-        Condition<?> condition = expression.getCondition();
-        boolean match = validate(condition);
-        if (!expression.hasNext()) {
-            return match;
+    private List<Option<?>> getAbsentOptions(
+            List<Option<?>> options) {
+
+        return options.stream()
+                .filter(option ->
+                        !hasOption(option)
+                                && option.defaultValue()
+                                == null)
+                .collect(Collectors.toList());
+    }
+
+    private boolean hasOption(Option<?> option) {
+        return config.getOptional(option)
+                .isPresent();
+    }
+
+    private void validateSingleChoice(
+            SingleChoiceOption<?> option,
+            List<String> errors) {
+
+        List<?> values =
+                option.getOptionValues();
+
+        if (values == null || values.isEmpty()) {
+            errors.add(
+                    formatError(
+                            option.key(),
+                            TYPE_SINGLE_CHOICE,
+                            "optionValues must not be empty"));
+            return;
         }
-        if (expression.and()) {
-            return match && validate(expression.getNext());
-        } else {
-            return match || validate(expression.getNext());
+
+        Object defaultValue =
+                option.defaultValue();
+
+        if (defaultValue != null
+                && !values.contains(defaultValue)) {
+
+            errors.add(
+                    formatError(
+                            option.key(),
+                            TYPE_SINGLE_CHOICE,
+                            String.format(
+                                    "defaultValue(%s) must be one of %s",
+                                    defaultValue,
+                                    values)));
+        }
+
+        Optional<?> configuredValue =
+                config.getOptional(option);
+
+        if (configuredValue.isPresent()
+                && !values.contains(
+                configuredValue.get())) {
+
+            errors.add(
+                    formatError(
+                            option.key(),
+                            TYPE_SINGLE_CHOICE,
+                            String.format(
+                                    "value(%s) must be one of %s",
+                                    configuredValue.get(),
+                                    values)));
         }
     }
 
     /**
-     * Evaluates a condition chain with standard boolean precedence: AND binds tighter than OR. The
-     * chain {@code A.and(B).or(C)} evaluates as {@code (A && B) || C}, matching the output of
-     * {@link Condition#toString()}.
+     * 判断可选配置的值约束是否需要执行。
      */
-    private <T> boolean validate(Condition<T> condition) {
-        Condition<?> cur = condition;
-        while (cur != null) {
-            boolean andGroupResult = true;
-            while (cur != null) {
-                andGroupResult = andGroupResult && ConditionEvaluators.evaluate(cur, config);
-                if (!cur.hasNext()) {
-                    cur = null;
-                    break;
-                }
-                if (Boolean.TRUE.equals(cur.and())) {
-                    cur = cur.getNext();
-                } else {
-                    cur = cur.getNext();
-                    break;
-                }
-            }
-            if (andGroupResult) {
+    private boolean isConstraintApplicable(
+            Condition<?> condition,
+            OptionRule rule) {
+
+        Option<?> headOption =
+                condition.getOption();
+
+        for (RequiredOption required :
+                rule.getRequiredOptions()) {
+
+            if (required
+                    instanceof
+                    RequiredOption
+                            .AbsolutelyRequiredOptions
+                    && required.getOptions()
+                    .contains(headOption)) {
                 return true;
             }
         }
+
+        return anyOrSegmentFullyPresent(condition);
+    }
+
+    /**
+     * 任意一个 OR 分组中的配置全部存在时执行校验。
+     */
+    private boolean anyOrSegmentFullyPresent(
+            Condition<?> condition) {
+
+        Condition<?> current = condition;
+
+        while (current != null) {
+            Set<Option<?>> segmentOptions =
+                    new HashSet<>();
+
+            while (current != null) {
+                segmentOptions.add(
+                        current.getOption());
+
+                if (current.getCompareOption()
+                        != null) {
+                    segmentOptions.add(
+                            current.getCompareOption());
+                }
+
+                if (!current.hasNext()) {
+                    current = null;
+                    break;
+                }
+
+                boolean isAnd =
+                        Boolean.TRUE.equals(
+                                current.and());
+
+                current = current.getNext();
+
+                if (!isAnd) {
+                    break;
+                }
+            }
+
+            boolean allPresent =
+                    segmentOptions.stream()
+                            .allMatch(this::hasOption);
+
+            if (allPresent) {
+                return true;
+            }
+        }
+
         return false;
     }
 
-    private boolean isConditionOption(RequiredOption requiredOption) {
-        return requiredOption instanceof RequiredOption.ConditionalRequiredOptions;
+    /**
+     * 按 AND 优先于 OR 的规则执行条件。
+     */
+    private boolean validate(
+            Condition<?> condition) {
+
+        Condition<?> current = condition;
+
+        while (current != null) {
+            boolean groupResult = true;
+
+            while (current != null) {
+                if (groupResult) {
+                    groupResult =
+                            ConditionEvaluators.evaluate(
+                                    current,
+                                    config);
+                }
+
+                if (!current.hasNext()) {
+                    current = null;
+                    break;
+                }
+
+                boolean isAnd =
+                        Boolean.TRUE.equals(
+                                current.and());
+
+                current = current.getNext();
+
+                if (!isAnd) {
+                    break;
+                }
+            }
+
+            if (groupResult) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean matchCondition(
-            RequiredOption.ConditionalRequiredOptions conditionalRequiredOptions) {
-        Expression expression = conditionalRequiredOptions.getExpression();
-        return validate(expression);
+            RequiredOption.ConditionalRequiredOptions conditional) {
+
+        return validate(
+                conditional.getCondition());
+    }
+
+    private void collectAbsentKeys(
+            RequiredOption required,
+            Set<String> absentKeys) {
+
+        if (required
+                instanceof
+                RequiredOption
+                        .ConditionalRequiredOptions
+                && !matchCondition(
+                (RequiredOption
+                        .ConditionalRequiredOptions)
+                        required)) {
+            return;
+        }
+
+        for (Option<?> option :
+                getAbsentOptions(
+                        required.getOptions())) {
+
+            absentKeys.add(option.key());
+        }
+    }
+
+    private static Set<String> collectDeclaredKeys(
+            OptionRule rule) {
+
+        Set<String> keys =
+                new HashSet<>();
+
+        if (rule == null) {
+            return keys;
+        }
+
+        collectKeys(
+                keys,
+                rule.getOptionalOptions());
+
+        for (RequiredOption required :
+                rule.getRequiredOptions()) {
+            collectKeys(
+                    keys,
+                    required.getOptions());
+
+            if (required
+                    instanceof
+                    RequiredOption
+                            .ConditionalRequiredOptions) {
+
+                collectConditionKeys(
+                        keys,
+                        ((RequiredOption
+                                .ConditionalRequiredOptions)
+                                required)
+                                .getCondition());
+            }
+        }
+
+        for (ConditionRule conditionRule :
+                rule.getConditionRules()) {
+
+            collectConditionKeys(
+                    keys,
+                    conditionRule.getCondition());
+
+            keys.addAll(
+                    collectDeclaredKeys(
+                            conditionRule
+                                    .getOptionRule()));
+        }
+
+        for (Condition<?> constraint :
+                rule.getValueConstraints()) {
+
+            collectConditionKeys(
+                    keys,
+                    constraint);
+        }
+
+        return keys;
+    }
+
+    private static void collectConditionKeys(
+            Set<String> keys,
+            Condition<?> condition) {
+
+        Condition<?> current = condition;
+
+        while (current != null) {
+            addOptionKeys(
+                    keys,
+                    current.getOption());
+
+            if (current.getCompareOption()
+                    != null) {
+                addOptionKeys(
+                        keys,
+                        current.getCompareOption());
+            }
+
+            current = current.getNext();
+        }
+    }
+
+    private static void collectKeys(
+            Set<String> keys,
+            List<? extends Option<?>> options) {
+
+        for (Option<?> option : options) {
+            addOptionKeys(keys, option);
+        }
+    }
+
+    private static void addOptionKeys(
+            Set<String> keys,
+            Option<?> option) {
+
+        keys.add(option.key());
+        keys.addAll(
+                option.getFallbackKeys());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void validatePaths(
+            Map<String, Object> map,
+            String prefix,
+            Set<String> declaredKeys,
+            List<String> unknownKeys) {
+
+        for (Map.Entry<String, Object> entry :
+                map.entrySet()) {
+
+            String fullKey =
+                    prefix.isEmpty()
+                            ? entry.getKey()
+                            : prefix
+                            + "."
+                            + entry.getKey();
+
+            boolean valid =
+                    declaredKeys.contains(fullKey)
+                            || declaredKeys.stream()
+                            .anyMatch(key ->
+                                    key.startsWith(
+                                            fullKey + "."));
+
+            if (!valid) {
+                unknownKeys.add(fullKey);
+                continue;
+            }
+
+            if (entry.getValue() instanceof Map
+                    && !declaredKeys.contains(fullKey)) {
+
+                validatePaths(
+                        (Map<String, Object>)
+                                entry.getValue(),
+                        fullKey,
+                        declaredKeys,
+                        unknownKeys);
+            }
+        }
     }
 }

@@ -1,135 +1,249 @@
 package com.baize.flux.api.configuration.util;
 
 import com.baize.flux.api.configuration.Option;
-import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
-@Getter
-public class Condition<T> {
+/**
+ * 配置条件，支持 AND 和 OR 链式组合。
+ *
+ * @param <T> 配置值类型
+ */
+public final class Condition<T> {
 
     private final Option<T> option;
-    private final T expectValue;
+    private final Object expectedValue;
     private final ConditionOperator operator;
     private final Option<?> compareOption;
     private final ConditionExtension<T> extension;
-    private Boolean and = null;
-    private Condition<?> next = null;
 
-    Condition(Option<T> option, T expectValue) {
-        this(option, ConditionOperator.EQUAL, expectValue, null, null);
-    }
+    private Boolean and;
+    private Condition<?> next;
 
     Condition(
-            Option<T> option, ConditionOperator operator, T expectValue, Option<?> compareOption) {
-        this(option, operator, expectValue, compareOption, null);
+            Option<T> option,
+            Object expectedValue) {
+
+        this(
+                option,
+                ConditionOperator.EQUAL,
+                expectedValue,
+                null,
+                null);
     }
 
     Condition(
             Option<T> option,
             ConditionOperator operator,
-            T expectValue,
+            Object expectedValue,
+            Option<?> compareOption) {
+
+        this(
+                option,
+                operator,
+                expectedValue,
+                compareOption,
+                null);
+    }
+
+    Condition(
+            Option<T> option,
+            ConditionOperator operator,
+            Object expectedValue,
             Option<?> compareOption,
             ConditionExtension<T> extension) {
-        if (option == null) {
-            throw new IllegalArgumentException("Condition option must not be null");
+
+        this.option = Objects.requireNonNull(
+                option,
+                "Condition option must not be null");
+
+        this.operator = Objects.requireNonNull(
+                operator,
+                "Condition operator must not be null");
+
+        if (operator.getSource() == ConditionOperator.Source.FIELD
+                && compareOption == null) {
+            throw new IllegalArgumentException(
+                    "Field comparison requires compareOption");
         }
-        if (operator == null) {
-            throw new IllegalArgumentException("Condition operator must not be null");
+
+        if (operator.getSource() != ConditionOperator.Source.FIELD
+                && compareOption != null) {
+            throw new IllegalArgumentException(
+                    "compareOption is only supported by field comparison");
         }
-        if (operator.getSource() == ConditionOperator.Source.FIELD && compareOption == null) {
+
+        if (operator == ConditionOperator.EXTENSION
+                && extension == null) {
+            throw new IllegalArgumentException(
+                    "EXTENSION requires ConditionExtension");
+        }
+
+        boolean requiresValue =
+                operator.getSource() == ConditionOperator.Source.LITERAL
+                        && operator.getArity() == ConditionOperator.Arity.BINARY
+                        && operator != ConditionOperator.EQUAL
+                        && operator != ConditionOperator.NOT_EQUAL;
+
+        if (requiresValue && expectedValue == null) {
             throw new IllegalArgumentException(
                     String.format(
-                            "Operator %s requires a compareOption (cross-field comparison), but compareOption is null",
+                            "Operator %s requires expectedValue",
                             operator.name()));
         }
-        if (operator.getArity() == ConditionOperator.Arity.BINARY
-                && operator.getSource() == ConditionOperator.Source.LITERAL
-                && expectValue == null) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "Operator %s requires an expectValue, but expectValue is null",
-                            operator.name()));
-        }
-        if (operator == ConditionOperator.EXTENSION && extension == null) {
-            throw new IllegalArgumentException(
-                    "Operator EXTENSION requires a non-null ConditionExtension");
-        }
-        this.option = option;
-        this.operator = operator;
-        this.expectValue = expectValue;
+
+        this.expectedValue = expectedValue;
         this.compareOption = compareOption;
         this.extension = extension;
     }
 
-    public static <T> Condition<T> of(Option<T> option, T expectValue) {
-        return new Condition<>(option, expectValue);
+    public static <T> Condition<T> of(
+            Option<T> option,
+            Object expectedValue) {
+
+        return new Condition<>(option, expectedValue);
     }
 
-    public static <T> Condition<T> of(Option<T> option, ConditionOperator op, T expectValue) {
-        return new Condition<>(option, op, expectValue, null);
+    public static <T> Condition<T> of(
+            Option<T> option,
+            ConditionOperator operator,
+            Object expectedValue) {
+
+        return new Condition<>(
+                option,
+                operator,
+                expectedValue,
+                null);
     }
 
-    public <E> Condition<T> and(Option<E> option, E expectValue) {
-        return and(of(option, expectValue));
+    public Option<T> getOption() {
+        return option;
     }
 
-    public <E> Condition<T> or(Option<E> option, E expectValue) {
-        return or(of(option, expectValue));
+    public Object getExpectedValue() {
+        return expectedValue;
     }
 
-    public Condition<T> and(Condition<?> next) {
-        addCondition(true, next);
-        return this;
+    /**
+     * 保留旧方法名，减少原调用代码改动。
+     */
+    public Object getExpectValue() {
+        return expectedValue;
     }
 
-    public Condition<T> or(Condition<?> next) {
-        addCondition(false, next);
-        return this;
+    public ConditionOperator getOperator() {
+        return operator;
     }
 
-    private void addCondition(boolean and, Condition<?> next) {
-        Condition<?> cur = next;
-        while (cur != null) {
-            Condition<?> self = this;
-            while (self != null) {
-                if (self == cur) {
-                    throw new IllegalArgumentException(
-                            "Circular condition chain detected: '"
-                                    + cur.option.key()
-                                    + "' already exists in the chain");
-                }
-                self = self.next;
-            }
-            cur = cur.next;
-        }
-        Condition<?> tail = getTailCondition();
-        tail.and = and;
-        tail.next = next;
+    public Option<?> getCompareOption() {
+        return compareOption;
     }
 
-    protected int getCount() {
-        int i = 1;
-        Condition<?> cur = this;
-        while (cur.hasNext()) {
-            i++;
-            cur = cur.next;
-        }
-        return i;
+    public ConditionExtension<T> getExtension() {
+        return extension;
     }
 
-    Condition<?> getTailCondition() {
-        return hasNext() ? this.next.getTailCondition() : this;
-    }
-
-    public boolean hasNext() {
-        return this.next != null;
+    public Condition<?> getNext() {
+        return next;
     }
 
     public Boolean and() {
-        return this.and;
+        return and;
+    }
+
+    public boolean hasNext() {
+        return next != null;
+    }
+
+    public <E> Condition<T> and(
+            Option<E> option,
+            Object expectedValue) {
+
+        return and(Condition.of(option, expectedValue));
+    }
+
+    public <E> Condition<T> or(
+            Option<E> option,
+            Object expectedValue) {
+
+        return or(Condition.of(option, expectedValue));
+    }
+
+    public Condition<T> and(Condition<?> condition) {
+        addCondition(true, condition);
+        return this;
+    }
+
+    public Condition<T> or(Condition<?> condition) {
+        addCondition(false, condition);
+        return this;
+    }
+
+    private void addCondition(
+            boolean and,
+            Condition<?> condition) {
+
+        Objects.requireNonNull(condition, "condition");
+
+        Set<Condition<?>> currentNodes =
+                Collections.newSetFromMap(
+                        new IdentityHashMap<>());
+
+        Condition<?> current = this;
+        while (current != null) {
+            if (!currentNodes.add(current)) {
+                throw new IllegalArgumentException(
+                        "Circular condition chain detected");
+            }
+            current = current.next;
+        }
+
+        Set<Condition<?>> newNodes =
+                Collections.newSetFromMap(
+                        new IdentityHashMap<>());
+
+        current = condition;
+        while (current != null) {
+            if (currentNodes.contains(current)
+                    || !newNodes.add(current)) {
+                throw new IllegalArgumentException(
+                        "Circular condition chain detected near option '"
+                                + current.option.key()
+                                + "'");
+            }
+            current = current.next;
+        }
+
+        Condition<?> tail = getTailCondition();
+        tail.and = and;
+        tail.next = condition;
+    }
+
+    int getCount() {
+        int count = 0;
+        Condition<?> current = this;
+
+        while (current != null) {
+            count++;
+            current = current.next;
+        }
+
+        return count;
+    }
+
+    private Condition<?> getTailCondition() {
+        Condition<?> current = this;
+
+        while (current.next != null) {
+            current = current.next;
+        }
+
+        return current;
     }
 
     @Override
@@ -140,91 +254,123 @@ public class Condition<T> {
         if (!(obj instanceof Condition)) {
             return false;
         }
+
         Condition<?> that = (Condition<?>) obj;
-        return Objects.equals(this.option, that.option)
-                && Objects.equals(this.expectValue, that.expectValue)
-                && Objects.equals(this.operator, that.operator)
-                && Objects.equals(this.compareOption, that.compareOption)
-                && Objects.equals(this.and, that.and)
-                && Objects.equals(this.next, that.next);
+        return Objects.equals(option, that.option)
+                && Objects.equals(expectedValue, that.expectedValue)
+                && operator == that.operator
+                && Objects.equals(compareOption, that.compareOption)
+                && Objects.equals(extension, that.extension)
+                && Objects.equals(and, that.and)
+                && Objects.equals(next, that.next);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(
-                this.option,
-                this.expectValue,
-                this.operator,
-                this.compareOption,
-                this.and,
-                this.next);
+                option,
+                expectedValue,
+                operator,
+                compareOption,
+                extension,
+                and,
+                next);
     }
 
     /**
-     * Renders this condition chain as a human-readable string using AND-first precedence grouping,
-     * consistent with the evaluation semantics in {@code ConfigValidator}.
-     *
-     * <p>Multi-node AND segments are wrapped in parentheses when mixed with OR: {@code A || (B &&
-     * C)} rather than {@code (A || B) && C}.
+     * 按 AND 优先级输出条件表达式。
      */
     @Override
     public String toString() {
-        List<String> orSegments = new ArrayList<>();
-        List<Integer> orSegmentSizes = new ArrayList<>();
-        Condition<?> cur = this;
-        while (cur != null) {
+        List<String> segments = new ArrayList<>();
+        List<Integer> sizes = new ArrayList<>();
+
+        Condition<?> current = this;
+
+        while (current != null) {
             StringBuilder segment = new StringBuilder();
-            int count = 0;
-            while (cur != null) {
-                if (count > 0) {
+            int size = 0;
+
+            while (current != null) {
+                if (size > 0) {
                     segment.append(" && ");
                 }
-                segment.append(conditionToString(cur));
-                count++;
-                if (!cur.hasNext()) {
-                    cur = null;
+
+                segment.append(conditionToString(current));
+                size++;
+
+                if (!current.hasNext()) {
+                    current = null;
                     break;
                 }
-                if (Boolean.TRUE.equals(cur.and)) {
-                    cur = cur.next;
-                } else {
-                    cur = cur.next;
+
+                boolean isAnd = Boolean.TRUE.equals(current.and);
+                current = current.next;
+
+                if (!isAnd) {
                     break;
                 }
             }
-            orSegments.add(segment.toString());
-            orSegmentSizes.add(count);
+
+            segments.add(segment.toString());
+            sizes.add(size);
         }
-        if (orSegments.size() == 1) {
-            return orSegments.get(0);
+
+        if (segments.size() == 1) {
+            return segments.get(0);
         }
+
         StringBuilder result = new StringBuilder();
-        for (int i = 0; i < orSegments.size(); i++) {
+
+        for (int i = 0; i < segments.size(); i++) {
             if (i > 0) {
                 result.append(" || ");
             }
-            if (orSegmentSizes.get(i) > 1) {
-                result.append("(").append(orSegments.get(i)).append(")");
+
+            if (sizes.get(i) > 1) {
+                result.append("(")
+                        .append(segments.get(i))
+                        .append(")");
             } else {
-                result.append(orSegments.get(i));
+                result.append(segments.get(i));
             }
         }
+
         return result.toString();
     }
 
-    private static String conditionToString(Condition<?> cond) {
-        ConditionOperator op = cond.operator;
-        String key = "'" + cond.option.key() + "'";
+    private static String conditionToString(Condition<?> condition) {
+        ConditionOperator operator = condition.operator;
+        String key = "'" + condition.option.key() + "'";
 
-        if (op == ConditionOperator.EXTENSION) {
-            return key + " " + cond.extension.description();
+        if (operator == ConditionOperator.EXTENSION) {
+            return key + " " + condition.extension.description();
         }
-        if (op.getSource() == ConditionOperator.Source.FIELD) {
-            return key + " " + op.getSymbol() + " '" + cond.compareOption.key() + "'";
+
+        if (operator.getSource() == ConditionOperator.Source.FIELD) {
+            return key
+                    + " "
+                    + operator.getSymbol()
+                    + " '"
+                    + condition.compareOption.key()
+                    + "'";
         }
-        if (op.getArity() == ConditionOperator.Arity.UNARY) {
-            return key + " " + op.getSymbol();
+
+        if (operator.getArity() == ConditionOperator.Arity.UNARY) {
+            return key + " " + operator.getSymbol();
         }
-        return key + " " + op.getSymbol() + " " + cond.expectValue;
+
+        return key
+                + " "
+                + operator.getSymbol()
+                + " "
+                + formatValue(condition.expectedValue);
+    }
+
+    private static String formatValue(Object value) {
+        if (value instanceof String) {
+            return "'" + value + "'";
+        }
+        return String.valueOf(value);
     }
 }

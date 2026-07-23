@@ -1,131 +1,263 @@
 package com.baize.flux.api.configuration.util;
 
-
 import com.baize.flux.api.configuration.Option;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 
 /**
- * Unified factory for creating {@link Condition} instances.
- *
- * <p>Usage example:
- *
- * <pre>{@code
- * static *
- * OptionRule.builder()
- *     .required(PORT, greaterOrEqual(PORT, 1).and(lessOrEqual(PORT, 65535)))
- *     .required(HOST, notBlank(HOST))
- *     .required(START_TS, END_TS, lessThanField(START_TS, END_TS))
- *     .build();
- * }</pre>
- *
- * <ul>
- *   <li><b>Numeric</b>: {@code greaterThan}, {@code greaterOrEqual}, {@code lessThan}, {@code
- *       lessOrEqual}
- *   <li><b>String</b>: {@code notBlank}, {@code startsWith}, {@code contains}, {@code matches},
- *       {@code upperCase}, {@code lowerCase}
- *   <li><b>Collection</b>: {@code notEmpty}, {@code unique}
- *   <li><b>Map</b>: {@code mapNotEmpty}, {@code mapContainsKey}, {@code mapContainsKeys}
- *   <li><b>Cross-field</b>: {@code lessThanField}, {@code lessOrEqualField}, {@code
- *       greaterThanField}, {@code greaterOrEqualField}
- *   <li><b>Extension</b>: {@code extension} (custom logic via {@link ConditionExtension})
- * </ul>
- *
- * <p>Additionally, equality checks are available via {@link Condition#of(Option, Object)} (EQUAL)
- * and {@link Condition#of(Option, ConditionOperator, Object)} (NOT_EQUAL).
+ * 条件创建工具。
  */
 public final class Conditions {
 
-    // ==================== Numeric comparison ====================
-
-    public static <T> Condition<T> greaterThan(Option<T> option, T value) {
-        return new Condition<>(option, ConditionOperator.GREATER_THAN, value, null);
+    private Conditions() {
     }
 
-    public static <T> Condition<T> greaterOrEqual(Option<T> option, T value) {
-        return new Condition<>(option, ConditionOperator.GREATER_OR_EQUAL, value, null);
+    public static <T> Condition<T> equalTo(
+            Option<T> option,
+            Object value) {
+
+        return new Condition<>(
+                option,
+                ConditionOperator.EQUAL,
+                value,
+                null);
     }
 
-    public static <T> Condition<T> lessThan(Option<T> option, T value) {
-        return new Condition<>(option, ConditionOperator.LESS_THAN, value, null);
+    public static <T> Condition<T> notEqual(
+            Option<T> option,
+            Object value) {
+
+        return new Condition<>(
+                option,
+                ConditionOperator.NOT_EQUAL,
+                value,
+                null);
     }
 
-    public static <T> Condition<T> lessOrEqual(Option<T> option, T value) {
-        return new Condition<>(option, ConditionOperator.LESS_OR_EQUAL, value, null);
+    public static <T> Condition<T> greaterThan(
+            Option<T> option,
+            Object value) {
+
+        return literal(
+                option,
+                ConditionOperator.GREATER_THAN,
+                value);
     }
 
-    // ==================== String validation ====================
+    public static <T> Condition<T> greaterOrEqual(
+            Option<T> option,
+            Object value) {
 
-    public static <T> Condition<T> notBlank(Option<T> option) {
-        return new Condition<>(option, ConditionOperator.NOT_BLANK, null, null);
+        return literal(
+                option,
+                ConditionOperator.GREATER_OR_EQUAL,
+                value);
     }
 
-    public static <T> Condition<T> startsWith(Option<T> option, T prefix) {
-        return new Condition<>(option, ConditionOperator.STARTS_WITH, prefix, null);
+    public static <T> Condition<T> lessThan(
+            Option<T> option,
+            Object value) {
+
+        return literal(
+                option,
+                ConditionOperator.LESS_THAN,
+                value);
     }
 
-    public static <T> Condition<T> matches(Option<T> option, T regex) {
-        return new Condition<>(option, ConditionOperator.MATCHES, regex, null);
+    public static <T> Condition<T> lessOrEqual(
+            Option<T> option,
+            Object value) {
+
+        return literal(
+                option,
+                ConditionOperator.LESS_OR_EQUAL,
+                value);
     }
 
-    public static <T> Condition<T> contains(Option<T> option, T substring) {
-        return new Condition<>(option, ConditionOperator.CONTAINS, substring, null);
+    public static Condition<String> notBlank(
+            Option<String> option) {
+
+        return unary(
+                option,
+                ConditionOperator.NOT_BLANK);
     }
 
-    public static <T> Condition<T> upperCase(Option<T> option) {
-        return new Condition<>(option, ConditionOperator.UPPER_CASE, null, null);
+    public static Condition<String> startsWith(
+            Option<String> option,
+            String prefix) {
+
+        return literal(
+                option,
+                ConditionOperator.STARTS_WITH,
+                prefix);
     }
 
-    public static <T> Condition<T> lowerCase(Option<T> option) {
-        return new Condition<>(option, ConditionOperator.LOWER_CASE, null, null);
+    public static Condition<String> contains(
+            Option<String> option,
+            String text) {
+
+        return literal(
+                option,
+                ConditionOperator.CONTAINS,
+                text);
     }
 
-    // ==================== Collection validation ====================
+    public static Condition<String> matches(
+            Option<String> option,
+            String regex) {
 
-    public static <T> Condition<T> notEmpty(Option<T> option) {
-        return new Condition<>(option, ConditionOperator.NOT_EMPTY, null, null);
+        return literal(
+                option,
+                ConditionOperator.MATCHES,
+                regex);
     }
 
-    // ==================== Map validation ====================
-    public static <T> Condition<T> mapNotEmpty(Option<T> option) {
-        return new Condition<>(option, ConditionOperator.MAP_NOT_EMPTY, null, null);
+    public static Condition<String> upperCase(
+            Option<String> option) {
+
+        return unary(
+                option,
+                ConditionOperator.UPPER_CASE);
     }
 
-    public static <T> Condition<T> mapContainsKey(Option<T> option, String key) {
-        return new Condition<>(option, ConditionOperator.MAP_CONTAINS_KEY, (T) key, null);
+    public static Condition<String> lowerCase(
+            Option<String> option) {
+
+        return unary(
+                option,
+                ConditionOperator.LOWER_CASE);
     }
 
-    public static <T> Condition<T> mapContainsKeys(Option<T> option, String... keys) {
-        List<String> keyList = Arrays.asList(keys);
-        return new Condition<>(option, ConditionOperator.MAP_CONTAINS_KEYS, (T) keyList, null);
+    public static <T extends Collection<?>> Condition<T> notEmpty(
+            Option<T> option) {
+
+        return unary(
+                option,
+                ConditionOperator.NOT_EMPTY);
     }
 
-    public static <T> Condition<T> unique(Option<T> option) {
-        return new Condition<>(option, ConditionOperator.COLLECTION_UNIQUE, null, null);
+    public static <T extends Collection<?>> Condition<T> unique(
+            Option<T> option) {
+
+        return unary(
+                option,
+                ConditionOperator.COLLECTION_UNIQUE);
     }
 
-    // ==================== Cross-field comparison ====================
+    public static <T extends Map<?, ?>> Condition<T> mapNotEmpty(
+            Option<T> option) {
 
-    public static <T> Condition<T> lessThanField(Option<T> option, Option<T> other) {
-        return new Condition<>(option, ConditionOperator.FIELD_LESS_THAN, null, other);
+        return unary(
+                option,
+                ConditionOperator.MAP_NOT_EMPTY);
     }
 
-    public static <T> Condition<T> lessOrEqualField(Option<T> option, Option<T> other) {
-        return new Condition<>(option, ConditionOperator.FIELD_LESS_OR_EQUAL, null, other);
+    public static <T extends Map<?, ?>> Condition<T> mapContainsKey(
+            Option<T> option,
+            Object key) {
+
+        return literal(
+                option,
+                ConditionOperator.MAP_CONTAINS_KEY,
+                key);
     }
 
-    public static <T> Condition<T> greaterThanField(Option<T> option, Option<T> other) {
-        return new Condition<>(option, ConditionOperator.FIELD_GREATER_THAN, null, other);
+    public static <T extends Map<?, ?>> Condition<T> mapContainsKeys(
+            Option<T> option,
+            Object... keys) {
+
+        return literal(
+                option,
+                ConditionOperator.MAP_CONTAINS_KEYS,
+                Arrays.asList(keys));
     }
 
-    public static <T> Condition<T> greaterOrEqualField(Option<T> option, Option<T> other) {
-        return new Condition<>(option, ConditionOperator.FIELD_GREATER_OR_EQUAL, null, other);
+    public static <T> Condition<T> lessThanField(
+            Option<T> option,
+            Option<T> other) {
+
+        return field(
+                option,
+                ConditionOperator.FIELD_LESS_THAN,
+                other);
     }
 
-    // ==================== Extension (pluggable validation) ====================
+    public static <T> Condition<T> lessOrEqualField(
+            Option<T> option,
+            Option<T> other) {
 
-    public static <T> Condition<T> extension(Option<T> option, ConditionExtension<T> ext) {
-        return new Condition<>(option, ConditionOperator.EXTENSION, null, null, ext);
+        return field(
+                option,
+                ConditionOperator.FIELD_LESS_OR_EQUAL,
+                other);
+    }
+
+    public static <T> Condition<T> greaterThanField(
+            Option<T> option,
+            Option<T> other) {
+
+        return field(
+                option,
+                ConditionOperator.FIELD_GREATER_THAN,
+                other);
+    }
+
+    public static <T> Condition<T> greaterOrEqualField(
+            Option<T> option,
+            Option<T> other) {
+
+        return field(
+                option,
+                ConditionOperator.FIELD_GREATER_OR_EQUAL,
+                other);
+    }
+
+    public static <T> Condition<T> extension(
+            Option<T> option,
+            ConditionExtension<T> extension) {
+
+        return new Condition<>(
+                option,
+                ConditionOperator.EXTENSION,
+                null,
+                null,
+                extension);
+    }
+
+    private static <T> Condition<T> unary(
+            Option<T> option,
+            ConditionOperator operator) {
+
+        return new Condition<>(
+                option,
+                operator,
+                null,
+                null);
+    }
+
+    private static <T> Condition<T> literal(
+            Option<T> option,
+            ConditionOperator operator,
+            Object value) {
+
+        return new Condition<>(
+                option,
+                operator,
+                value,
+                null);
+    }
+
+    private static <T> Condition<T> field(
+            Option<T> option,
+            ConditionOperator operator,
+            Option<?> compareOption) {
+
+        return new Condition<>(
+                option,
+                operator,
+                null,
+                compareOption);
     }
 }

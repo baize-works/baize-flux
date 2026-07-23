@@ -1,79 +1,96 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.baize.flux.api.configuration;
 
-import lombok.extern.slf4j.Slf4j;
+import com.baize.flux.api.configuration.util.ConfigUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
-import static com.baize.flux.api.configuration.util.ConfigUtil.convertToJsonString;
-import static com.baize.flux.api.configuration.util.ConfigUtil.convertValue;
-
+/**
+ * 只读配置对象。
+ */
 @Slf4j
-public class ReadonlyConfig implements Serializable {
-    private static final long serialVersionUID = 1L;
-    private static final ObjectMapper JACKSON_MAPPER = new ObjectMapper();
+public final class ReadonlyConfig implements Serializable {
 
-    /** Stores the concrete key/value pairs of this configuration object. */
-    protected final Map<String, Object> confData;
+    private static final long serialVersionUID = 1L;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final Map<String, Object> confData;
 
     private ReadonlyConfig(Map<String, Object> confData) {
-        this.confData = confData;
+        this.confData = Collections.unmodifiableMap(
+                new LinkedHashMap<>(confData));
     }
 
     public static ReadonlyConfig fromMap(Map<String, Object> map) {
+        Objects.requireNonNull(map, "map");
         return new ReadonlyConfig(map);
     }
 
     public static ReadonlyConfig fromConfig(Config config) {
+        Objects.requireNonNull(config, "config");
+
         try {
-            return fromMap(
-                    JACKSON_MAPPER.readValue(
-                            config.root().render(ConfigRenderOptions.concise()),
-                            new TypeReference<Map<String, Object>>() {}));
+            String json = config.root().render(
+                    ConfigRenderOptions.concise());
+
+            Map<String, Object> data =
+                    OBJECT_MAPPER.readValue(
+                            json,
+                            new TypeReference<Map<String, Object>>() {});
+
+            return fromMap(data);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Json parsing exception.", e);
+            throw new IllegalArgumentException(
+                    "Failed to parse HOCON configuration",
+                    e);
         }
     }
 
+    /**
+     * 获取配置值，不存在时返回默认值。
+     */
     public <T> T get(Option<T> option) {
         return getOptional(option).orElseGet(option::defaultValue);
     }
 
     /**
-     * Transform to Config todo: This method should be removed after we remove Config
-     *
-     * @return Config
-     * @deprecated Please use ReadonlyConfig directly
+     * 获取用户实际配置的值，不包含默认值。
      */
-    @Deprecated
-    public Config toConfig() {
-        return ConfigFactory.parseMap(confData);
+    public <T> Optional<T> getOptional(Option<T> option) {
+        Objects.requireNonNull(option, "option");
+
+        Object value = getValue(option.key());
+
+        if (value == null) {
+            for (String fallbackKey : option.getFallbackKeys()) {
+                value = getValue(fallbackKey);
+
+                if (value != null) {
+                    log.warn(
+                            "Please use the new key '{}' instead of deprecated key '{}'",
+                            option.key(),
+                            fallbackKey);
+                    break;
+                }
+            }
+        }
+
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(
+                ConfigUtil.convertValue(value, option));
     }
 
     public Map<String, String> toMap() {
@@ -82,74 +99,43 @@ public class ReadonlyConfig implements Serializable {
         }
 
         Map<String, String> result = new LinkedHashMap<>();
-        toMap(result);
-        return result;
-    }
+        confData.forEach(
+                (key, value) ->
+                        result.put(
+                                key,
+                                ConfigUtil.convertToJsonString(value)));
 
-    public void toMap(Map<String, String> result) {
-        if (confData.isEmpty()) {
-            return;
-        }
-        for (Map.Entry<String, Object> entry : confData.entrySet()) {
-            result.put(entry.getKey(), convertToJsonString(entry.getValue()));
-        }
+        return result;
     }
 
     public Map<String, Object> getSourceMap() {
         return confData;
     }
 
-    public <T> Optional<T> getOptional(Option<T> option) {
-        if (option == null) {
-            throw new NullPointerException("Option not be null.");
-        }
-        Object value = getValue(option.key());
-        if (value == null) {
-            for (String fallbackKey : option.getFallbackKeys()) {
-                value = getValue(fallbackKey);
-                if (value != null) {
-                    log.warn(
-                            "Please use the new key '{}' instead of the deprecated key '{}'.",
-                            option.key(),
-                            fallbackKey);
-                    break;
-                }
-            }
-        }
-        if (value == null) {
-            return Optional.empty();
-        }
-        return Optional.of(convertValue(value, option));
-    }
-
+    @SuppressWarnings("unchecked")
     private Object getValue(String key) {
-        if (this.confData.containsKey(key)) {
-            return this.confData.get(key);
-        } else {
-            String[] keys = key.split("\\.");
-            Map<String, Object> data = this.confData;
-            Object value = null;
-            for (int i = 0; i < keys.length; i++) {
-                value = data.get(keys[i]);
-                if (i < keys.length - 1) {
-                    if (!(value instanceof Map)) {
-                        return null;
-                    } else {
-                        data = (Map<String, Object>) value;
-                    }
-                }
-            }
-            return value;
+        if (confData.containsKey(key)) {
+            return confData.get(key);
         }
-    }
 
-    @Override
-    public int hashCode() {
-        int hash = 0;
-        for (String s : this.confData.keySet()) {
-            hash ^= s.hashCode();
+        String[] paths = key.split("\\.");
+        Map<String, Object> current = confData;
+
+        for (int i = 0; i < paths.length; i++) {
+            Object value = current.get(paths[i]);
+
+            if (i == paths.length - 1) {
+                return value;
+            }
+
+            if (!(value instanceof Map)) {
+                return null;
+            }
+
+            current = (Map<String, Object>) value;
         }
-        return hash;
+
+        return null;
     }
 
     @Override
@@ -160,12 +146,18 @@ public class ReadonlyConfig implements Serializable {
         if (!(obj instanceof ReadonlyConfig)) {
             return false;
         }
-        Map<String, Object> otherConf = ((ReadonlyConfig) obj).confData;
-        return this.confData.equals(otherConf);
+
+        ReadonlyConfig that = (ReadonlyConfig) obj;
+        return Objects.equals(confData, that.confData);
+    }
+
+    @Override
+    public int hashCode() {
+        return confData.hashCode();
     }
 
     @Override
     public String toString() {
-        return convertToJsonString(this.confData);
+        return ConfigUtil.convertToJsonString(confData);
     }
 }

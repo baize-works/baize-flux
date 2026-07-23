@@ -6,49 +6,88 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ExceptionParamsUtil {
-
-    private static final Pattern PARAMS_PATTERN = Pattern.compile("<([a-zA-Z0-9]+)+>");
+/**
+ * 异常参数处理工具类。
+ *
+ * <p>用于提取异常描述模板中的参数，并根据参数值生成完整的异常描述。
+ */
+public final class ExceptionParamsUtil {
 
     /**
-     * Get all params key in description, the param key should be wrapped by <>. eg: "<param1>
-     * <param2>" will return ["param1", "param2"]
+     * 匹配由尖括号包裹的参数，例如：{@code <param1>}。
+     */
+    private static final Pattern PARAMS_PATTERN =
+            Pattern.compile("<([a-zA-Z0-9]+)>");
+
+    private ExceptionParamsUtil() {
+        // 工具类禁止实例化
+    }
+
+    /**
+     * 获取异常描述模板中的所有参数名称。
      *
-     * @param description error description
-     * @return params key list
+     * <p>参数需要使用尖括号包裹，例如：
+     * {@code "<param1> <param2>"} 将返回 {@code ["param1", "param2"]}。
+     *
+     * @param description 异常描述模板
+     * @return 参数名称列表
      */
     public static List<String> getParams(String description) {
-        // find all match params key in description
         Matcher matcher = PARAMS_PATTERN.matcher(description);
         List<String> params = new ArrayList<>();
+
         while (matcher.find()) {
-            String key = matcher.group(1);
-            params.add(key);
+            params.add(matcher.group(1));
         }
+
         return params;
     }
 
-    public static String getDescription(String descriptionTemplate, Map<String, String> params) {
+    /**
+     * 根据参数值替换异常描述模板中的占位参数。
+     *
+     * @param descriptionTemplate 异常描述模板
+     * @param params 参数名称与参数值的映射
+     * @return 替换参数后的异常描述
+     */
+    public static String getDescription(
+            String descriptionTemplate,
+            Map<String, String> params) {
+
         assertParamsMatchWithDescription(descriptionTemplate, params);
+
         String description = descriptionTemplate;
         for (String param : getParams(descriptionTemplate)) {
-            String value = params.get(param);
-            description = description.replace(String.format("<%s>", param), value);
+            description = description.replace(
+                    String.format("<%s>", param),
+                    params.get(param)
+            );
         }
+
         return description;
     }
 
+    /**
+     * 校验异常描述模板中声明的参数是否都已设置。
+     *
+     * @param descriptionTemplate 异常描述模板
+     * @param params 参数名称与参数值的映射
+     * @throws IllegalArgumentException 模板中的参数未设置时抛出
+     */
     public static void assertParamsMatchWithDescription(
-            String descriptionTemplate, Map<String, String> params) {
-        getParams(descriptionTemplate)
-                .forEach(
-                        param -> {
-                            if (!params.containsKey(param)) {
-                                throw new IllegalArgumentException(
-                                        String.format(
-                                                "Param [%s] is not set in error message [%s]",
-                                                param, descriptionTemplate));
-                            }
-                        });
+            String descriptionTemplate,
+            Map<String, String> params) {
+
+        getParams(descriptionTemplate).forEach(param -> {
+            if (!params.containsKey(param)) {
+                throw new IllegalArgumentException(
+                        String.format(
+                                "异常描述模板 [%s] 中的参数 [%s] 未设置",
+                                descriptionTemplate,
+                                param
+                        )
+                );
+            }
+        });
     }
 }

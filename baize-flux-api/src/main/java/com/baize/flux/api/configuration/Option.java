@@ -1,50 +1,38 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.baize.flux.api.configuration;
 
-import lombok.Getter;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 配置项定义。
+ *
+ * @param <T> 配置值类型
+ */
 public class Option<T> {
-    /** The current key for that config option. */
+
+    /** 配置键。 */
     private final String key;
 
-    /** Type of the value that this Option describes. */
+    /** 配置值类型。 */
     private final TypeReference<T> typeReference;
 
-    /** The default value for this option. */
+    /** 默认值。 */
     private final T defaultValue;
 
-    /** The description for this option. */
-    String description = "";
+    /** 配置说明。 */
+    private String description = "";
 
-    @Getter private final List<String> fallbackKeys;
+    /** 兼容的旧配置键。 */
+    private final List<String> fallbackKeys = new ArrayList<>();
 
     public Option(String key, TypeReference<T> typeReference, T defaultValue) {
-        this.key = key;
-        this.typeReference = typeReference;
+        this.key = Objects.requireNonNull(key, "key");
+        this.typeReference = Objects.requireNonNull(typeReference, "typeReference");
         this.defaultValue = defaultValue;
-        this.fallbackKeys = new ArrayList<>();
     }
 
     public String key() {
@@ -63,13 +51,27 @@ public class Option<T> {
         return description;
     }
 
+    public List<String> getFallbackKeys() {
+        return Collections.unmodifiableList(fallbackKeys);
+    }
+
     public Option<T> withDescription(String description) {
-        this.description = description;
+        this.description = description == null ? "" : description;
         return this;
     }
 
-    public Option<T> withFallbackKeys(String... fallbackKeys) {
-        this.fallbackKeys.addAll(Arrays.asList(fallbackKeys));
+    public Option<T> withFallbackKeys(String... keys) {
+        if (keys == null) {
+            return this;
+        }
+
+        for (String fallbackKey : keys) {
+            if (fallbackKey != null
+                    && !fallbackKey.trim().isEmpty()
+                    && !fallbackKeys.contains(fallbackKey)) {
+                fallbackKeys.add(fallbackKey);
+            }
+        }
         return this;
     }
 
@@ -81,20 +83,29 @@ public class Option<T> {
         if (!(obj instanceof Option)) {
             return false;
         }
+
         Option<?> that = (Option<?>) obj;
-        return Objects.equals(this.key, that.key)
-                && Objects.equals(this.defaultValue, that.defaultValue)
-                && Objects.equals(this.fallbackKeys, that.fallbackKeys);
+        return Objects.equals(key, that.key)
+                && Objects.equals(typeReference.getType(), that.typeReference.getType())
+                && Objects.equals(defaultValue, that.defaultValue)
+                && Objects.equals(fallbackKeys, that.fallbackKeys);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.key, this.defaultValue, this.fallbackKeys);
+        return Objects.hash(
+                key,
+                typeReference.getType(),
+                defaultValue,
+                fallbackKeys);
     }
 
     @Override
     public String toString() {
         return String.format(
-                "Key: '%s', default: %s (fallback keys: %s)", key, defaultValue, fallbackKeys);
+                "Option{key='%s', defaultValue=%s, fallbackKeys=%s}",
+                key,
+                defaultValue,
+                fallbackKeys);
     }
 }

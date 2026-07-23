@@ -1,14 +1,13 @@
 package com.baize.flux.api.configuration.util;
 
 import com.baize.flux.api.configuration.Option;
-import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.ParameterizedType;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -16,226 +15,398 @@ import java.util.Locale;
 import java.util.function.LongFunction;
 import java.util.stream.Collectors;
 
+/**
+ * 配置值转换工具。
+ */
 @Slf4j
-public class ConfigUtil {
+public final class ConfigUtil {
 
-    private static final ObjectMapper JACKSON_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER =
+            new ObjectMapper();
+
+    private ConfigUtil() {
+    }
 
     @SuppressWarnings("unchecked")
-    public static <T> T convertValue(Object rawValue, Option<T> option) {
-        TypeReference<T> typeReference = option.typeReference();
+    public static <T> T convertValue(
+            Object rawValue,
+            Option<T> option) {
+
+        if (rawValue == null) {
+            return null;
+        }
+
+        TypeReference<T> typeReference =
+                option.typeReference();
+
         if (typeReference.getType() instanceof Class) {
-            // simple type
-            Class<T> clazz = (Class<T>) typeReference.getType();
-            if (clazz.equals(rawValue.getClass())) {
+            Class<T> targetType =
+                    (Class<T>) typeReference.getType();
+
+            if (targetType.isInstance(rawValue)) {
                 return (T) rawValue;
             }
+
             try {
-                return convertValue(rawValue, clazz);
-            } catch (IllegalArgumentException e) {
-                // Continue with Jackson parsing
+                return convertSimpleValue(
+                        rawValue,
+                        targetType);
+            } catch (IllegalArgumentException ignored) {
+                // 继续尝试 Jackson 转换。
             }
         }
+
         try {
-            // complex type && untreated type
-            return JACKSON_MAPPER.readValue(convertToJsonString(rawValue), typeReference);
-        } catch (JsonProcessingException e) {
-            if (typeReference.getType() instanceof ParameterizedType
-                    && List.class.equals(
-                            ((ParameterizedType) typeReference.getType()).getRawType())) {
+            return OBJECT_MAPPER.convertValue(
+                    rawValue,
+                    typeReference);
+        } catch (IllegalArgumentException e) {
+            if (isListType(typeReference)) {
                 try {
+                    Class<?> elementType =
+                            (Class<?>)
+                                    ((ParameterizedType)
+                                            typeReference.getType())
+                                            .getActualTypeArguments()[0];
+
                     log.warn(
-                            "Option '{}' is a List, and it is recommended to configure it as [\"string1\",\"string2\"]; we will only use ',' to split the String into a list.",
+                            "Option '{}' should use list syntax; comma-separated strings are temporarily supported",
                             option.key());
-                    return (T)
-                            convertToList(
-                                    rawValue,
-                                    (Class<T>)
-                                            ((ParameterizedType) typeReference.getType())
-                                                    .getActualTypeArguments()[0]);
-                } catch (Exception ignore) {
-                    // nothing
+
+                    return (T) convertToList(
+                            rawValue,
+                            elementType);
+                } catch (RuntimeException ignored) {
+                    // 使用统一异常。
                 }
             }
+
             throw new IllegalArgumentException(
                     String.format(
-                            "Json parsing exception, value '%s', and expected type '%s'",
-                            rawValue, typeReference.getType().getTypeName()),
+                            "Cannot convert value '%s' to type '%s'",
+                            rawValue,
+                            typeReference.getType().getTypeName()),
                     e);
         }
     }
 
-    static <T> List<T> convertToList(Object rawValue, Class<T> clazz) {
+    private static boolean isListType(
+            TypeReference<?> typeReference) {
+
+        if (!(typeReference.getType()
+                instanceof ParameterizedType)) {
+            return false;
+        }
+
+        ParameterizedType type =
+                (ParameterizedType) typeReference.getType();
+
+        return List.class.equals(type.getRawType());
+    }
+
+    private static List<?> convertToList(
+            Object rawValue,
+            Class<?> elementType) {
+
         if (rawValue instanceof List) {
             return ((List<?>) rawValue)
                     .stream()
-                            .map(value -> convertValue(convertToJsonString(value), clazz))
-                            .collect(Collectors.toList());
+                    .map(value ->
+                            convertSimpleValue(
+                                    value,
+                                    elementType))
+                    .collect(Collectors.toList());
         }
-        return Arrays.stream(rawValue.toString().split(","))
+
+        return Arrays.stream(
+                rawValue.toString().split(","))
                 .map(String::trim)
-                .map(value -> convertValue(value, clazz))
+                .map(value ->
+                        convertSimpleValue(
+                                value,
+                                elementType))
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unchecked")
-    static <T> T convertValue(Object rawValue, Class<T> clazz) {
-        if (Boolean.class.equals(clazz)) {
-            return (T) convertToBoolean(rawValue);
-        } else if (clazz.isEnum()) {
-            return (T) convertToEnum(rawValue, (Class<? extends Enum<?>>) clazz);
-        } else if (String.class.equals(clazz)) {
-            return (T) convertToJsonString(rawValue);
-        } else if (Integer.class.equals(clazz)) {
-            return (T) convertToInt(rawValue);
-        } else if (Long.class.equals(clazz)) {
-            return (T) convertToLong(rawValue);
-        } else if (Float.class.equals(clazz)) {
-            return (T) convertToFloat(rawValue);
-        } else if (Double.class.equals(clazz)) {
-            return (T) convertToDouble(rawValue);
-        } else if (Duration.class.equals(clazz)) {
-            return (T) convertToDuration(rawValue);
-        } else if (Object.class.equals(clazz)) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <T> T convertSimpleValue(
+            Object rawValue,
+            Class<T> targetType) {
+
+        if (targetType.isInstance(rawValue)) {
             return (T) rawValue;
         }
-        throw new IllegalArgumentException("Unsupported type: " + clazz);
+
+        if (Boolean.class.equals(targetType)) {
+            return (T) convertToBoolean(rawValue);
+        }
+
+        if (String.class.equals(targetType)) {
+            return (T) rawValue.toString();
+        }
+
+        if (Integer.class.equals(targetType)) {
+            return (T) convertToInt(rawValue);
+        }
+
+        if (Long.class.equals(targetType)) {
+            return (T) convertToLong(rawValue);
+        }
+
+        if (Float.class.equals(targetType)) {
+            return (T) convertToFloat(rawValue);
+        }
+
+        if (Double.class.equals(targetType)) {
+            return (T) convertToDouble(rawValue);
+        }
+
+        if (BigDecimal.class.equals(targetType)) {
+            return (T) new BigDecimal(
+                    rawValue.toString());
+        }
+
+        if (Duration.class.equals(targetType)) {
+            return (T) convertToDuration(rawValue);
+        }
+
+        if (targetType.isEnum()) {
+            return (T) convertToEnum(
+                    rawValue,
+                    (Class<? extends Enum>) targetType);
+        }
+
+        if (Object.class.equals(targetType)) {
+            return (T) rawValue;
+        }
+
+        throw new IllegalArgumentException(
+                "Unsupported simple type: "
+                        + targetType.getName());
     }
 
-    static Integer convertToInt(Object o) {
-        if (o.getClass() == Integer.class) {
-            return (Integer) o;
-        } else if (o.getClass() == Long.class) {
-            long value = (Long) o;
-            if (value <= Integer.MAX_VALUE && value >= Integer.MIN_VALUE) {
-                return (int) value;
-            } else {
+    private static Integer convertToInt(Object value) {
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+
+        if (value instanceof Long) {
+            long longValue = (Long) value;
+
+            if (longValue > Integer.MAX_VALUE
+                    || longValue < Integer.MIN_VALUE) {
                 throw new IllegalArgumentException(
-                        String.format(
-                                "Configuration value %s overflows/underflows the integer type.",
-                                value));
+                        "Integer value out of range: "
+                                + longValue);
             }
+
+            return (int) longValue;
         }
 
-        return Integer.parseInt(o.toString());
+        return Integer.parseInt(
+                value.toString().trim());
     }
 
-    static Long convertToLong(Object o) {
-        if (o.getClass() == Long.class) {
-            return (Long) o;
-        } else if (o.getClass() == Integer.class) {
-            return ((Integer) o).longValue();
+    private static Long convertToLong(Object value) {
+        if (value instanceof Long) {
+            return (Long) value;
         }
 
-        return Long.parseLong(o.toString());
+        if (value instanceof Integer) {
+            return ((Integer) value).longValue();
+        }
+
+        return Long.parseLong(
+                value.toString().trim());
     }
 
-    static Float convertToFloat(Object o) {
-        if (o.getClass() == Float.class) {
-            return (Float) o;
-        } else if (o.getClass() == Double.class) {
-            double value = ((Double) o);
-            if (value == 0.0
-                    || (value >= Float.MIN_VALUE && value <= Float.MAX_VALUE)
-                    || (value >= -Float.MAX_VALUE && value <= -Float.MIN_VALUE)) {
-                return (float) value;
-            } else {
-                throw new IllegalArgumentException(
-                        String.format(
-                                "Configuration value %s overflows/underflows the float type.",
-                                value));
-            }
+    private static Float convertToFloat(Object value) {
+        if (value instanceof Float) {
+            return (Float) value;
         }
 
-        return Float.parseFloat(o.toString());
-    }
+        double doubleValue =
+                Double.parseDouble(
+                        value.toString().trim());
 
-    static Double convertToDouble(Object o) {
-        if (o.getClass() == Double.class) {
-            return (Double) o;
-        } else if (o.getClass() == Float.class) {
-            return ((Float) o).doubleValue();
-        }
-
-        return Double.parseDouble(o.toString());
-    }
-
-    static Duration convertToDuration(Object o) {
-        if (o instanceof Duration) {
-            return (Duration) o;
-        }
-
-        String value = o.toString().trim();
-        if (value.isEmpty()) {
-            throw new IllegalArgumentException("Duration value cannot be blank.");
-        }
-
-        // Prefer shorthand format first to match connector docs, e.g. 10S / 500MS.
-        String normalized = value.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
-        Duration shorthandDuration = tryParseShorthandDuration(normalized);
-        if (shorthandDuration != null) {
-            return shorthandDuration;
-        }
-
-        // Fallback to ISO-8601 duration format, e.g. PT10S.
-        try {
-            return Duration.parse(value);
-        } catch (Exception e) {
+        if (doubleValue != 0D
+                && (doubleValue > Float.MAX_VALUE
+                || doubleValue < -Float.MAX_VALUE)) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "Could not parse duration value '%s'. Supported formats: shorthand (e.g. 10S, 500MS) or ISO-8601 (e.g. PT10S).",
-                            value),
+                    "Float value out of range: "
+                            + doubleValue);
+        }
+
+        return (float) doubleValue;
+    }
+
+    private static Double convertToDouble(Object value) {
+        if (value instanceof Double) {
+            return (Double) value;
+        }
+
+        return Double.parseDouble(
+                value.toString().trim());
+    }
+
+    private static Boolean convertToBoolean(Object value) {
+        String text =
+                value.toString()
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
+
+        if ("true".equals(text)) {
+            return true;
+        }
+
+        if ("false".equals(text)) {
+            return false;
+        }
+
+        throw new IllegalArgumentException(
+                "Boolean value must be true or false: "
+                        + value);
+    }
+
+    private static <E extends Enum<E>> E convertToEnum(
+            Object value,
+            Class<E> enumType) {
+
+        String text =
+                value.toString().trim();
+
+        return Arrays.stream(
+                enumType.getEnumConstants())
+                .filter(item ->
+                        item.name().equalsIgnoreCase(text)
+                                || item.toString()
+                                .equalsIgnoreCase(text))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new IllegalArgumentException(
+                                        String.format(
+                                                "Enum %s only supports %s",
+                                                enumType.getSimpleName(),
+                                                Arrays.toString(
+                                                        enumType.getEnumConstants()))));
+    }
+
+    private static Duration convertToDuration(Object value) {
+        if (value instanceof Duration) {
+            return (Duration) value;
+        }
+
+        String text =
+                value.toString().trim();
+
+        if (text.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Duration value must not be blank");
+        }
+
+        String normalized =
+                text.replaceAll("\\s+", "")
+                        .toUpperCase(Locale.ROOT);
+
+        Duration shorthand =
+                tryParseShorthandDuration(normalized);
+
+        if (shorthand != null) {
+            return shorthand;
+        }
+
+        try {
+            return Duration.parse(text);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException(
+                    "Unsupported duration value: "
+                            + value,
                     e);
         }
     }
 
-    private static Duration tryParseShorthandDuration(String normalizedValue) {
-        Duration parsed = parseDurationWithSuffix(normalizedValue, "MS", Duration::ofMillis);
-        if (parsed != null) {
-            return parsed;
+    private static Duration tryParseShorthandDuration(
+            String value) {
+
+        Duration duration =
+                parseDuration(
+                        value,
+                        "MS",
+                        Duration::ofMillis);
+
+        if (duration != null) {
+            return duration;
         }
-        parsed = parseDurationWithSuffix(normalizedValue, "S", Duration::ofSeconds);
-        if (parsed != null) {
-            return parsed;
+
+        duration = parseDuration(
+                value,
+                "S",
+                Duration::ofSeconds);
+
+        if (duration != null) {
+            return duration;
         }
-        parsed = parseDurationWithSuffix(normalizedValue, "M", Duration::ofMinutes);
-        if (parsed != null) {
-            return parsed;
+
+        duration = parseDuration(
+                value,
+                "M",
+                Duration::ofMinutes);
+
+        if (duration != null) {
+            return duration;
         }
-        parsed = parseDurationWithSuffix(normalizedValue, "H", Duration::ofHours);
-        if (parsed != null) {
-            return parsed;
+
+        duration = parseDuration(
+                value,
+                "H",
+                Duration::ofHours);
+
+        if (duration != null) {
+            return duration;
         }
-        return parseDurationWithSuffix(normalizedValue, "D", Duration::ofDays);
+
+        return parseDuration(
+                value,
+                "D",
+                Duration::ofDays);
     }
 
-    private static Duration parseDurationWithSuffix(
-            String normalizedValue, String suffix, LongFunction<Duration> converter) {
-        if (!normalizedValue.endsWith(suffix)) {
+    private static Duration parseDuration(
+            String value,
+            String suffix,
+            LongFunction<Duration> converter) {
+
+        if (!value.endsWith(suffix)) {
             return null;
         }
 
-        String numberPart =
-                normalizedValue.substring(0, normalizedValue.length() - suffix.length());
-        if (!isSignedInteger(numberPart)) {
+        String number =
+                value.substring(
+                        0,
+                        value.length() - suffix.length());
+
+        if (!isInteger(number)) {
             return null;
         }
 
         try {
-            return converter.apply(Long.parseLong(numberPart));
+            return converter.apply(
+                    Long.parseLong(number));
         } catch (RuntimeException e) {
             return null;
         }
     }
 
-    private static boolean isSignedInteger(String value) {
+    private static boolean isInteger(String value) {
         if (value == null || value.isEmpty()) {
             return false;
         }
 
         int start = 0;
-        char firstChar = value.charAt(0);
-        if (firstChar == '+' || firstChar == '-') {
+
+        if (value.charAt(0) == '+'
+                || value.charAt(0) == '-') {
             if (value.length() == 1) {
                 return false;
             }
@@ -247,58 +418,26 @@ public class ConfigUtil {
                 return false;
             }
         }
+
         return true;
     }
 
-    static Boolean convertToBoolean(Object o) {
-        switch (o.toString().toUpperCase()) {
-            case "TRUE":
-                return true;
-            case "FALSE":
-                return false;
-            default:
-                throw new IllegalArgumentException(
-                        String.format(
-                                "Unrecognized option for boolean: %s. Expected either true or false(case insensitive)",
-                                o));
-        }
-    }
-
-    static <E extends Enum<?>> E convertToEnum(Object o, Class<E> clazz) {
-        return Arrays.stream(clazz.getEnumConstants())
-                .filter(
-                        e ->
-                                e.toString()
-                                        .toUpperCase(Locale.ROOT)
-                                        .equals(o.toString().toUpperCase(Locale.ROOT)))
-                .findAny()
-                .orElseThrow(
-                        () ->
-                                new IllegalArgumentException(
-                                        String.format(
-                                                "Could not parse value for enum %s. Expected one of: [%s]",
-                                                clazz, Arrays.toString(clazz.getEnumConstants()))));
-    }
-
-    public static String convertToJsonString(Object o) {
-        if (o == null) {
+    public static String convertToJsonString(Object value) {
+        if (value == null) {
             return null;
         }
-        if (o instanceof String) {
-            return (String) o;
+
+        if (value instanceof String) {
+            return (String) value;
         }
+
         try {
-            return JACKSON_MAPPER.writeValueAsString(o);
+            return OBJECT_MAPPER.writeValueAsString(value);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(String.format("Could not parse json, value: %s", o));
+            throw new IllegalArgumentException(
+                    "Cannot convert value to JSON: "
+                            + value,
+                    e);
         }
-    }
-
-    public static String convertToJsonString(Config config) {
-        return convertToJsonString(config.root().unwrapped());
-    }
-
-    public static Config convertToConfig(String configJson) {
-        return ConfigFactory.parseString(configJson);
     }
 }

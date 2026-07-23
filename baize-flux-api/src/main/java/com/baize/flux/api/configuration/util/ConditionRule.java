@@ -1,36 +1,52 @@
-
 package com.baize.flux.api.configuration.util;
-
-import lombok.Getter;
 
 import java.util.Objects;
 
-@Getter
-public class ConditionRule {
+/**
+ * 条件触发的子规则。
+ */
+public final class ConditionRule {
 
-    private final Expression expression;
+    private final Condition<?> condition;
     private final OptionRule optionRule;
 
-    public ConditionRule(Expression expression, OptionRule optionRule) {
-        this.expression = expression;
-        this.optionRule = optionRule;
+    public ConditionRule(
+            Condition<?> condition,
+            OptionRule optionRule) {
+
+        this.condition = Objects.requireNonNull(
+                condition,
+                "condition");
+
+        this.optionRule = Objects.requireNonNull(
+                optionRule,
+                "optionRule");
+    }
+
+    public Condition<?> getCondition() {
+        return condition;
+    }
+
+    public OptionRule getOptionRule() {
+        return optionRule;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object obj) {
+        if (this == obj) {
             return true;
         }
-        if (!(o instanceof ConditionRule)) {
+        if (!(obj instanceof ConditionRule)) {
             return false;
         }
-        ConditionRule that = (ConditionRule) o;
-        return Objects.equals(expression, that.expression)
+
+        ConditionRule that = (ConditionRule) obj;
+        return Objects.equals(condition, that.condition)
                 && Objects.equals(optionRule, that.optionRule);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(expression, optionRule);
+        return Objects.hash(condition, optionRule);
     }
 }
