@@ -3,8 +3,6 @@ package com.baize.flux.launcher;
 import com.baize.flux.api.configuration.*;
 import com.baize.flux.api.job.JobDefinition;
 import com.baize.flux.framework.configuration.HoconConfigLoader;
-import com.baize.flux.framework.execution.JobResult;
-import com.baize.flux.framework.execution.LocalJobExecutor;
 import com.baize.flux.framework.planner.JobPlanner;
 import com.baize.flux.framework.plugin.FactoryRegistry;
 

@@ -1,6 +1,5 @@
 package com.baize.flux.framework.planner;
 
-import com.baize.flux.api.source.BoundedSource;
 import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.table.FluxRow;
 

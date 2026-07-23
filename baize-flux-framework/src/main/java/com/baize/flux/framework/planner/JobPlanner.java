@@ -3,7 +3,6 @@ package com.baize.flux.framework.planner;
 import com.baize.flux.api.configuration.ConfigValidator;
 import com.baize.flux.api.factory.*;
 import com.baize.flux.api.job.JobDefinition;
-import com.baize.flux.api.source.BoundedSource;
 import com.baize.flux.api.table.FluxRow;
 import com.baize.flux.framework.plugin.FactoryRegistry;
 
