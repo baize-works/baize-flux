@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.core.dialect.mysql;
 
 import com.baize.flux.api.table.catalog.Catalog;
+import com.baize.flux.api.table.catalog.Column;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.catalog.JdbcCatalogConfig;
 import com.baize.flux.connector.jdbc.catalog.mysql.MySqlCatalog;
@@ -217,5 +218,32 @@ public final class MySqlDialect
                 "false");
 
         return Collections.unmodifiableMap(result);
+    }
+
+    @Override
+    public Optional<String> buildHashPartitionPredicate(
+            Column column,
+            int bucket,
+            int bucketCount) {
+
+        if (bucketCount <= 0) {
+            throw new IllegalArgumentException(
+                    "bucketCount must be greater than 0");
+        }
+
+        if (bucket < 0 || bucket >= bucketCount) {
+            throw new IllegalArgumentException(
+                    "bucket must be between 0 and bucketCount - 1");
+        }
+
+        String field = quoteIdentifier(column.getName());
+
+        return Optional.of(
+                "MOD(CRC32(CAST("
+                        + field
+                        + " AS CHAR)), "
+                        + bucketCount
+                        + ") = "
+                        + bucket);
     }
 }

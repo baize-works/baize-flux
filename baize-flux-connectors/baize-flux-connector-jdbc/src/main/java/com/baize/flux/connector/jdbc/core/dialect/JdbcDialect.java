@@ -5,6 +5,7 @@ import com.baize.flux.api.table.catalog.Column;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
 import com.baize.flux.connector.jdbc.core.converter.JdbcRowConverter;
+import com.baize.flux.connector.jdbc.core.split.StringRangeSplitDecision;
 import com.baize.flux.connector.jdbc.source.JdbcSourceTable;
 
 import java.io.Serializable;
@@ -313,5 +314,39 @@ public interface JdbcDialect extends Serializable {
         }
 
         return Collections.unmodifiableMap(result);
+    }
+
+    /**
+     * 判断字符串范围分片是否与数据库实际排序规则一致。
+     *
+     * <p>默认拒绝 RANGE，防止 Java 字典序和数据库排序规则不一致导致漏数或重复。
+     */
+    default StringRangeSplitDecision validateStringRangeSplit(
+            JdbcSourceTable table,
+            Column column,
+            String lowerBound,
+            String upperBound) {
+
+        return StringRangeSplitDecision.unsafe(
+                "dialect has not verified a binary/ASCII-compatible collation");
+    }
+
+    /**
+     * 构造 HASH 分片谓词。
+     *
+     * <p>返回内容应当是完整布尔表达式，例如：
+     *
+     * <pre>
+     * MOD(CRC32(CAST(`id` AS CHAR)), 4) = 0
+     * </pre>
+     *
+     * <p>默认不支持 HASH 分片。
+     */
+    default Optional<String> buildHashPartitionPredicate(
+            Column column,
+            int bucket,
+            int bucketCount) {
+
+        return Optional.empty();
     }
 }
