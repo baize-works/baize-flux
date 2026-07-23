@@ -2,6 +2,7 @@ package com.baize.flux.api.configuration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -13,7 +14,9 @@ import java.util.Objects;
  */
 public class SingleChoiceOption<T> extends Option<T> {
 
-    /** 可选值列表。 */
+    /**
+     * 可选值列表。
+     */
     private final List<T> optionValues;
 
     public SingleChoiceOption(
@@ -23,8 +26,10 @@ public class SingleChoiceOption<T> extends Option<T> {
             T defaultValue) {
 
         super(key, typeReference, defaultValue);
-        this.optionValues = Collections.unmodifiableList(
-                List.copyOf(Objects.requireNonNull(optionValues, "optionValues")));
+        this.optionValues =
+                Collections.unmodifiableList(
+                        new ArrayList<>(Objects.requireNonNull(optionValues, "optionValues")))
+        ;
     }
 
     public List<T> getOptionValues() {
