@@ -7,7 +7,7 @@ import com.baize.flux.api.source.Source;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
-import com.baize.flux.api.table.factory.SourceFactoryContext;
+import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.table.factory.TableSourceFactory;
 import com.baize.flux.framework.factory.FactoryException;
 import com.baize.flux.framework.factory.PreparedSource;
