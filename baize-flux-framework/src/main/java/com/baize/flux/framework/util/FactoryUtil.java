@@ -1,4 +1,4 @@
-package com.baize.flux.framework.factory;
+package com.baize.flux.framework.util;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.util.ConfigValidator;
@@ -9,6 +9,8 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.factory.SourceFactoryContext;
 import com.baize.flux.api.table.factory.TableSourceFactory;
+import com.baize.flux.framework.factory.FactoryException;
+import com.baize.flux.framework.factory.PreparedSource;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
