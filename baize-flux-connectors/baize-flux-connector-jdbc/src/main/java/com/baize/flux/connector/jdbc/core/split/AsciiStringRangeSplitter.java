@@ -10,6 +10,10 @@ import java.util.List;
  * Database collations are not assumed: callers must use a binary/ASCII compatible key column.
  */
 public final class AsciiStringRangeSplitter implements ChunkSplitter<String> {
+    private static final char FIRST_PRINTABLE_ASCII = ' ';
+    private static final char LAST_PRINTABLE_ASCII = '~';
+    private static final BigInteger PRINTABLE_ASCII_RADIX = BigInteger.valueOf(95);
+
     @Override
     public List<Chunk<String>> split(String lower, String upper, int count) {
         validate(lower, upper, count);
@@ -29,13 +33,30 @@ public final class AsciiStringRangeSplitter implements ChunkSplitter<String> {
     private static void validate(String lower, String upper, int count) {
         if (lower == null || upper == null || lower.length() == 0 || lower.length() != upper.length()) throw new IllegalArgumentException("ASCII bounds must be non-empty and have the same length");
         if (count <= 0 || lower.compareTo(upper) > 0) throw new IllegalArgumentException("chunkCount must be positive and bounds ordered");
-        for (char c : (lower + upper).toCharArray()) if (c > 127) throw new IllegalArgumentException("only ASCII bounds are supported");
+        for (char c : (lower + upper).toCharArray()) {
+            if (c < FIRST_PRINTABLE_ASCII || c > LAST_PRINTABLE_ASCII) {
+                throw new IllegalArgumentException("only printable ASCII bounds are supported");
+            }
+        }
     }
-    private static BigInteger encode(String value) { return new BigInteger(1, value.getBytes(java.nio.charset.StandardCharsets.US_ASCII)); }
+
+    private static BigInteger encode(String value) {
+        BigInteger result = BigInteger.ZERO;
+        for (int index = 0; index < value.length(); index++) {
+            result = result.multiply(PRINTABLE_ASCII_RADIX)
+                    .add(BigInteger.valueOf(value.charAt(index) - FIRST_PRINTABLE_ASCII));
+        }
+        return result;
+    }
+
     private static String decode(BigInteger value, int length) {
-        byte[] source = value.toByteArray(); byte[] result = new byte[length];
-        int sourceOffset = Math.max(0, source.length - length); int targetOffset = Math.max(0, length - source.length);
-        System.arraycopy(source, sourceOffset, result, targetOffset, Math.min(length, source.length));
-        return new String(result, java.nio.charset.StandardCharsets.US_ASCII);
+        char[] result = new char[length];
+        BigInteger remaining = value;
+        for (int index = length - 1; index >= 0; index--) {
+            BigInteger[] quotientAndRemainder = remaining.divideAndRemainder(PRINTABLE_ASCII_RADIX);
+            result[index] = (char) (quotientAndRemainder[1].intValue() + FIRST_PRINTABLE_ASCII);
+            remaining = quotientAndRemainder[0];
+        }
+        return new String(result);
     }
 }

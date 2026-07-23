@@ -4,8 +4,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Startup-time adaptive splitter. It caps planned chunks at the available reader parallelism;
- * scheduling remains the responsibility of the source enumerator.
+ * Startup-time splitter that caps a table's requested chunks at the available reader
+ * parallelism. The delegate owns range-boundary calculation while this class owns the
+ * scheduling constraint.
  */
 public final class DynamicChunkSplitter<T> implements ChunkSplitter<T> {
     private final ChunkSplitter<T> delegate;
@@ -15,8 +16,23 @@ public final class DynamicChunkSplitter<T> implements ChunkSplitter<T> {
         if (maxChunks <= 0) throw new IllegalArgumentException("maxChunks must be greater than 0");
         this.maxChunks = maxChunks;
     }
-    @Override public List<Chunk<T>> split(T lower, T upper, int requestedChunks) {
-        if (requestedChunks <= 0) throw new IllegalArgumentException("chunkCount must be greater than 0");
-        return delegate.split(lower, upper, Math.min(maxChunks, requestedChunks));
+
+    @Override
+    public List<Chunk<T>> split(T lower, T upper, int requestedChunks) {
+        return delegate.split(lower, upper, effectiveChunkCount(requestedChunks, maxChunks));
+    }
+
+    /**
+     * Resolves the number of chunks that may be planned for one table. Kept package-visible so
+     * the planner and tests share the same validation and capping semantics.
+     */
+    static int effectiveChunkCount(int requestedChunks, int parallelism) {
+        if (requestedChunks <= 0) {
+            throw new IllegalArgumentException("requestedChunks must be greater than 0");
+        }
+        if (parallelism <= 0) {
+            throw new IllegalArgumentException("parallelism must be greater than 0");
+        }
+        return Math.min(requestedChunks, parallelism);
     }
 }
