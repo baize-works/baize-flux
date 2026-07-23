@@ -1,15 +1,11 @@
-package com.baize.flux.connectors.jdbc;
+package com.baize.flux.connectors.jdbc.source;
 
 import com.baize.flux.api.source.SourceReader;
 import com.baize.flux.api.table.FluxRow;
 import com.baize.flux.api.table.RecordBatch;
 import com.baize.flux.api.table.RowType;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 

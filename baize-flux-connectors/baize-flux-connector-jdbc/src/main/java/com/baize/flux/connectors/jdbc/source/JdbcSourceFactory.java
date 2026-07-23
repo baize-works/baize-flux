@@ -1,10 +1,6 @@
-package com.baize.flux.connectors.jdbc;
+package com.baize.flux.connectors.jdbc.source;
 
-import com.baize.flux.api.configuration.Constraints;
-import com.baize.flux.api.configuration.Option;
-import com.baize.flux.api.configuration.OptionRule;
-import com.baize.flux.api.configuration.Options;
-import com.baize.flux.api.configuration.ReadonlyConfig;
+import com.baize.flux.api.configuration.*;
 import com.baize.flux.api.factory.SourceFactory;
 import com.baize.flux.api.source.BoundedSource;
 import com.baize.flux.api.table.FluxRow;

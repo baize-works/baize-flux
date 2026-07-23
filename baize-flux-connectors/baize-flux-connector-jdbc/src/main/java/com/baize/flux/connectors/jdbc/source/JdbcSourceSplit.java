@@ -1,4 +1,4 @@
-package com.baize.flux.connectors.jdbc;
+package com.baize.flux.connectors.jdbc.source;
 
 import com.baize.flux.api.source.SourceSplit;
 
