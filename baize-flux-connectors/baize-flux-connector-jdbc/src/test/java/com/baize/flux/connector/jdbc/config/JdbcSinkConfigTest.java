@@ -1,0 +1,46 @@
+package com.baize.flux.connector.jdbc.config;
+
+import com.baize.flux.api.configuration.ReadonlyConfig;
+import com.baize.flux.api.table.catalog.TablePath;
+import com.typesafe.config.ConfigFactory;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class JdbcSinkConfigTest {
+
+    @Test
+    public void shouldResolveTargetTableTemplateForMySqlPath() {
+        JdbcSinkConfig config = config("table = \"sink_${schema_name}_${table_name}\"");
+
+        assertEquals(
+                "sink_flux_test_orders",
+                config.resolveTargetTablePath(TablePath.of("flux_test", "orders")));
+    }
+
+    @Test
+    public void shouldResolveTargetTableTemplateForSchemaPath() {
+        JdbcSinkConfig config = config("table_path = \"${schema_name}.${table_name}_copy\"");
+
+        assertEquals(
+                "public.orders_copy",
+                config.resolveTargetTablePath(TablePath.of("catalog", "public", "orders")));
+    }
+
+    @Test
+    public void shouldPreferConfiguredTableOverCustomSql() {
+        JdbcSinkConfig config = config("table = \"sink_${table_name}\"\ncustom_sql = \"INSERT INTO ignored VALUES (?)\"");
+
+        assertFalse(config.hasCustomSql());
+        assertTrue(config.resolveTargetTablePath(TablePath.of("orders")).equals("sink_orders"));
+    }
+
+    private JdbcSinkConfig config(String sinkOptions) {
+        return JdbcSinkConfig.of(
+                ReadonlyConfig.fromConfig(
+                        ConfigFactory.parseString(
+                                "url = \"jdbc:mysql://localhost:3306/flux_test\"\n" + sinkOptions)));
+    }
+}

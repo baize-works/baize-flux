@@ -99,7 +99,11 @@ public final class JdbcOutputFormat implements AutoCloseable {
     }
 
     private CatalogTable targetTable(CatalogTable source) {
-        TablePath path = config.getTargetTablePath() == null ? source.getTablePath() : dialect.parseTablePath(config.getTargetTablePath());
+        String targetTablePath = config.resolveTargetTablePath(source.getTablePath());
+        TablePath path =
+                targetTablePath == null
+                        ? source.getTablePath()
+                        : dialect.parseTablePath(targetTablePath);
         return source.withPath(path);
     }
 
