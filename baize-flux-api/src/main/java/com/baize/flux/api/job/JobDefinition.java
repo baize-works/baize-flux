@@ -7,16 +7,14 @@ import com.baize.flux.api.configuration.ReadonlyConfig;
  */
 public final class JobDefinition {
     private final String name;
-    private final Boundedness boundedness;
     private final int batchSize;
     private final String sourceType;
     private final ReadonlyConfig sourceOptions;
     private final String sinkType;
     private final ReadonlyConfig sinkOptions;
 
-    public JobDefinition(String name, Boundedness boundedness, int batchSize, String sourceType, ReadonlyConfig sourceOptions, String sinkType, ReadonlyConfig sinkOptions) {
+    public JobDefinition(String name, int batchSize, String sourceType, ReadonlyConfig sourceOptions, String sinkType, ReadonlyConfig sinkOptions) {
         this.name = name;
-        this.boundedness = boundedness;
         this.batchSize = batchSize;
         this.sourceType = sourceType;
         this.sourceOptions = sourceOptions;
@@ -26,10 +24,6 @@ public final class JobDefinition {
 
     public String name() {
         return name;
-    }
-
-    public Boundedness boundedness() {
-        return boundedness;
     }
 
     public int batchSize() {

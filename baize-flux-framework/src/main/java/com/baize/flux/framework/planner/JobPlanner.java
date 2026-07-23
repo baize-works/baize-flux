@@ -2,7 +2,7 @@ package com.baize.flux.framework.planner;
 
 import com.baize.flux.api.configuration.ConfigValidator;
 import com.baize.flux.api.factory.*;
-import com.baize.flux.api.job.*;
+import com.baize.flux.api.job.JobDefinition;
 import com.baize.flux.api.source.BoundedSource;
 import com.baize.flux.api.table.FluxRow;
 import com.baize.flux.framework.plugin.FactoryRegistry;
@@ -18,8 +18,6 @@ public final class JobPlanner {
     }
 
     public PhysicalPlan plan(JobDefinition job) {
-        if (job.boundedness() != Boundedness.BOUNDED)
-            throw new UnsupportedOperationException("Unbounded source is not supported yet");
         SourceFactory sf = registry.getSourceFactory(job.sourceType());
         SinkFactory kf = registry.getSinkFactory(job.sinkType());
         ConfigValidator.strict().validate(job.sourceOptions(), sf.optionRule()).throwIfInvalid();
