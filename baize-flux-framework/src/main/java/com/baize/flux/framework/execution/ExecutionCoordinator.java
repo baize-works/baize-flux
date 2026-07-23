@@ -1,0 +1,208 @@
+package com.baize.flux.framework.execution;
+
+import com.baize.flux.framework.execution.task.ExecutionTask;
+import com.baize.flux.framework.metrics.JobMetrics;
+import com.baize.flux.framework.metrics.TaskMetrics;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
+/**
+ * Job Task 协调器。
+ *
+ * <p>任意一个 Task 失败时：
+ *
+ * <ol>
+ *     <li>设置全局取消标记</li>
+ *     <li>关闭或失败所有 Channel</li>
+ *     <li>取消其他 Task</li>
+ *     <li>中断执行线程</li>
+ * </ol>
+ */
+public final class ExecutionCoordinator {
+
+    private final TaskExecutor taskExecutor;
+
+    private final CancellationToken cancellationToken;
+
+    private final JobMetrics jobMetrics;
+
+    private final ClassLoader classLoader;
+
+    private final Runnable cancellationHook;
+
+    public ExecutionCoordinator(
+            TaskExecutor taskExecutor,
+            CancellationToken cancellationToken,
+            JobMetrics jobMetrics,
+            ClassLoader classLoader,
+            Runnable cancellationHook) {
+
+        this.taskExecutor =
+                Objects.requireNonNull(
+                        taskExecutor,
+                        "taskExecutor must not be null");
+
+        this.cancellationToken =
+                Objects.requireNonNull(
+                        cancellationToken,
+                        "cancellationToken must not be null");
+
+        this.jobMetrics =
+                Objects.requireNonNull(
+                        jobMetrics,
+                        "jobMetrics must not be null");
+
+        this.classLoader =
+                Objects.requireNonNull(
+                        classLoader,
+                        "classLoader must not be null");
+
+        this.cancellationHook =
+                Objects.requireNonNull(
+                        cancellationHook,
+                        "cancellationHook must not be null");
+    }
+
+    public Throwable execute(
+            List<ExecutionTask> sinkTasks,
+            List<ExecutionTask> sourceTasks) {
+
+        Objects.requireNonNull(
+                sinkTasks,
+                "sinkTasks must not be null");
+
+        Objects.requireNonNull(
+                sourceTasks,
+                "sourceTasks must not be null");
+
+        List<ExecutionTask> allTasks =
+                new ArrayList<ExecutionTask>();
+
+        /*
+         * 先启动 Sink，让消费者优先进入等待状态。
+         */
+        allTasks.addAll(sinkTasks);
+        allTasks.addAll(sourceTasks);
+
+        if (allTasks.isEmpty()) {
+            return null;
+        }
+
+        List<Future<TaskResult>> futures =
+                new ArrayList<Future<TaskResult>>(
+                        allTasks.size());
+
+        Throwable firstFailure = null;
+
+        try {
+            for (ExecutionTask task : allTasks) {
+                TaskMetrics metrics =
+                        jobMetrics.registerTask(
+                                task.getTaskId());
+
+                TaskContext context =
+                        new TaskContext(
+                                task.getTaskId(),
+                                cancellationToken,
+                                metrics,
+                                classLoader);
+
+                futures.add(
+                        taskExecutor.submit(
+                                task,
+                                context));
+            }
+
+            for (int i = 0; i < allTasks.size(); i++) {
+                Future<TaskResult> completed =
+                        taskExecutor.takeCompleted();
+
+                try {
+                    TaskResult result =
+                            completed.get();
+
+                    if (result.isFailed()
+                            && firstFailure == null) {
+
+                        firstFailure =
+                                result.getFailure();
+
+                        cancelAll(
+                                allTasks,
+                                futures,
+                                firstFailure);
+                    }
+
+                } catch (CancellationException ignored) {
+                    // 由其他 Task 失败触发的取消。
+
+                } catch (ExecutionException exception) {
+                    if (firstFailure == null) {
+                        firstFailure =
+                                exception.getCause() == null
+                                        ? exception
+                                        : exception.getCause();
+
+                        cancelAll(
+                                allTasks,
+                                futures,
+                                firstFailure);
+                    }
+                }
+            }
+
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+
+            firstFailure = interrupted;
+
+            cancelAll(
+                    allTasks,
+                    futures,
+                    interrupted);
+
+        } catch (Throwable throwable) {
+            firstFailure = throwable;
+
+            cancelAll(
+                    allTasks,
+                    futures,
+                    throwable);
+        }
+
+        return firstFailure;
+    }
+
+    private void cancelAll(
+            List<ExecutionTask> tasks,
+            List<Future<TaskResult>> futures,
+            Throwable cause) {
+
+        cancellationToken.cancel(cause);
+
+        try {
+            cancellationHook.run();
+        } catch (Throwable hookFailure) {
+            cause.addSuppressed(
+                    hookFailure);
+        }
+
+        for (ExecutionTask task : tasks) {
+            try {
+                task.cancel();
+            } catch (Throwable cancelFailure) {
+                cause.addSuppressed(
+                        cancelFailure);
+            }
+        }
+
+        for (Future<TaskResult> future : futures) {
+            future.cancel(true);
+        }
+    }
+}
