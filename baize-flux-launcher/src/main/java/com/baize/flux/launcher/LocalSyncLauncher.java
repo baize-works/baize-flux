@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class LocalSyncLauncher {
 
     private static final int DEFAULT_BATCH_SIZE = 1_000;
+    private static final int DEFAULT_PARALLELISM = 1;
 
     /**
      * 本地测试配置。
@@ -176,6 +177,14 @@ public final class LocalSyncLauncher {
             sinkWriter = sinkFactory.createSink(sinkOptions);
         }
 
+        int parallelism = root.hasPath("env.parallelism")
+                ? root.getInt("env.parallelism")
+                : DEFAULT_PARALLELISM;
+        if (parallelism <= 0) {
+            throw new IllegalArgumentException(
+                    "env.parallelism must be greater than 0");
+        }
+
         PreparedSource<?> preparedSource =
                 FactoryUtil.createAndPrepareSource(
                         factoryIdentifier,
@@ -184,7 +193,7 @@ public final class LocalSyncLauncher {
                         classLoader);
 
         try (SinkWriter<FluxRow> writer = sinkWriter) {
-            executeAndPrint(preparedSource, batchSize, writer);
+            executeAndPrint(preparedSource, batchSize, parallelism, writer);
         }
     }
 
@@ -195,6 +204,7 @@ public final class LocalSyncLauncher {
     private static void executeAndPrint(
             PreparedSource<?> preparedSource,
             int batchSize,
+            int parallelism,
             SinkWriter<FluxRow> sinkWriter)
             throws Exception {
 
@@ -209,6 +219,7 @@ public final class LocalSyncLauncher {
                         () -> executeSource(
                                 preparedSource,
                                 batchSize,
+                                parallelism,
                                 channel,
                                 producerFailure),
                         "baize-flux-source-reader");
@@ -236,6 +247,7 @@ public final class LocalSyncLauncher {
     private static void executeSource(
             PreparedSource<?> preparedSource,
             int batchSize,
+            int parallelism,
             Channel<RecordBatch<FluxRow>> channel,
             AtomicReference<Throwable> producerFailure) {
 
@@ -247,9 +259,10 @@ public final class LocalSyncLauncher {
                             batchSize);
 
             new SourceExecuteProcessor()
-                    .execute(
-                            action,
-                            channel::put);
+                            .execute(
+                                    action,
+                                    parallelism,
+                                    channel::put);
 
         } catch (Throwable failure) {
             producerFailure.set(failure);

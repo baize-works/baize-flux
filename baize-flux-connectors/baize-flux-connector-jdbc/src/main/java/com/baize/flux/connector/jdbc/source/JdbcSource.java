@@ -34,6 +34,15 @@ public final class JdbcSource
             Map<TablePath, CatalogTable> tables)
             throws Exception {
 
+        return createSplits(tables, 1);
+    }
+
+    @Override
+    public List<JdbcSourceSplit> createSplits(
+            Map<TablePath, CatalogTable> tables,
+            int parallelism)
+            throws Exception {
+
         /*
          * 这里替换成你现有的分片生成器。
          *
@@ -43,7 +52,8 @@ public final class JdbcSource
          */
         return JdbcSourceSplitGenerator.generate(
                 config,
-                tables);
+                tables,
+                parallelism);
     }
 
     @Override
