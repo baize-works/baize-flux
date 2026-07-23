@@ -7,6 +7,7 @@ import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.internal.JdbcConnectionProvider;
+import com.baize.flux.connector.jdbc.sink.savemode.JdbcSaveModeHandler;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -74,27 +75,20 @@ public final class JdbcOutputFormat implements AutoCloseable {
     private void prepareTable(CatalogTable target) throws Exception {
         if (!preparedTables.add(target.getTablePath())) return;
         Catalog catalog = dialect.createCatalog(config.getConnectionConfig());
+        if (!(catalog instanceof WritableCatalog))
+            throw new IllegalStateException("JDBC catalog does not support DDL");
+        JdbcSaveModeHandler saveModeHandler =
+                new JdbcSaveModeHandler(
+                        config.getSchemaSaveMode(),
+                        config.getDataSaveMode(),
+                        (WritableCatalog) catalog,
+                        target,
+                        config.isCreatePrimaryKey());
         try {
-            catalog.open();
-            boolean exists = catalog.tableExists(target.getTablePath());
-            if (!(catalog instanceof WritableCatalog))
-                throw new IllegalStateException("JDBC catalog does not support DDL");
-            WritableCatalog writable = (WritableCatalog) catalog;
-            if (config.getSchemaSaveMode() == SchemaSaveMode.RECREATE_SCHEMA && exists) {
-                writable.dropTable(target.getTablePath(), false);
-                exists = false;
-            }
-            if (!exists && config.getSchemaSaveMode() != SchemaSaveMode.IGNORE) {
-                if (config.getSchemaSaveMode() == SchemaSaveMode.ERROR_WHEN_SCHEMA_NOT_EXIST)
-                    throw new TableNotFoundException(catalog.name(), target.getTablePath());
-                writable.createTable(createTableDefinition(target), false);
-                exists = true;
-            }
-            if (!exists) throw new TableNotFoundException(catalog.name(), target.getTablePath());
-            if (config.getDataSaveMode() == DataSaveMode.DROP_DATA)
-                writable.truncateTable(target.getTablePath(), false);
+            saveModeHandler.open();
+            saveModeHandler.handleSaveMode();
         } finally {
-            catalog.close();
+            saveModeHandler.close();
         }
     }
 
@@ -105,12 +99,6 @@ public final class JdbcOutputFormat implements AutoCloseable {
                         ? source.getTablePath()
                         : dialect.parseTablePath(targetTablePath);
         return source.withPath(path);
-    }
-
-    private CatalogTable createTableDefinition(CatalogTable target) {
-        if (config.isCreatePrimaryKey()) return target;
-        TableSchema schema = TableSchema.builder().columns(target.getTableSchema().getColumns()).build();
-        return target.withSchema(schema);
     }
 
     private List<String> primaryKeys(CatalogTable table) {
