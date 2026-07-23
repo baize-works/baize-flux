@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 /**
  * 通用配置值约束工具类。
- *
+ * <p>
  * 提供常见的配置值校验规则。
  * 连接器或业务模块的自定义校验规则可以通过 {@link Constraint#of} 创建。
  *
@@ -88,7 +88,7 @@ public final class Constraints {
 
     /**
      * 创建指定范围内的配置值约束。
-     *
+     * <p>
      * 最小值和最大值均包含在有效范围内。
      *
      * @param minimum 最小值

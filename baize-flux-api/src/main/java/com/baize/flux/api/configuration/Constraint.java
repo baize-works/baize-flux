@@ -5,7 +5,7 @@ import java.util.function.BiPredicate;
 
 /**
  * 配置值约束。
- *
+ * <p>
  * 用于定义配置项的值级校验规则。
  *
  * @param <T> 配置值类型

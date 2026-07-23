@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * 配置值转换异常。
- *
+ * <p>
  * 当原始配置值无法转换为配置项声明的目标类型时抛出。
  * 异常中不保存原始配置值，避免密码、Token 等敏感信息泄露。
  *
@@ -51,7 +51,7 @@ public class ConfigConversionException extends FluxException {
 
     /**
      * 根据配置项名称、原始配置值、目标类型和原始异常创建配置值转换异常。
-     *
+     * <p>
      * 原始配置值仅用于获取类型，不会保存到异常对象或写入异常信息。
      *
      * @param optionKey    配置项名称
@@ -96,33 +96,6 @@ public class ConfigConversionException extends FluxException {
         this.optionKey = optionKey;
         this.expectedType = expectedType;
         this.rawValueType = rawValueType;
-    }
-
-    /**
-     * 获取配置项名称。
-     *
-     * @return 配置项名称
-     */
-    public String optionKey() {
-        return optionKey;
-    }
-
-    /**
-     * 获取期望转换的目标类型。
-     *
-     * @return 目标类型
-     */
-    public String expectedType() {
-        return expectedType;
-    }
-
-    /**
-     * 获取原始配置值的类型。
-     *
-     * @return 原始配置值类型
-     */
-    public String rawValueType() {
-        return rawValueType;
     }
 
     /**
@@ -202,5 +175,32 @@ public class ConfigConversionException extends FluxException {
         return rawValue == null
                 ? "null"
                 : rawValue.getClass().getTypeName();
+    }
+
+    /**
+     * 获取配置项名称。
+     *
+     * @return 配置项名称
+     */
+    public String optionKey() {
+        return optionKey;
+    }
+
+    /**
+     * 获取期望转换的目标类型。
+     *
+     * @return 目标类型
+     */
+    public String expectedType() {
+        return expectedType;
+    }
+
+    /**
+     * 获取原始配置值的类型。
+     *
+     * @return 原始配置值类型
+     */
+    public String rawValueType() {
+        return rawValueType;
     }
 }

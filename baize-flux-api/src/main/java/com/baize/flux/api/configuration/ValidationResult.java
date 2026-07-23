@@ -11,7 +11,7 @@ import java.util.Set;
 
 /**
  * 配置校验结果。
- *
+ * <p>
  * 用于聚合配置校验过程中产生的违规信息，
  * 可供命令行、REST API 和 Web UI 等调用方统一处理。
  *
@@ -36,7 +36,7 @@ public final class ValidationResult implements Serializable {
 
     /**
      * 根据违规信息创建配置校验结果。
-     *
+     * <p>
      * 传入的违规信息会被复制并转换为不可修改集合。
      *
      * @param violations 配置违规信息
@@ -111,6 +111,66 @@ public final class ValidationResult implements Serializable {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * 规范化配置项名称集合。
+     * <p>
+     * 配置项名称会被去除首尾空白，并按照传入顺序去重。
+     *
+     * @param optionKeys 原始配置项名称
+     * @return 不可修改的配置项名称集合
+     */
+    private static List<String> normalizeOptionKeys(
+            List<String> optionKeys) {
+
+        Objects.requireNonNull(
+                optionKeys,
+                "optionKeys must not be null"
+        );
+
+        Set<String> normalizedKeys =
+                new LinkedHashSet<>();
+
+        for (String optionKey : optionKeys) {
+            normalizedKeys.add(
+                    requireNonBlank(
+                            optionKey,
+                            "optionKey"
+                    )
+            );
+        }
+
+        return Collections.unmodifiableList(
+                new ArrayList<>(normalizedKeys)
+        );
+    }
+
+    /**
+     * 校验并规范化非空白文本。
+     *
+     * @param value     待校验文本
+     * @param fieldName 字段名称
+     * @return 去除首尾空白后的文本
+     */
+    private static String requireNonBlank(
+            String value,
+            String fieldName) {
+
+        Objects.requireNonNull(
+                value,
+                fieldName + " must not be null"
+        );
+
+        String normalizedValue = value.trim();
+
+        if (normalizedValue.isEmpty()) {
+            throw new IllegalArgumentException(
+                    fieldName + " must not be blank"
+            );
+        }
+
+        return normalizedValue;
     }
 
     /**
@@ -223,7 +283,7 @@ public final class ValidationResult implements Serializable {
 
     /**
      * 配置违规信息。
-     *
+     * <p>
      * 描述一次配置校验失败的类型、关联配置项及异常明细。
      */
     public static final class Violation implements Serializable {
@@ -411,7 +471,7 @@ public final class ValidationResult implements Serializable {
 
     /**
      * 配置校验结果构建器。
-     *
+     * <p>
      * 用于在配置校验过程中逐步收集违规信息。
      */
     public static final class Builder {
@@ -550,7 +610,7 @@ public final class ValidationResult implements Serializable {
 
         /**
          * 构建配置校验结果。
-         *
+         * <p>
          * 未收集违规信息时返回共享的有效校验结果。
          *
          * @return 配置校验结果
@@ -562,65 +622,5 @@ public final class ValidationResult implements Serializable {
 
             return new ValidationResult(violations);
         }
-    }
-
-    /**
-     * 规范化配置项名称集合。
-     *
-     * 配置项名称会被去除首尾空白，并按照传入顺序去重。
-     *
-     * @param optionKeys 原始配置项名称
-     * @return 不可修改的配置项名称集合
-     */
-    private static List<String> normalizeOptionKeys(
-            List<String> optionKeys) {
-
-        Objects.requireNonNull(
-                optionKeys,
-                "optionKeys must not be null"
-        );
-
-        Set<String> normalizedKeys =
-                new LinkedHashSet<>();
-
-        for (String optionKey : optionKeys) {
-            normalizedKeys.add(
-                    requireNonBlank(
-                            optionKey,
-                            "optionKey"
-                    )
-            );
-        }
-
-        return Collections.unmodifiableList(
-                new ArrayList<>(normalizedKeys)
-        );
-    }
-
-    /**
-     * 校验并规范化非空白文本。
-     *
-     * @param value     待校验文本
-     * @param fieldName 字段名称
-     * @return 去除首尾空白后的文本
-     */
-    private static String requireNonBlank(
-            String value,
-            String fieldName) {
-
-        Objects.requireNonNull(
-                value,
-                fieldName + " must not be null"
-        );
-
-        String normalizedValue = value.trim();
-
-        if (normalizedValue.isEmpty()) {
-            throw new IllegalArgumentException(
-                    fieldName + " must not be blank"
-            );
-        }
-
-        return normalizedValue;
     }
 }

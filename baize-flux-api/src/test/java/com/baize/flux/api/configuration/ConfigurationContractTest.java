@@ -13,6 +13,16 @@ import static org.junit.Assert.fail;
 
 public class ConfigurationContractTest {
 
+    private static <T> void assertConversionFails(Option<T> option, Object raw) {
+        try {
+            ReadonlyConfig.fromMap(Collections.<String, Object>singletonMap(option.key(), raw))
+                    .get(option);
+            fail("Expected ConfigConversionException");
+        } catch (ConfigConversionException expected) {
+            assertFalse(expected.getMessage().isEmpty());
+        }
+    }
+
     @Test
     public void strictValidationAcceptsFallbackKey() {
         Option<String> option = Options.key("current.key")
@@ -100,15 +110,5 @@ public class ConfigurationContractTest {
 
         assertEquals(2, rule.options().size());
         assertEquals(1, rule.rules().size());
-    }
-
-    private static <T> void assertConversionFails(Option<T> option, Object raw) {
-        try {
-            ReadonlyConfig.fromMap(Collections.<String, Object>singletonMap(option.key(), raw))
-                    .get(option);
-            fail("Expected ConfigConversionException");
-        } catch (ConfigConversionException expected) {
-            assertFalse(expected.getMessage().isEmpty());
-        }
     }
 }

@@ -8,7 +8,7 @@ import java.util.function.Predicate;
 
 /**
  * 配置规则条件。
- *
+ * <p>
  * 用于判断条件配置规则是否生效，支持相等、存在、不存在、
  * 自定义条件以及与、或、非逻辑组合。
  *
@@ -65,7 +65,7 @@ public final class RuleCondition {
 
     /**
      * 创建配置值等于指定值的条件。
-     *
+     * <p>
      * 条件判断会使用配置项的显式配置值或默认值。
      *
      * @param option        配置项
@@ -102,7 +102,7 @@ public final class RuleCondition {
 
     /**
      * 创建配置项已显式配置的条件。
-     *
+     * <p>
      * 配置项名称或备用配置项名称存在时，条件成立。
      * 配置项默认值不参与判断。
      *
@@ -127,7 +127,7 @@ public final class RuleCondition {
 
     /**
      * 创建配置项未显式配置的条件。
-     *
+     * <p>
      * 配置项名称及所有备用配置项名称均不存在时，条件成立。
      * 配置项默认值不参与判断。
      *
@@ -170,8 +170,27 @@ public final class RuleCondition {
     }
 
     /**
-     * 将当前条件与另一个条件进行逻辑与组合。
+     * 合并两个配置项集合。
+     * <p>
+     * 使用插入顺序去重，优先保留左侧集合中的配置项顺序。
      *
+     * @param left  左侧配置项集合
+     * @param right 右侧配置项集合
+     * @return 合并后的配置项集合
+     */
+    private static Set<Option<?>> merge(
+            Set<Option<?>> left,
+            Set<Option<?>> right) {
+        Set<Option<?>> result =
+                new LinkedHashSet<>(left);
+
+        result.addAll(right);
+        return result;
+    }
+
+    /**
+     * 将当前条件与另一个条件进行逻辑与组合。
+     * <p>
      * 两个条件均成立时，组合条件成立。
      *
      * @param other 另一个配置规则条件
@@ -205,7 +224,7 @@ public final class RuleCondition {
 
     /**
      * 将当前条件与另一个条件进行逻辑或组合。
-     *
+     * <p>
      * 任意一个条件成立时，组合条件成立。
      *
      * @param other 另一个配置规则条件
@@ -279,24 +298,5 @@ public final class RuleCondition {
      */
     public Set<Option<?>> referencedOptions() {
         return referencedOptions;
-    }
-
-    /**
-     * 合并两个配置项集合。
-     *
-     * 使用插入顺序去重，优先保留左侧集合中的配置项顺序。
-     *
-     * @param left  左侧配置项集合
-     * @param right 右侧配置项集合
-     * @return 合并后的配置项集合
-     */
-    private static Set<Option<?>> merge(
-            Set<Option<?>> left,
-            Set<Option<?>> right) {
-        Set<Option<?>> result =
-                new LinkedHashSet<>(left);
-
-        result.addAll(right);
-        return result;
     }
 }

@@ -6,7 +6,9 @@ import com.baize.flux.common.exception.FluxException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** HOCON syntax or resolution failure. */
+/**
+ * HOCON syntax or resolution failure.
+ */
 public class ConfigParseException extends FluxException {
 
     private static final long serialVersionUID = 1L;
@@ -26,14 +28,6 @@ public class ConfigParseException extends FluxException {
         this.lineNumber = lineNumber;
     }
 
-    public String source() {
-        return source;
-    }
-
-    public Integer lineNumber() {
-        return lineNumber;
-    }
-
     private static Map<String, Object> buildContext(
             String source,
             Integer lineNumber) {
@@ -45,5 +39,13 @@ public class ConfigParseException extends FluxException {
             context.put("lineNumber", lineNumber);
         }
         return context;
+    }
+
+    public String source() {
+        return source;
+    }
+
+    public Integer lineNumber() {
+        return lineNumber;
     }
 }

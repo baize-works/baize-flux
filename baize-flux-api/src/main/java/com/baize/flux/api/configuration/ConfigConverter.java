@@ -2,7 +2,7 @@ package com.baize.flux.api.configuration;
 
 /**
  * 配置值转换器。
- *
+ * <p>
  * 用于将原始配置值转换为 {@link Option} 声明的目标类型。
  *
  * @param <T> 目标配置值类型

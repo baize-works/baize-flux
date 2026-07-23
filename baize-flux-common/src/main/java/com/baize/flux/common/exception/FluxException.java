@@ -107,24 +107,6 @@ public class FluxException extends RuntimeException {
         );
     }
 
-
-
-    public String getCode() {
-        return errorCode.getCode();
-    }
-
-    public ErrorCategory getCategory() {
-        return errorCode.getCategory();
-    }
-
-    public String getDescription() {
-        return errorCode.getDescription();
-    }
-
-    public boolean isRetryable() {
-        return errorCode.isRetryable();
-    }
-
     private static String buildMessage(
             FluxErrorCode errorCode,
             String detail,
@@ -175,5 +157,21 @@ public class FluxException extends RuntimeException {
 
     private static boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    public String getCode() {
+        return errorCode.getCode();
+    }
+
+    public ErrorCategory getCategory() {
+        return errorCode.getCategory();
+    }
+
+    public String getDescription() {
+        return errorCode.getDescription();
+    }
+
+    public boolean isRetryable() {
+        return errorCode.isRetryable();
     }
 }

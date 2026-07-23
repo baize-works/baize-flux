@@ -8,7 +8,7 @@ import java.util.Optional;
 
 /**
  * 配置项元数据。
- *
+ * <p>
  * 用于描述配置项名称、目标类型、类型转换器、默认值以及展示属性。
  * 配置项是否必填由 {@link OptionRule} 定义，不属于当前类的职责。
  *
@@ -152,6 +152,23 @@ public final class Option<T> {
     }
 
     /**
+     * 校验文本内容不为空。
+     *
+     * @param value   待校验文本
+     * @param message 校验失败时的异常信息
+     * @return 原始文本
+     */
+    private static String requireText(
+            String value,
+            String message) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(message);
+        }
+
+        return value;
+    }
+
+    /**
      * 获取配置项名称。
      *
      * @return 配置项名称
@@ -245,7 +262,7 @@ public final class Option<T> {
 
     /**
      * 判断是否允许配置项包含任意子配置项。
-     *
+     * <p>
      * 启用后，未知配置项校验不会拒绝当前配置项下未明确声明的子配置项。
      *
      * @return 允许任意子配置项时返回 {@code true}
@@ -282,7 +299,7 @@ public final class Option<T> {
 
     /**
      * 返回配置项的字符串表示。
-     *
+     * <p>
      * 字符串中仅包含配置项名称和类型，不包含配置值，
      * 避免敏感配置内容泄露。
      *
@@ -298,22 +315,5 @@ public final class Option<T> {
                 + typeName
                 + '\''
                 + '}';
-    }
-
-    /**
-     * 校验文本内容不为空。
-     *
-     * @param value   待校验文本
-     * @param message 校验失败时的异常信息
-     * @return 原始文本
-     */
-    private static String requireText(
-            String value,
-            String message) {
-        if (value == null || value.trim().isEmpty()) {
-            throw new IllegalArgumentException(message);
-        }
-
-        return value;
     }
 }

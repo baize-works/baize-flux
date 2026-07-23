@@ -1,5 +1,4 @@
-
-        package com.baize.flux.api.configuration;
+package com.baize.flux.api.configuration;
 
 import com.baize.flux.common.exception.FluxException;
 
@@ -9,7 +8,7 @@ import java.util.Objects;
 
 /**
  * 配置校验异常。
- *
+ * <p>
  * 当配置内容未通过校验时抛出。
  * 异常中保留完整的校验结果，便于调用方获取具体的违规信息。
  *
@@ -68,15 +67,6 @@ public class ConfigValidationException extends FluxException {
                 buildContext(validationResult)
         );
         this.validationResult = validationResult;
-    }
-
-    /**
-     * 获取完整的配置校验结果。
-     *
-     * @return 配置校验结果
-     */
-    public ValidationResult validationResult() {
-        return validationResult;
     }
 
     /**
@@ -140,6 +130,15 @@ public class ConfigValidationException extends FluxException {
         }
 
         return message.toString();
+    }
+
+    /**
+     * 获取完整的配置校验结果。
+     *
+     * @return 配置校验结果
+     */
+    public ValidationResult validationResult() {
+        return validationResult;
     }
 }
 

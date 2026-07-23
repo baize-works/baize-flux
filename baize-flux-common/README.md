@@ -4,20 +4,8 @@
 
 该模块不包含数据同步业务逻辑，也不负责执行任务。
 
-baize-flux-common
-└── src/main/java/com/baize/flux/common
-├── constant
-├── enums
-├── exception
-├── model
-└── util
+baize-flux-common └── src/main/java/com/baize/flux/common ├── constant ├── enums ├── exception ├── model └── util
 
+exception baize-flux-core └── exception └── CoreErrorCode.java
 
-exception
-baize-flux-core
-└── exception
-└── CoreErrorCode.java
-
-baize-flux-connector-jdbc
-└── exception
-└── JdbcErrorCode.java
+baize-flux-connector-jdbc └── exception └── JdbcErrorCode.java

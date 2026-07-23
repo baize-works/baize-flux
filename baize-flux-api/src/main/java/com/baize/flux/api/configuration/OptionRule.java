@@ -11,12 +11,136 @@ import java.util.Set;
 
 /**
  * 配置项规则。
- *
+ * <p>
  * 用于声明支持的配置项，以及配置项之间的结构规则和配置值约束。
  *
  * @author weifuwan
  */
 public final class OptionRule {
+
+    /**
+     * 支持的配置项。
+     */
+    private final List<Option<?>> options;
+    /**
+     * 配置校验规则。
+     */
+    private final List<Rule> rules;
+
+    /**
+     * 创建配置项规则。
+     *
+     * @param options 支持的配置项
+     * @param rules   配置校验规则
+     */
+    private OptionRule(
+            List<Option<?>> options,
+            List<Rule> rules) {
+
+        this.options =
+                immutableOptions(
+                        options,
+                        "options"
+                );
+        this.rules = immutableRules(rules);
+    }
+
+    /**
+     * 创建配置项规则构建器。
+     *
+     * @return 配置项规则构建器
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * 创建不可修改的配置项集合。
+     *
+     * @param options   原始配置项集合
+     * @param fieldName 字段名称
+     * @return 不可修改的配置项集合
+     */
+    private static List<Option<?>> immutableOptions(
+            List<Option<?>> options,
+            String fieldName) {
+
+        Objects.requireNonNull(
+                options,
+                fieldName + " must not be null"
+        );
+
+        List<Option<?>> copiedOptions =
+                new ArrayList<>(options.size());
+
+        for (Option<?> option : options) {
+            copiedOptions.add(
+                    Objects.requireNonNull(
+                            option,
+                            fieldName + " must not contain null"
+                    )
+            );
+        }
+
+        return Collections.unmodifiableList(copiedOptions);
+    }
+
+    /**
+     * 创建不可修改的配置规则集合。
+     *
+     * @param rules 原始配置规则集合
+     * @return 不可修改的配置规则集合
+     */
+    private static List<Rule> immutableRules(
+            List<Rule> rules) {
+
+        Objects.requireNonNull(
+                rules,
+                "rules must not be null"
+        );
+
+        List<Rule> copiedRules =
+                new ArrayList<>(rules.size());
+
+        for (Rule rule : rules) {
+            copiedRules.add(
+                    Objects.requireNonNull(
+                            rule,
+                            "rules must not contain null"
+                    )
+            );
+        }
+
+        return Collections.unmodifiableList(copiedRules);
+    }
+
+    /**
+     * 获取支持的配置项。
+     *
+     * @return 不可修改的配置项集合
+     */
+    public List<Option<?>> options() {
+        return options;
+    }
+
+    /**
+     * 获取配置校验规则。
+     *
+     * @return 不可修改的配置规则集合
+     */
+    public List<Rule> rules() {
+        return rules;
+    }
+
+    @Override
+    public String toString() {
+        return "OptionRule{"
+                + "options="
+                + options
+                + ", rules="
+                + rules
+                + '}';
+    }
 
     /**
      * 配置规则标记接口。
@@ -26,7 +150,7 @@ public final class OptionRule {
 
     /**
      * 必填配置项规则。
-     *
+     * <p>
      * 表示指定的所有配置项都必须存在有效配置值。
      */
     public static final class RequiredRule implements Rule {
@@ -84,7 +208,7 @@ public final class OptionRule {
 
     /**
      * 唯一配置项规则。
-     *
+     * <p>
      * 表示指定配置项中必须有且仅有一个配置项存在有效配置值。
      */
     public static final class ExactlyOneRule implements Rule {
@@ -142,7 +266,7 @@ public final class OptionRule {
 
     /**
      * 最多一个配置项规则。
-     *
+     * <p>
      * 表示指定配置项中最多只能有一个配置项存在有效配置值。
      */
     public static final class AtMostOneRule implements Rule {
@@ -200,7 +324,7 @@ public final class OptionRule {
 
     /**
      * 全有或全无配置项规则。
-     *
+     * <p>
      * 表示指定配置项必须同时存在有效配置值，或者全部不配置。
      */
     public static final class AllOrNoneRule implements Rule {
@@ -258,7 +382,7 @@ public final class OptionRule {
 
     /**
      * 条件必填配置项规则。
-     *
+     * <p>
      * 当指定条件成立时，要求相关配置项必须存在有效配置值。
      */
     public static final class ConditionalRequiredRule implements Rule {
@@ -352,7 +476,7 @@ public final class OptionRule {
 
     /**
      * 配置值约束规则。
-     *
+     * <p>
      * 用于声明单个配置项需要满足的值级约束。
      *
      * @param <T> 配置值类型
@@ -446,73 +570,8 @@ public final class OptionRule {
     }
 
     /**
-     * 支持的配置项。
-     */
-    private final List<Option<?>> options;
-
-    /**
-     * 配置校验规则。
-     */
-    private final List<Rule> rules;
-
-    /**
-     * 创建配置项规则。
-     *
-     * @param options 支持的配置项
-     * @param rules   配置校验规则
-     */
-    private OptionRule(
-            List<Option<?>> options,
-            List<Rule> rules) {
-
-        this.options =
-                immutableOptions(
-                        options,
-                        "options"
-                );
-        this.rules = immutableRules(rules);
-    }
-
-    /**
-     * 创建配置项规则构建器。
-     *
-     * @return 配置项规则构建器
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * 获取支持的配置项。
-     *
-     * @return 不可修改的配置项集合
-     */
-    public List<Option<?>> options() {
-        return options;
-    }
-
-    /**
-     * 获取配置校验规则。
-     *
-     * @return 不可修改的配置规则集合
-     */
-    public List<Rule> rules() {
-        return rules;
-    }
-
-    @Override
-    public String toString() {
-        return "OptionRule{"
-                + "options="
-                + options
-                + ", rules="
-                + rules
-                + '}';
-    }
-
-    /**
      * 配置项规则构建器。
-     *
+     * <p>
      * 用于声明可选配置项、必填配置项、配置项结构关系以及配置值约束。
      */
     public static final class Builder {
@@ -536,6 +595,29 @@ public final class OptionRule {
         }
 
         /**
+         * 校验配置项数量是否满足最低要求。
+         *
+         * @param minimum 最少配置项数量
+         * @param method  调用方法名称
+         * @param options 配置项
+         */
+        private static void requireAtLeast(
+                int minimum,
+                String method,
+                Option<?>[] options) {
+
+            if (options == null
+                    || options.length < minimum) {
+                throw new IllegalArgumentException(
+                        method
+                                + " requires at least "
+                                + minimum
+                                + " option(s)"
+                );
+            }
+        }
+
+        /**
          * 注册可选配置项。
          *
          * @param options 可选配置项
@@ -553,7 +635,7 @@ public final class OptionRule {
 
         /**
          * 注册必填配置项。
-         *
+         * <p>
          * 必填配置项不允许声明默认值。
          *
          * @param options 必填配置项
@@ -662,7 +744,7 @@ public final class OptionRule {
 
         /**
          * 声明条件必填配置项。
-         *
+         * <p>
          * 当指定条件成立时，相关配置项必须存在有效配置值。
          *
          * @param condition       规则生效条件
@@ -756,7 +838,7 @@ public final class OptionRule {
 
         /**
          * 注册配置项。
-         *
+         * <p>
          * 相同配置项名称只能由同一个 {@link Option} 实例声明。
          *
          * @param newOptions 待注册的配置项
@@ -790,88 +872,5 @@ public final class OptionRule {
                 }
             }
         }
-
-        /**
-         * 校验配置项数量是否满足最低要求。
-         *
-         * @param minimum 最少配置项数量
-         * @param method  调用方法名称
-         * @param options 配置项
-         */
-        private static void requireAtLeast(
-                int minimum,
-                String method,
-                Option<?>[] options) {
-
-            if (options == null
-                    || options.length < minimum) {
-                throw new IllegalArgumentException(
-                        method
-                                + " requires at least "
-                                + minimum
-                                + " option(s)"
-                );
-            }
-        }
-    }
-
-    /**
-     * 创建不可修改的配置项集合。
-     *
-     * @param options   原始配置项集合
-     * @param fieldName 字段名称
-     * @return 不可修改的配置项集合
-     */
-    private static List<Option<?>> immutableOptions(
-            List<Option<?>> options,
-            String fieldName) {
-
-        Objects.requireNonNull(
-                options,
-                fieldName + " must not be null"
-        );
-
-        List<Option<?>> copiedOptions =
-                new ArrayList<>(options.size());
-
-        for (Option<?> option : options) {
-            copiedOptions.add(
-                    Objects.requireNonNull(
-                            option,
-                            fieldName + " must not contain null"
-                    )
-            );
-        }
-
-        return Collections.unmodifiableList(copiedOptions);
-    }
-
-    /**
-     * 创建不可修改的配置规则集合。
-     *
-     * @param rules 原始配置规则集合
-     * @return 不可修改的配置规则集合
-     */
-    private static List<Rule> immutableRules(
-            List<Rule> rules) {
-
-        Objects.requireNonNull(
-                rules,
-                "rules must not be null"
-        );
-
-        List<Rule> copiedRules =
-                new ArrayList<>(rules.size());
-
-        for (Rule rule : rules) {
-            copiedRules.add(
-                    Objects.requireNonNull(
-                            rule,
-                            "rules must not contain null"
-                    )
-            );
-        }
-
-        return Collections.unmodifiableList(copiedRules);
     }
 }

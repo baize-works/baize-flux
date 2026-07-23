@@ -11,7 +11,9 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 
-/** Loads HOCON into the engine-neutral {@link ReadonlyConfig}. */
+/**
+ * Loads HOCON into the engine-neutral {@link ReadonlyConfig}.
+ */
 public final class HoconConfigLoader {
 
     public ReadonlyConfig load(Path path) {
@@ -20,8 +22,8 @@ public final class HoconConfigLoader {
         try {
             Config config =
                     ConfigFactory.parseFile(
-                                    path.toFile(),
-                                    ConfigParseOptions.defaults().setAllowMissing(false))
+                            path.toFile(),
+                            ConfigParseOptions.defaults().setAllowMissing(false))
                             .resolve(ConfigResolveOptions.defaults());
             return fromConfig(config);
         } catch (ConfigException e) {

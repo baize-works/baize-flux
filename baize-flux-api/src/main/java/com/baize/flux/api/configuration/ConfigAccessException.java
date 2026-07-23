@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * 配置访问异常。
- *
+ * <p>
  * 当读取必要配置项，但未找到对应配置值时抛出。
  *
  * @author weifuwan
@@ -77,15 +77,6 @@ public class ConfigAccessException extends FluxException {
     }
 
     /**
-     * 获取配置项名称。
-     *
-     * @return 配置项名称
-     */
-    public String optionKey() {
-        return optionKey;
-    }
-
-    /**
      * 规范化异常明细。
      *
      * @param optionKey 配置项名称
@@ -123,5 +114,14 @@ public class ConfigAccessException extends FluxException {
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("optionKey", optionKey);
         return context;
+    }
+
+    /**
+     * 获取配置项名称。
+     *
+     * @return 配置项名称
+     */
+    public String optionKey() {
+        return optionKey;
     }
 }

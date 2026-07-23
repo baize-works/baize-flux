@@ -15,7 +15,7 @@ import static com.baize.flux.api.configuration.ValidationResult.ViolationType;
 
 /**
  * 配置校验器。
- *
+ * <p>
  * 用于校验未知配置项、配置值类型、配置结构规则以及配置值约束。
  *
  * @author weifuwan
@@ -38,7 +38,7 @@ public final class ConfigValidator {
 
     /**
      * 创建严格模式的配置校验器。
-     *
+     * <p>
      * 严格模式下，未声明的配置项将被视为校验错误。
      *
      * @return 配置校验器
@@ -49,13 +49,26 @@ public final class ConfigValidator {
 
     /**
      * 创建宽松模式的配置校验器。
-     *
+     * <p>
      * 宽松模式下，不校验未声明的配置项。
      *
      * @return 配置校验器
      */
     public static ConfigValidator lenient() {
         return new ConfigValidator(false);
+    }
+
+    /**
+     * 将通用 Map 转换为配置 Map。
+     *
+     * @param map 原始 Map
+     * @return 配置 Map
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMap(
+            Map<?, ?> map) {
+
+        return (Map<String, Object>) map;
     }
 
     /**
@@ -638,18 +651,5 @@ public final class ConfigValidator {
         }
 
         return keys;
-    }
-
-    /**
-     * 将通用 Map 转换为配置 Map。
-     *
-     * @param map 原始 Map
-     * @return 配置 Map
-     */
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> castMap(
-            Map<?, ?> map) {
-
-        return (Map<String, Object>) map;
     }
 }
