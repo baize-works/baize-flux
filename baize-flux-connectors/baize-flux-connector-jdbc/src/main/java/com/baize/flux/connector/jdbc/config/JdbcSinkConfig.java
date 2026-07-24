@@ -48,6 +48,8 @@ public final class JdbcSinkConfig
     private final List<String> primaryKeys;
 
     private final int batchSize;
+    private final int preparedStatementCacheSize;
+    private final int queryTimeoutSec;
     private final int maxRetries;
     private final DirtyDataPolicy dirtyDataPolicy;
     private final boolean createPrimaryKey;
@@ -61,6 +63,8 @@ public final class JdbcSinkConfig
             String customSql,
             List<String> primaryKeys,
             int batchSize,
+            int preparedStatementCacheSize,
+            int queryTimeoutSec,
             int maxRetries,
             DirtyDataPolicy dirtyDataPolicy,
             boolean createPrimaryKey) {
@@ -105,12 +109,24 @@ public final class JdbcSinkConfig
                     "batchSize must be greater than 0");
         }
 
+        if (preparedStatementCacheSize <= 0) {
+            throw new IllegalArgumentException(
+                    "preparedStatementCacheSize must be greater than 0");
+        }
+
+        if (queryTimeoutSec < 0) {
+            throw new IllegalArgumentException(
+                    "queryTimeoutSec must not be negative");
+        }
+
         if (maxRetries < 0) {
             throw new IllegalArgumentException(
                     "maxRetries must not be negative");
         }
 
         this.batchSize = batchSize;
+        this.preparedStatementCacheSize = preparedStatementCacheSize;
+        this.queryTimeoutSec = queryTimeoutSec;
         this.maxRetries = maxRetries;
         this.dirtyDataPolicy = Objects.requireNonNull(
                 dirtyDataPolicy, "dirtyDataPolicy must not be null");
@@ -141,6 +157,10 @@ public final class JdbcSinkConfig
                         .orElse(Collections.emptyList()),
                 config.get(
                         JdbcSinkOptions.BATCH_SIZE),
+                config.get(
+                        JdbcSinkOptions.PREPARED_STATEMENT_CACHE_SIZE),
+                config.get(
+                        JdbcSinkOptions.QUERY_TIMEOUT_SEC),
                 config.get(
                         JdbcSinkOptions.MAX_RETRIES),
                 config.get(JdbcSinkOptions.DIRTY_DATA_POLICY),
