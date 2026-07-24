@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.Savepoint;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -60,6 +61,10 @@ public final class JdbcOutputFormat
      */
     private final Set<TablePath> preparedTables =
             new HashSet<TablePath>();
+
+    /** Rows skipped after the failed batch has been isolated to individual rows. */
+    private final List<JdbcRowError> rowErrors =
+            new ArrayList<JdbcRowError>();
 
     private Connection connection;
 
@@ -215,6 +220,14 @@ public final class JdbcOutputFormat
     }
 
     /**
+     * Returns a snapshot of rows rejected while {@code dirty_data_policy=SKIP}.
+     */
+    public List<JdbcRowError> getRowErrors() {
+        return Collections.unmodifiableList(
+                new ArrayList<JdbcRowError>(rowErrors));
+    }
+
+    /**
      * 执行一个 JDBC Batch。
      *
      * <p>整个 SinkTask 共用一条事务，因此批次重试不能执行完整 rollback。
@@ -228,16 +241,51 @@ public final class JdbcOutputFormat
 
         ensureTransactionConnection();
 
-        int maxRetries =
-                config.getMaxRetries();
+        try {
+            executeRows(sql, rows, schema);
+        } catch (Exception batchFailure) {
+            if (!config.shouldSkipDirtyData()) {
+                throw batchFailure;
+            }
 
-        if (maxRetries > 0
+            if (!isTransactionConnectionValid()) {
+                throw batchFailure;
+            }
+
+            /*
+             * The failed batch has already been rolled back to its savepoint.
+             * Replay it one row at a time so valid rows remain in the task
+             * transaction and only the rows that still fail are discarded.
+             */
+            for (FluxRow row : rows) {
+                try {
+                    executeRows(sql, Collections.singletonList(row), schema);
+                } catch (Exception rowFailure) {
+                    if (!isTransactionConnectionValid()) {
+                        throw rowFailure;
+                    }
+                    rowErrors.add(new JdbcRowError(row, rowFailure));
+                }
+            }
+        }
+    }
+
+    private void executeRows(
+            String sql,
+            List<FluxRow> rows,
+            TableSchema schema)
+            throws Exception {
+
+        int maxRetries = config.getMaxRetries();
+        boolean requiresSavepoint = maxRetries > 0 || config.shouldSkipDirtyData();
+
+        if (requiresSavepoint
                 && !supportsSavepoints()) {
 
             throw new IllegalStateException(
                     "当前 JDBC 数据库或驱动不支持 Savepoint，"
-                            + "无法在任务级事务中安全执行批次重试。"
-                            + "请将 maxRetries 设置为 0，"
+                            + "无法在任务级事务中安全执行批次重试或脏数据隔离。"
+                            + "请关闭重试和脏数据跳过，"
                             + "或者使用支持 Savepoint 的 JDBC 驱动");
         }
 
@@ -252,7 +300,7 @@ public final class JdbcOutputFormat
             /*
              * 配置了批次重试时，为当前批次创建保存点。
              */
-            if (maxRetries > 0) {
+            if (requiresSavepoint) {
                 savepoint =
                         connection.setSavepoint(
                                 "baize_flux_batch_"

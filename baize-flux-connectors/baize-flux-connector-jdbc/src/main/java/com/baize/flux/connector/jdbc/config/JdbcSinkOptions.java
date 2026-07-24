@@ -3,6 +3,7 @@ package com.baize.flux.connector.jdbc.config;
 import com.baize.flux.api.configuration.Option;
 import com.baize.flux.api.configuration.Options;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
+import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 
 import java.util.List;
@@ -96,6 +97,16 @@ public final class JdbcSinkOptions
                     .intType()
                     .defaultValue(3)
                     .withDescription("批次写入失败后的最大重试次数");
+
+    /**
+     * 脏数据处理策略。SKIP 会使用 Savepoint 回滚失败批次，然后逐行定位并跳过
+     * 无法写入的记录；FAIL_FAST 保持事务失败即回滚的默认行为。
+     */
+    public static final Option<DirtyDataPolicy> DIRTY_DATA_POLICY =
+            Options.key("dirty_data_policy")
+                    .enumType(DirtyDataPolicy.class)
+                    .defaultValue(DirtyDataPolicy.FAIL_FAST)
+                    .withDescription("脏数据处理策略：FAIL_FAST 或 SKIP");
 
     /**
      * 自动创建目标表时是否创建主键。

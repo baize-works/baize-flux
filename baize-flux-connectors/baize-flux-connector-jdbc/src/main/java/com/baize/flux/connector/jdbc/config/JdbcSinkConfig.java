@@ -3,6 +3,7 @@ package com.baize.flux.connector.jdbc.config;
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
+import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 import lombok.Getter;
 
@@ -48,6 +49,7 @@ public final class JdbcSinkConfig
 
     private final int batchSize;
     private final int maxRetries;
+    private final DirtyDataPolicy dirtyDataPolicy;
     private final boolean createPrimaryKey;
 
     private JdbcSinkConfig(
@@ -60,6 +62,7 @@ public final class JdbcSinkConfig
             List<String> primaryKeys,
             int batchSize,
             int maxRetries,
+            DirtyDataPolicy dirtyDataPolicy,
             boolean createPrimaryKey) {
 
         this.connectionConfig =
@@ -109,6 +112,8 @@ public final class JdbcSinkConfig
 
         this.batchSize = batchSize;
         this.maxRetries = maxRetries;
+        this.dirtyDataPolicy = Objects.requireNonNull(
+                dirtyDataPolicy, "dirtyDataPolicy must not be null");
         this.createPrimaryKey =
                 createPrimaryKey;
     }
@@ -138,6 +143,7 @@ public final class JdbcSinkConfig
                         JdbcSinkOptions.BATCH_SIZE),
                 config.get(
                         JdbcSinkOptions.MAX_RETRIES),
+                config.get(JdbcSinkOptions.DIRTY_DATA_POLICY),
                 config.get(
                         JdbcSinkOptions
                                 .CREATE_PRIMARY_KEY));
@@ -230,5 +236,9 @@ public final class JdbcSinkConfig
 
     public boolean hasConfiguredPrimaryKeys() {
         return !primaryKeys.isEmpty();
+    }
+
+    public boolean shouldSkipDirtyData() {
+        return dirtyDataPolicy == DirtyDataPolicy.SKIP;
     }
 }
