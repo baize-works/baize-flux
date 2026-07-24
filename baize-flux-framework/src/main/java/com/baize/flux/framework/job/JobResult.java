@@ -4,6 +4,9 @@ import com.baize.flux.api.dirtydata.DirtyDataSummary;
 import com.baize.flux.framework.metrics.JobMetrics;
 
 import java.util.Objects;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Job 执行结果。
@@ -23,6 +26,7 @@ public final class JobResult {
     private final Throwable failure;
     private final CommitSummary commitSummary;
     private final DirtyDataSummary dirtyDataSummary;
+    private final List<PipelineResult> pipelineResults;
 
     public JobResult(
             String jobName,
@@ -31,16 +35,18 @@ public final class JobResult {
             long endTimeMillis,
             JobMetrics metrics,
             Throwable failure) {
-        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, CommitSummary.empty(), DirtyDataSummary.empty());
+        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, CommitSummary.empty(), DirtyDataSummary.empty(), Collections.<PipelineResult>emptyList());
     }
 
     public JobResult(
             String jobName, JobStatus status, long startTimeMillis, long endTimeMillis,
             JobMetrics metrics, Throwable failure, CommitSummary commitSummary) {
-        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, commitSummary, DirtyDataSummary.empty());
+        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, commitSummary, DirtyDataSummary.empty(), Collections.<PipelineResult>emptyList());
     }
 
-    public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary) {
+    public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary) { this(jobName,status,startTimeMillis,endTimeMillis,metrics,failure,commitSummary,dirtyDataSummary,Collections.<PipelineResult>emptyList()); }
+
+    public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary, List<PipelineResult> pipelineResults) {
 
         this.jobName =
                 Objects.requireNonNull(
@@ -63,6 +69,7 @@ public final class JobResult {
         this.failure = failure;
         this.commitSummary = Objects.requireNonNull(commitSummary, "commitSummary must not be null");
         this.dirtyDataSummary = Objects.requireNonNull(dirtyDataSummary, "dirtyDataSummary must not be null");
+        this.pipelineResults = Collections.unmodifiableList(new ArrayList<PipelineResult>(pipelineResults));
     }
 
     public void throwIfFailed() throws Exception {
@@ -118,6 +125,8 @@ public final class JobResult {
     public DirtyDataSummary getDirtyDataSummary() {
         return dirtyDataSummary;
     }
+
+    public List<PipelineResult> getPipelineResults() { return pipelineResults; }
 
     public boolean isSuccess() {
         return status == JobStatus.SUCCEEDED;

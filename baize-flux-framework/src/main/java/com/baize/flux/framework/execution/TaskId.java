@@ -2,89 +2,20 @@ package com.baize.flux.framework.execution;
 
 import java.util.Objects;
 
-/**
- * Task 唯一标识。
- */
+/** Immutable semantic task identity. */
 public final class TaskId {
-
-    private final String stageName;
-
-    private final int subtaskIndex;
-
-    private final int parallelism;
-
-    public TaskId(
-            String stageName,
-            int subtaskIndex,
-            int parallelism) {
-
-        if (subtaskIndex < 0) {
-            throw new IllegalArgumentException(
-                    "subtaskIndex must not be negative");
-        }
-
-        if (parallelism <= 0) {
-            throw new IllegalArgumentException(
-                    "parallelism must be greater than 0");
-        }
-
-        if (subtaskIndex >= parallelism) {
-            throw new IllegalArgumentException(
-                    "subtaskIndex must be less than parallelism");
-        }
-
-        this.stageName =
-                Objects.requireNonNull(
-                        stageName,
-                        "stageName must not be null");
-
-        this.subtaskIndex = subtaskIndex;
-        this.parallelism = parallelism;
+    private final String pipelineId; private final TaskType taskType; private final int subtaskIndex; private final int parallelism;
+    public TaskId(String pipelineId, TaskType taskType, int subtaskIndex, int parallelism) {
+        this.pipelineId=Objects.requireNonNull(pipelineId,"pipelineId must not be null"); this.taskType=Objects.requireNonNull(taskType,"taskType must not be null");
+        if(subtaskIndex<0 || parallelism<=0 || subtaskIndex>=parallelism) throw new IllegalArgumentException("invalid subtask index or parallelism");
+        this.subtaskIndex=subtaskIndex; this.parallelism=parallelism;
     }
-
-    public String getStageName() {
-        return stageName;
-    }
-
-    public int getSubtaskIndex() {
-        return subtaskIndex;
-    }
-
-    public int getParallelism() {
-        return parallelism;
-    }
-
-    @Override
-    public String toString() {
-        return stageName
-                + "-"
-                + subtaskIndex
-                + "/"
-                + parallelism;
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-
-        if (!(object instanceof TaskId)) {
-            return false;
-        }
-
-        TaskId that = (TaskId) object;
-
-        return subtaskIndex == that.subtaskIndex
-                && parallelism == that.parallelism
-                && stageName.equals(that.stageName);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(
-                stageName,
-                subtaskIndex,
-                parallelism);
-    }
+    /** @deprecated Use the typed constructor. Retained only for source compatibility. */
+    @Deprecated public TaskId(String stageName,int subtaskIndex,int parallelism) { this(stageName.endsWith("/sink") || "sink".equals(stageName) ? stageName.replaceAll("/sink$", "") : stageName.replaceAll("/source$", ""), stageName.endsWith("/sink") || "sink".equals(stageName) ? TaskType.SINK : TaskType.SOURCE, subtaskIndex, parallelism); }
+    public String getPipelineId(){return pipelineId;} public TaskType getTaskType(){return taskType;}
+    /** Display-only legacy name. */ public String getStageName(){return pipelineId+"/"+taskType.name().toLowerCase();}
+    public int getSubtaskIndex(){return subtaskIndex;} public int getParallelism(){return parallelism;}
+    @Override public String toString(){return getStageName()+"-"+subtaskIndex+"/"+parallelism;}
+    @Override public boolean equals(Object o){if(this==o)return true;if(!(o instanceof TaskId))return false; TaskId x=(TaskId)o;return subtaskIndex==x.subtaskIndex&&parallelism==x.parallelism&&pipelineId.equals(x.pipelineId)&&taskType==x.taskType;}
+    @Override public int hashCode(){return Objects.hash(pipelineId,taskType,subtaskIndex,parallelism);}
 }

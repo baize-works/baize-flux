@@ -181,18 +181,19 @@ public final class ExecutionCoordinator {
     }
 
     private CommitSummary summarizeCommits(List<ExecutionTask> sinkTasks) {
-        int committed = 0;
+        int committed = 0, empty = 0, finished = 0; long attempted = 0, written = 0, unknown = 0, failed = 0;
         String retryAdvice = "This sink commits per task; verify already committed targets before retrying.";
         com.baize.flux.api.sink.CommitScope scope = com.baize.flux.api.sink.CommitScope.TASK_LOCAL;
-        for (ExecutionTask task : sinkTasks) {
-            if (task instanceof SinkTask) {
-                SinkTask sinkTask = (SinkTask) task;
-                if (sinkTask.isCommitted()) committed++;
-                scope = sinkTask.getCommitScope();
-                retryAdvice = sinkTask.getRetryAdvice();
-            }
+        for (ExecutionTask task : sinkTasks) if (task instanceof SinkTask) {
+            SinkTask sink = (SinkTask) task; TaskMetrics m = jobMetrics.getTaskMetrics().get(sink.getTaskId());
+            long successful = m == null ? 0 : m.getSinkWriteSuccessRecordCount();
+            attempted += m == null ? 0 : m.getAttemptedRecordCount(); written += successful; unknown += m == null ? 0 : m.getUnknownStateRecordCount(); failed += m == null ? 0 : m.getFailedRecordCount();
+            if (m != null && m.getState() == TaskState.FINISHED) finished++;
+            if (sink.isCommitted()) { committed++; if (successful == 0) empty++; }
+            scope = sink.getCommitScope(); retryAdvice = sink.getRetryAdvice();
         }
-        return new CommitSummary(committed, sinkTasks.size() - committed, scope, retryAdvice);
+        return new CommitSummary(sinkTasks.size(), finished, committed, empty, sinkTasks.size() - committed,
+                attempted, written, committed == 0 ? 0 : written, failed, unknown, scope, retryAdvice);
     }
 
     private void cancelAll(

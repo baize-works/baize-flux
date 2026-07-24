@@ -113,29 +113,22 @@ public final class SinkTask
                         break;
                     }
 
+                    long recordCount = envelope.getBatch().getRecords().size();
+                    context.getMetrics().incrementReceivedBatchCount();
+                    context.getMetrics().addAttemptedRecords(recordCount);
+                    context.getMetrics().setCurrentPosition(envelope.getBatch().getDataSetId(), envelope.getBatch().getSplitId());
                     long sqlStart = System.nanoTime();
                     try {
-                        writer.write(
-                                envelope.getBatch(),
-                                envelope.getCatalogTable());
-                    } finally {
-                        context.getMetrics().addSqlExecutionNanos(
-                                System.nanoTime() - sqlStart);
-                    }
-
-                    context.getMetrics().setCurrentPosition(
-                            envelope.getBatch().getDataSetId(),
-                            envelope.getBatch().getSplitId());
-
-                    context.getMetrics()
-                            .incrementBatchCount();
-
-                    context.getMetrics()
-                            .addSinkWriteSuccessRecords(
-                                    envelope
-                                            .getBatch()
-                                            .getRecords()
-                                            .size());
+                        writer.write(envelope.getBatch(), envelope.getCatalogTable());
+                        context.getMetrics().incrementSuccessfulBatchCount();
+                        context.getMetrics().incrementBatchCount();
+                        context.getMetrics().addSinkWriteSuccessRecords(recordCount);
+                    } catch (Throwable writeFailure) {
+                        context.getMetrics().incrementFailedBatchCount();
+                        // Connector-specific failures may refine this later; JDBC outcome is otherwise unknown.
+                        context.getMetrics().addUnknownStateRecords(recordCount);
+                        throw writeFailure;
+                    } finally { context.getMetrics().addSqlExecutionNanos(System.nanoTime() - sqlStart); }
                 }
 
                 /*
