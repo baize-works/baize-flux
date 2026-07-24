@@ -90,14 +90,17 @@ public final class LocalFluxEngine
     }
 
     @Override
-    public JobResult execute(
-            JobDefinition definition)
-            throws Exception {
+    public JobResult execute(JobDefinition definition) throws Exception {
+        return execute(definition, null);
+    }
 
+    /** 为本地服务暴露正在执行的实例，以便取消请求能传递到引擎。 */
+    public JobResult execute(JobDefinition definition, JobExecutionListener listener) throws Exception {
         try {
             PreparedJob preparedJob = connectorPreparer.prepare(definition);
             ExecutionPlan executionPlan = jobPlanner.plan(preparedJob);
             JobExecution jobExecution = new JobExecution(executionPlan, classLoader);
+            if (listener != null) listener.onJobExecutionCreated(jobExecution);
             return jobExecution.execute();
         } finally {
             // Plugin loaders are job resources; no open jar remains after a job completes or fails.
