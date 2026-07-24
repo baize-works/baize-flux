@@ -92,4 +92,21 @@ public final class JobExecution {
     public void cancel() {
         cancellationToken.cancel(new CancellationException("Job was cancelled by caller"));
     }
+
+    /**
+     * 返回当前 Job 的实时指标。
+     *
+     * <p>JobMetrics 本身是线程安全的，调用方应将其转换为只读快照，
+     * 不应直接暴露给 HTTP 客户端。
+     */
+    public JobMetrics getMetrics() {
+        return jobMetrics;
+    }
+
+    /**
+     * 当前 Job 是否已经收到取消请求。
+     */
+    public boolean isCancellationRequested() {
+        return cancellationToken.isCancelled();
+    }
 }

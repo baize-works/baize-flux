@@ -1,1 +1,12 @@
-package com.baize.flux.server.runtime; import java.util.*; public interface JobRepository { JobSnapshot get(String jobId); List<JobSnapshot> list(); }
+package com.baize.flux.server.runtime;
+
+import java.util.List;
+
+public interface JobRepository {
+
+    void save(JobSnapshot snapshot);
+
+    JobSnapshot get(String jobId);
+
+    List<JobSnapshot> list();
+}

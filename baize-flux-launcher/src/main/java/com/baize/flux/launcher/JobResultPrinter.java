@@ -1,20 +1,19 @@
 package com.baize.flux.launcher;
 
+import com.baize.flux.framework.execution.TaskType;
 import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.job.JobResult;
 import com.baize.flux.framework.job.PipelineResult;
 import com.baize.flux.framework.metrics.ChannelMetrics;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.metrics.TaskMetrics;
-import com.baize.flux.framework.execution.TaskType;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.ToLongFunction;
-
-import java.io.PrintStream;
 import java.util.Locale;
+import java.util.function.ToLongFunction;
 
 /**
  * Concise default result output; callers may request task/channel detail explicitly.

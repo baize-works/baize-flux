@@ -1,8 +1,10 @@
 package com.baize.flux.framework.execution;
 
 import com.baize.flux.api.source.SourceSplit;
+import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.*;
+import com.baize.flux.framework.connector.PreparedSink;
 import com.baize.flux.framework.execution.split.SplitProvider;
 import com.baize.flux.framework.execution.task.ExecutionTask;
 import com.baize.flux.framework.execution.task.SinkTask;
@@ -12,12 +14,9 @@ import com.baize.flux.framework.job.PipelineResult;
 import com.baize.flux.framework.job.PipelineStatus;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.PipelinePlan;
+import com.baize.flux.framework.planner.SinkTaskPlan;
 import com.baize.flux.framework.planner.SourceTaskPlan;
 import com.baize.flux.framework.routing.Partitioner;
-
-import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.framework.connector.PreparedSink;
-import com.baize.flux.framework.planner.SinkTaskPlan;
 
 import java.util.ArrayList;
 import java.util.HashSet;

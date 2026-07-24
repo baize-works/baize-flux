@@ -1,2 +1,135 @@
-package com.baize.flux.server; import com.baize.flux.server.http.JettyServer; import com.baize.flux.server.runtime.LocalJobManager; import com.baize.flux.server.service.JobRestService;
-/** Baize Flux REST 服务入口。 */ public final class FluxServer {private FluxServer(){} public static void main(String[] args)throws Exception{String host="0.0.0.0";int port=8080,threads=Runtime.getRuntime().availableProcessors();for(int i=0;i<args.length-1;i++){if("--host".equals(args[i]))host=args[++i];else if("--port".equals(args[i]))port=Integer.parseInt(args[++i]);else if("--job-threads".equals(args[i]))threads=Integer.parseInt(args[++i]);}final LocalJobManager manager=new LocalJobManager(threads);final JettyServer server=new JettyServer(host,port,new JobRestService(manager));Runtime.getRuntime().addShutdownHook(new Thread(new Runnable(){public void run(){try{server.stop();}catch(Exception ignored){}manager.close();}}));server.start();server.join();}}
+package com.baize.flux.server;
+
+import com.baize.flux.server.config.FluxServerConfig;
+import com.baize.flux.server.http.JettyServer;
+import com.baize.flux.server.runtime.InMemoryJobRepository;
+import com.baize.flux.server.runtime.JobExecutor;
+import com.baize.flux.server.runtime.JobIdGenerator;
+import com.baize.flux.server.runtime.JobRepository;
+import com.baize.flux.server.runtime.LocalJobExecutor;
+import com.baize.flux.server.runtime.LocalJobIdGenerator;
+import com.baize.flux.server.runtime.LocalJobManager;
+import com.baize.flux.server.service.JobRestService;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Baize Flux REST Server 启动入口。
+ */
+public final class FluxServer {
+
+    private static final Logger LOG =
+            Logger.getLogger(
+                    FluxServer.class.getName());
+
+    private FluxServer() {
+    }
+
+    public static void main(String[] args)
+            throws Exception {
+
+        final FluxServerConfig config =
+                FluxServerConfig.fromArgs(args);
+
+        List<Path> pluginDirectories =
+                config.getPluginDirectories();
+
+        JobExecutor jobExecutor =
+                new LocalJobExecutor(
+                        Thread.currentThread()
+                                .getContextClassLoader(),
+                        pluginDirectories.toArray(
+                                new Path[
+                                        pluginDirectories
+                                                .size()]));
+
+        JobRepository repository =
+                new InMemoryJobRepository(
+                        config.getHistoryLimit());
+
+        JobIdGenerator jobIdGenerator =
+                new LocalJobIdGenerator();
+
+        final LocalJobManager manager =
+                new LocalJobManager(
+                        config.getJobThreads(),
+                        config.getMaxQueuedJobs(),
+                        config.getShutdownTimeoutMillis(),
+                        jobExecutor,
+                        repository,
+                        jobIdGenerator);
+
+        JobRestService service =
+                new JobRestService(manager);
+
+        final JettyServer server =
+                new JettyServer(
+                        config,
+                        service);
+
+        final AtomicBoolean shutdown =
+                new AtomicBoolean(false);
+
+        final Runnable shutdownAction =
+                new Runnable() {
+                    public void run() {
+                        if (!shutdown.compareAndSet(
+                                false,
+                                true)) {
+                            return;
+                        }
+
+                        try {
+                            server.stop();
+                        } catch (Exception exception) {
+                            LOG.log(
+                                    Level.WARNING,
+                                    "Failed to stop HTTP server",
+                                    exception);
+                        }
+
+                        manager.close();
+                    }
+                };
+
+        Thread shutdownHook =
+                new Thread(
+                        shutdownAction,
+                        "baize-flux-shutdown");
+
+        Runtime.getRuntime()
+                .addShutdownHook(
+                        shutdownHook);
+
+        try {
+            server.start();
+
+            LOG.info(
+                    "Baize Flux Server started"
+                            + ", host="
+                            + config.getHost()
+                            + ", port="
+                            + server.getLocalPort()
+                            + ", jobThreads="
+                            + config.getJobThreads()
+                            + ", pluginDirectories="
+                            + config.getPluginDirectories());
+
+            server.join();
+        } finally {
+            shutdownAction.run();
+
+            try {
+                Runtime.getRuntime()
+                        .removeShutdownHook(
+                                shutdownHook);
+            } catch (IllegalStateException ignored) {
+                // JVM 已经进入关闭流程。
+            }
+        }
+    }
+}

@@ -1,2 +1,78 @@
-package com.baize.flux.server.http.servlet; import com.baize.flux.server.http.FluxServlet; import com.baize.flux.server.service.JobRestService; import com.baize.flux.server.runtime.*; import javax.servlet.http.*; import java.io.*; import java.util.*;
-public final class JobsServlet extends FluxServlet {public JobsServlet(JobRestService s){super(s);} protected void doPost(HttpServletRequest q,HttpServletResponse p)throws IOException{try{JobSnapshot x=service.submit(body(q));Map<String,Object>r=new LinkedHashMap<String,Object>();r.put("jobId",x.getJobId());r.put("jobName",x.getJobName());r.put("status",x.getStatus());write(p,202,r);}catch(Exception e){error(q,p,e);}} protected void doGet(HttpServletRequest q,HttpServletResponse p)throws IOException{try{List<JobSnapshot> all=service.jobs(),out=new ArrayList<JobSnapshot>();String status=q.getParameter("status");for(JobSnapshot x:all)if(status==null||status.equals(x.getStatus().name()))out.add(x);int page=num(q,"page",1),size=num(q,"pageSize",20),from=Math.min(out.size(),(page-1)*size),to=Math.min(out.size(),from+size);Map<String,Object>r=new LinkedHashMap<String,Object>();r.put("data",out.subList(from,to));r.put("page",page);r.put("pageSize",size);r.put("total",out.size());write(p,200,r);}catch(Exception e){error(q,p,e);}} private int num(HttpServletRequest q,String n,int d){try{return Math.max(1,Integer.parseInt(q.getParameter(n)));}catch(Exception e){return d;}}}
+package com.baize.flux.server.http.servlet;
+
+import com.baize.flux.server.http.FluxServlet;
+import com.baize.flux.server.service.JobRestService;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+/**
+ * /api/v1/jobs 集合资源。
+ */
+public final class JobsServlet
+        extends FluxServlet {
+
+    private final JobRestService service;
+    private final int maxRequestBytes;
+
+    public JobsServlet(
+            JobRestService service,
+            int maxRequestBytes) {
+
+        this.service = service;
+        this.maxRequestBytes = maxRequestBytes;
+    }
+
+    protected void doPost(
+            HttpServletRequest request,
+            HttpServletResponse response)
+             {
+
+        validateSubmitContentType(request);
+
+                 try {
+                     write(
+                             response,
+                             202,
+                             service.submit(
+                                     requestBody(
+                                             request,
+                                             maxRequestBytes)));
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
+             }
+
+
+    protected void doGet(
+            HttpServletRequest request,
+            HttpServletResponse response)
+             {
+
+        int page =
+                intParameter(
+                        request,
+                        "page",
+                        1);
+
+        int pageSize =
+                intParameter(
+                        request,
+                        "pageSize",
+                        20);
+
+                 try {
+                     write(
+                             response,
+                             200,
+                             service.jobs(
+                                     request.getParameter(
+                                             "status"),
+                                     page,
+                                     pageSize));
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
+             }
+}

@@ -1,1 +1,39 @@
-package com.baize.flux.server.http.servlet; import com.baize.flux.server.http.FluxServlet; import com.baize.flux.server.service.JobRestService; import javax.servlet.http.*; import java.io.*; import java.util.*; public final class HealthServlet extends FluxServlet {public HealthServlet(JobRestService s){super(s);} protected void doGet(HttpServletRequest q,HttpServletResponse p)throws IOException{Map<String,String>x=new LinkedHashMap<String,String>();x.put("status","UP");x.put("service","baize-flux-server");write(p,200,x);}}
+package com.baize.flux.server.http.servlet;
+
+import com.baize.flux.server.http.FluxServlet;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class HealthServlet
+        extends FluxServlet {
+
+    protected void doGet(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            {
+
+        Map<String, Object> result =
+                new LinkedHashMap<String, Object>();
+
+        result.put("status", "UP");
+        result.put(
+                "service",
+                "baize-flux-server");
+        result.put(
+                "timestamp",
+                System.currentTimeMillis());
+
+                try {
+                    write(
+                            response,
+                            200,
+                            result);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+}

@@ -94,7 +94,9 @@ public final class LocalFluxEngine
         return execute(definition, null);
     }
 
-    /** 为本地服务暴露正在执行的实例，以便取消请求能传递到引擎。 */
+    /**
+     * 为本地服务暴露正在执行的实例，以便取消请求能传递到引擎。
+     */
     public JobResult execute(JobDefinition definition, JobExecutionListener listener) throws Exception {
         try {
             PreparedJob preparedJob = connectorPreparer.prepare(definition);

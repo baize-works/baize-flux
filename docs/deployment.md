@@ -42,8 +42,10 @@ Git。可通过 `BAIZE_FLUX_CONF_DIR`、`BAIZE_FLUX_LOG_DIR`、`BAIZE_FLUX_HOME`
 BAIZE_FLUX_JAVA_OPTS='-XX:+UseG1GC -XX:MaxRAMPercentage=70.0' bin/baize-flux.sh -c config/orders-prod.yaml
 ```
 
-`config/log4j2.xml` 同时输出控制台和 `${BAIZE_FLUX_LOG_DIR:-logs}/baize-flux.log`。日志按日或 100 MB 滚动，最多保留 14 个归档。每次作业执行还会为每个 Source/Sink Task 创建独立日志，命名为 `job-<job-name>-<pipeline>-<task-type>-<subtask>-<run-id>.log`（例如 `job-orders_sync-pipeline_source.orders-source-0-128392984.log`）。文件名中的不安全字符会替换为下划线；同一作业运行的 `run-id` 相同，便于按批次检索。Task 日志同样按 100 MB 滚动，最多保留 14 个归档。对容器运行，优先采集
-stdout；需要落盘时挂载日志目录。
+`config/log4j2.xml` 同时输出控制台和 `${BAIZE_FLUX_LOG_DIR:-logs}/baize-flux.log`。日志按日或 100 MB 滚动，最多保留 14 个归档。每次作业执行还会为每个
+Source/Sink Task 创建独立日志，命名为 `job-<job-name>-<pipeline>-<task-type>-<subtask>-<run-id>.log`
+（例如 `job-orders_sync-pipeline_source.orders-source-0-128392984.log`）。文件名中的不安全字符会替换为下划线；同一作业运行的 `run-id` 相同，便于按批次检索。Task
+日志同样按 100 MB 滚动，最多保留 14 个归档。对容器运行，优先采集 stdout；需要落盘时挂载日志目录。
 
 ## Docker、上线与回滚
 
