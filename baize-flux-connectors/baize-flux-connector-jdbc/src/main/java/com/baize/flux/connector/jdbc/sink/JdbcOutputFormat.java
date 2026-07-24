@@ -88,8 +88,11 @@ public final class JdbcOutputFormat
 
     private boolean closed;
 
-    JdbcOutputFormat(
-            JdbcSinkConfig config) {
+    JdbcOutputFormat(JdbcSinkConfig config) {
+        this(config, Thread.currentThread().getContextClassLoader());
+    }
+
+    JdbcOutputFormat(JdbcSinkConfig config, ClassLoader classLoader) {
 
         this.config =
                 Objects.requireNonNull(
@@ -102,8 +105,7 @@ public final class JdbcOutputFormat
 
         this.connectionProvider =
                 new JdbcConnectionProvider(
-                        config.getConnectionConfig(),
-                        dialect);
+                        config.getConnectionConfig(), dialect, classLoader);
     }
 
     /**

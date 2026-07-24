@@ -101,9 +101,8 @@ public final class JobPlanner {
             List<PreparedSink> preparedSinks =
                     preparedJob.getSinks();
 
-            if (preparedSinks.size() != sinkParallelism) {
-                throw new IllegalStateException(
-                        "Prepared sink count does not match sink parallelism");
+            if (preparedSinks.size() != 1) {
+                throw new IllegalStateException("A job must contain exactly one prepared sink");
             }
 
             for (int i = 0; i < sinkParallelism; i++) {
@@ -113,7 +112,7 @@ public final class JobPlanner {
                                         "sink",
                                         i,
                                         sinkParallelism),
-                                preparedSinks.get(i)));
+                                preparedSinks.get(0)));
             }
         }
 

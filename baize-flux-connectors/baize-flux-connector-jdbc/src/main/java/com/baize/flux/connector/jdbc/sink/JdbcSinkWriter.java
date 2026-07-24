@@ -22,9 +22,13 @@ public final class JdbcSinkWriter
 
     public JdbcSinkWriter(
             JdbcSinkConfig config) {
+        this(config, Thread.currentThread().getContextClassLoader());
+    }
 
+    public JdbcSinkWriter(JdbcSinkConfig config, ClassLoader classLoader) {
         this.outputFormat =
                 new JdbcOutputFormatBuilder()
+                        .withClassLoader(classLoader)
                         .withConfig(
                                 Objects.requireNonNull(
                                         config,

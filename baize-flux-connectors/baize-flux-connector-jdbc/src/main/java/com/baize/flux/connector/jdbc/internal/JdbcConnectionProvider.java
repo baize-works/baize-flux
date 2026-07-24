@@ -25,16 +25,21 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
 
     private final JdbcConnectionConfig config;
     private final JdbcDialect dialect;
+    private final ClassLoader classLoader;
 
     private transient Driver loadedDriver;
     private transient Connection connection;
 
     public JdbcConnectionProvider(JdbcConnectionConfig config, JdbcDialect dialect) {
+        this(config, dialect, Thread.currentThread().getContextClassLoader());
+    }
+    public JdbcConnectionProvider(JdbcConnectionConfig config, JdbcDialect dialect, ClassLoader classLoader) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.dialect = Objects.requireNonNull(dialect, "dialect must not be null");
+        this.classLoader = Objects.requireNonNull(classLoader, "classLoader must not be null");
     }
 
-    private static Driver loadDriver(String driverName) throws ClassNotFoundException, SQLException {
+    private static Driver loadDriver(String driverName, ClassLoader classLoader) throws ClassNotFoundException, SQLException {
         Enumeration<Driver> drivers = DriverManager.getDrivers();
         while (drivers.hasMoreElements()) {
             Driver driver = drivers.nextElement();
@@ -43,7 +48,7 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
             }
         }
 
-        Class<?> driverClass = Class.forName(driverName, true, Thread.currentThread().getContextClassLoader());
+        Class<?> driverClass = Class.forName(driverName, true, classLoader);
         if (!Driver.class.isAssignableFrom(driverClass)) {
             throw new SQLException("Configured JDBC driver does not implement java.sql.Driver: " + driverName);
         }
@@ -125,7 +130,7 @@ public final class JdbcConnectionProvider implements AutoCloseable, Serializable
 
     private Driver getLoadedDriver() throws ClassNotFoundException, SQLException {
         if (loadedDriver == null) {
-            loadedDriver = loadDriver(config.getDriverName());
+            loadedDriver = loadDriver(config.getDriverName(), classLoader);
         }
         return loadedDriver;
     }

@@ -3,6 +3,8 @@ package com.baize.flux.framework.connector;
 import com.baize.flux.api.configuration.util.ConfigValidator;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.source.Source;
+import com.baize.flux.api.sink.Sink;
+import com.baize.flux.api.sink.SinkFactoryContext;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
@@ -65,8 +67,8 @@ public final class ConnectorPreparer {
         List<PreparedSink> sinks =
                 prepareSinks(
                         definition.getSink(),
-                        definition.getExecutionConfig()
-                                .getSinkParallelism());
+                        definition.getName(),
+                        source.getTables());
 
         return new PreparedJob(
                 definition.getName(),
@@ -130,7 +132,8 @@ public final class ConnectorPreparer {
 
     private List<PreparedSink> prepareSinks(
             SinkDefinition definition,
-            int parallelism) {
+            String jobName,
+            Map<TablePath, CatalogTable> sourceTables) {
 
         SinkFactory factory =
                 registry.getSinkFactory(
@@ -141,19 +144,15 @@ public final class ConnectorPreparer {
                 .validate(
                         factory.optionRule());
 
-        List<PreparedSink> sinks =
-                new java.util.ArrayList<PreparedSink>(
-                        parallelism);
-
-        for (int i = 0; i < parallelism; i++) {
-            sinks.add(
-                    new PreparedSink(
-                            definition.getType(),
-                            factory,
-                            definition.getOptions()));
+        SinkFactoryContext context =
+                new SinkFactoryContext(
+                        definition.getOptions(), classLoader, jobName, sourceTables, sourceTables);
+        Sink sink = factory.createSink(context);
+        if (sink == null) {
+            throw new ConnectorException("Sink factory '" + definition.getType() + "' returned a null sink");
         }
-
-        return sinks;
+        return java.util.Collections.singletonList(
+                new PreparedSink(definition.getType(), definition.getOptions(), sink, sourceTables));
     }
 
     private Map<TablePath, CatalogTable> buildTableMap(

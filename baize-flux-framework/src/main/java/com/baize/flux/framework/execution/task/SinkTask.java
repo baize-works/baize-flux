@@ -1,6 +1,8 @@
 package com.baize.flux.framework.execution.task;
 
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.SinkWriterContext;
+import com.baize.flux.api.sink.SinkWriterMetrics;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.InputGate;
 import com.baize.flux.framework.channel.RecordEnvelope;
@@ -55,9 +57,13 @@ public final class SinkTask
         boolean committed = false;
 
         try {
-            writer =
-                    plan.getPreparedSink()
-                            .getWriter();
+            writer = plan.getPreparedSink().getSink().createWriter(
+                    new SinkWriterContext(getTaskId(), getTaskId().getSubtaskIndex(), getTaskId().getParallelism(),
+                            context.getClassLoader(), new TaskMetricsAdapter(context),
+                            plan.getPreparedSink().getPreparedTargetTables()));
+            if (writer == null) {
+                throw new IllegalStateException("Sink returned a null writer for " + getTaskId());
+            }
 
             writer.open();
 
@@ -166,6 +172,14 @@ public final class SinkTask
                 }
             }
         }
+    }
+
+    /** 将框架指标以最小 API 暴露给 Connector。 */
+    private static final class TaskMetricsAdapter implements SinkWriterMetrics {
+        private final TaskContext context;
+        private TaskMetricsAdapter(TaskContext context) { this.context = context; }
+        @Override public void incrementWriteSuccessRecords(long count) { context.getMetrics().addSinkWriteSuccessRecords(count); }
+        @Override public void addWrittenBytes(long count) { context.getMetrics().addSinkWrittenBytes(count); }
     }
 
     private static RuntimeException propagate(
