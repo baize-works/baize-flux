@@ -3,6 +3,8 @@ package com.baize.flux.framework.connector;
 import com.baize.flux.api.configuration.util.ConfigValidator;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.source.Source;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
+import com.baize.flux.api.sink.SinkPrepareContext;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
@@ -66,7 +68,8 @@ public final class ConnectorPreparer {
                 prepareSinks(
                         definition.getSink(),
                         definition.getExecutionConfig()
-                                .getSinkParallelism());
+                                .getSinkParallelism(),
+                        source.getTables());
 
         return new PreparedJob(
                 definition.getName(),
@@ -130,7 +133,8 @@ public final class ConnectorPreparer {
 
     private List<PreparedSink> prepareSinks(
             SinkDefinition definition,
-            int parallelism) {
+            int parallelism,
+            Map<TablePath, CatalogTable> sourceTables) throws Exception {
 
         SinkFactory factory =
                 registry.getSinkFactory(
@@ -141,6 +145,12 @@ public final class ConnectorPreparer {
                 .validate(
                         factory.optionRule());
 
+        PreparedSinkMetadata metadata = factory.createPreparer(definition.getOptions())
+                .prepare(new SinkPrepareContext(definition.getOptions(), sourceTables));
+        if (metadata == null) {
+            throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
+        }
+
         List<PreparedSink> sinks =
                 new java.util.ArrayList<PreparedSink>(
                         parallelism);
@@ -150,7 +160,8 @@ public final class ConnectorPreparer {
                     new PreparedSink(
                             definition.getType(),
                             factory,
-                            definition.getOptions()));
+                            definition.getOptions(),
+                            metadata));
         }
 
         return sinks;

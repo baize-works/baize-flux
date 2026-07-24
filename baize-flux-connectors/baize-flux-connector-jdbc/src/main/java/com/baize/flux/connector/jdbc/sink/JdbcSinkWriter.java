@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.sink;
 
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.source.RecordBatch;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
@@ -21,10 +22,12 @@ public final class JdbcSinkWriter
     private final JdbcOutputFormat outputFormat;
 
     public JdbcSinkWriter(
-            JdbcSinkConfig config) {
+            JdbcSinkConfig config,
+            PreparedSinkMetadata metadata) {
 
         this.outputFormat =
                 new JdbcOutputFormatBuilder()
+                        .withMetadata(Objects.requireNonNull(metadata, "metadata must not be null"))
                         .withConfig(
                                 Objects.requireNonNull(
                                         config,
