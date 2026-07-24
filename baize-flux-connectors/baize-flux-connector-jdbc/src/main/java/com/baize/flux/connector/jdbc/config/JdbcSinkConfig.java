@@ -23,6 +23,8 @@ import java.util.Objects;
  * 3. commit；
  * 4. 失败时 rollback。
  * <p>
+ * 每个 SinkTask 独立提交；普通 JDBC Sink 不提供 Job 级原子性或全局回滚。
+ * <p>
  * 因此不再对外暴露 auto_commit、XA、Exactly Once 等配置。
  */
 @Getter
