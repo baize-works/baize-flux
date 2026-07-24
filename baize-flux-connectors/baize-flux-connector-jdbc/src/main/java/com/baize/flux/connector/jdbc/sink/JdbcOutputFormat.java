@@ -1,6 +1,8 @@
 package com.baize.flux.connector.jdbc.sink;
 
 import com.baize.flux.api.table.catalog.CatalogTable;
+import com.baize.flux.api.dirtydata.*;
+import java.nio.file.Paths;
 import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.catalog.TableSchema;
@@ -61,9 +63,8 @@ public final class JdbcOutputFormat
 
     private final PreparedSinkMetadata metadata;
 
-    /** Rows skipped after the failed batch has been isolated to individual rows. */
-    private final List<JdbcRowError> rowErrors =
-            new ArrayList<JdbcRowError>();
+    private DirtyDataCollector dirtyDataCollector;
+    private DirtyDataContext dirtyDataContext;
 
     private Connection connection;
 
@@ -76,6 +77,7 @@ public final class JdbcOutputFormat
     private boolean opened;
 
     private boolean transactionCompleted;
+    private boolean committed;
 
     private boolean closed;
 
@@ -106,7 +108,10 @@ public final class JdbcOutputFormat
      * <p>这里暂时不立即创建连接，避免空任务无意义地连接数据库。
      * 第一批数据写入时才真正开启事务。
      */
-    public void open() {
+    public void setDirtyDataCollector(DirtyDataCollector collector, DirtyDataContext context) { this.dirtyDataCollector = collector; this.dirtyDataContext = context; }
+    public void updateDirtyDataContext(DirtyDataContext context) { this.dirtyDataContext = context; }
+
+    public void open() throws Exception {
         if (closed) {
             throw new IllegalStateException(
                     "JdbcOutputFormat has already been closed");
@@ -118,6 +123,7 @@ public final class JdbcOutputFormat
         }
 
         opened = true;
+        if (dirtyDataCollector != null) dirtyDataCollector.open();
     }
 
     /**
@@ -170,6 +176,7 @@ public final class JdbcOutputFormat
                             start + config.getBatchSize(),
                             rows.size());
 
+            if (dirtyDataCollector != null) dirtyDataCollector.recordAttempt(end - start);
             executeBatch(
                     targetTable.getTablePath(),
                     sql,
@@ -196,6 +203,7 @@ public final class JdbcOutputFormat
         }
 
         transactionCompleted = true;
+        committed = true;
     }
 
     /**
@@ -223,13 +231,8 @@ public final class JdbcOutputFormat
         }
     }
 
-    /**
-     * Returns a snapshot of rows rejected while {@code dirty_data_policy=SKIP}.
-     */
-    public List<JdbcRowError> getRowErrors() {
-        return Collections.unmodifiableList(
-                new ArrayList<JdbcRowError>(rowErrors));
-    }
+    public DirtyDataSummary getDirtyDataSummary() { return dirtyDataCollector == null ? DirtyDataSummary.empty() : dirtyDataCollector.summary(); }
+    private static String sanitize(String message) { return message == null ? "" : message.replaceAll("(?i)(password|secret|token)=[^\\s,;]+", "$1=***"); }
 
     /**
      * 执行一个 JDBC Batch。
@@ -269,7 +272,11 @@ public final class JdbcOutputFormat
                     if (!isTransactionConnectionValid()) {
                         throw rowFailure;
                     }
-                    rowErrors.add(new JdbcRowError(row, rowFailure));
+                    if (dirtyDataCollector != null) {
+                        DirtyDataContext context = dirtyDataContext == null ? new DirtyDataContext(null, null, "jdbc", null, null) : dirtyDataContext;
+                        dirtyDataCollector.collect(DirtyRecord.from(rowFailure, sanitize(rowFailure.getMessage()), context));
+                        if (dirtyDataCollector.summary().isThresholdExceeded()) throw new IllegalStateException("Dirty-data threshold exceeded");
+                    }
                     LOG.warn(
                             "Skipping dirty JDBC row because dirty_data_policy=SKIP; table={}, row={}",
                             tablePath,
@@ -613,8 +620,9 @@ public final class JdbcOutputFormat
             connection = null;
         }
 
-        if (failure != null) {
-            throw failure;
+        if (dirtyDataCollector != null) {
+            try { dirtyDataCollector.close(failure == null && committed); } catch (Exception collectorFailure) { if (failure == null) failure = collectorFailure; else failure.addSuppressed(collectorFailure); }
         }
+        if (failure != null) throw failure;
     }
 }

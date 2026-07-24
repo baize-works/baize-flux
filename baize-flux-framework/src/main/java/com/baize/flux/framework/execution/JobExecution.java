@@ -15,6 +15,8 @@ import com.baize.flux.framework.execution.task.SourceTask;
 import com.baize.flux.framework.job.JobResult;
 import com.baize.flux.framework.job.JobStatus;
 import com.baize.flux.framework.job.CommitSummary;
+import com.baize.flux.api.dirtydata.DirtyDataSummary;
+import java.util.LinkedHashMap;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.SinkTaskPlan;
@@ -78,6 +80,7 @@ public final class JobExecution {
 
         Throwable failure = null;
         CommitSummary commitSummary = CommitSummary.empty();
+        DirtyDataSummary dirtyDataSummary = DirtyDataSummary.empty();
 
         try {
             int sourceTaskCount =
@@ -131,6 +134,9 @@ public final class JobExecution {
                 ExecutionCoordinator.ExecutionOutcome outcome = coordinator.execute(sinkTasks, sourceTasks);
                 failure = outcome.getFailure();
                 commitSummary = outcome.getCommitSummary();
+                long dirty = 0L, attempted = 0L; int samples = 0; boolean countExceeded = false, percentageExceeded = false; String outputPath = null; java.util.Map<String, Long> taskCounts = new LinkedHashMap<String, Long>();
+                for (ExecutionTask task : sinkTasks) if (task instanceof SinkTask) { DirtyDataSummary summary = ((SinkTask) task).getDirtyDataSummary(); dirty += summary.getDirtyCount(); attempted += summary.getAttemptedCount(); samples += summary.getSampleCount(); countExceeded |= summary.isCountThresholdExceeded(); percentageExceeded |= summary.isPercentageThresholdExceeded(); taskCounts.putAll(summary.getTaskCounts()); if (summary.getOutputPath() != null) outputPath = summary.getOutputPath(); }
+                dirtyDataSummary = new DirtyDataSummary(dirty, attempted, taskCounts, countExceeded, percentageExceeded, samples, outputPath);
             }
 
         } catch (Throwable throwable) {
@@ -170,7 +176,8 @@ public final class JobExecution {
                 System.currentTimeMillis(),
                 jobMetrics,
                 failure,
-                commitSummary);
+                commitSummary,
+                dirtyDataSummary);
     }
 
     public void cancel() {
