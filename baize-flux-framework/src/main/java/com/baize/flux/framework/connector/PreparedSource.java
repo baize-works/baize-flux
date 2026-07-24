@@ -22,10 +22,20 @@ public final class PreparedSource<
 
     private final Map<TablePath, CatalogTable> tables;
 
+    private final ClassLoader classLoader;
+
     public PreparedSource(
             String factoryIdentifier,
             Source<SplitT> source,
             Map<TablePath, CatalogTable> tables) {
+        this(factoryIdentifier, source, tables, source.getClass().getClassLoader());
+    }
+
+    public PreparedSource(
+            String factoryIdentifier,
+            Source<SplitT> source,
+            Map<TablePath, CatalogTable> tables,
+            ClassLoader classLoader) {
 
         this.factoryIdentifier =
                 Objects.requireNonNull(
@@ -45,6 +55,8 @@ public final class PreparedSource<
                                 Objects.requireNonNull(
                                         tables,
                                         "tables must not be null")));
+
+        this.classLoader = Objects.requireNonNull(classLoader, "classLoader must not be null");
     }
 
     public String getFactoryIdentifier() {
@@ -54,6 +66,8 @@ public final class PreparedSource<
     public Source<SplitT> getSource() {
         return source;
     }
+
+    public ClassLoader getClassLoader() { return classLoader; }
 
     public Map<TablePath, CatalogTable> getTables() {
         return tables;

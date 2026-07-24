@@ -56,6 +56,8 @@ public final class SourceTask<
 
         PreparedSource<SplitT> preparedSource =
                 plan.getPreparedSource();
+        try (com.baize.flux.framework.classloading.ClassLoaderScope ignored =
+                com.baize.flux.framework.classloading.ClassLoaderScope.open(preparedSource.getClassLoader())) {
 
         SourceReader<FluxRow, SplitT> reader =
                 null;
@@ -161,6 +163,7 @@ public final class SourceTask<
                 throw propagate(
                         closeFailure);
             }
+        }
         }
     }
 
