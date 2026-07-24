@@ -3,10 +3,10 @@ package com.baize.flux.framework.job;
 import com.baize.flux.api.dirtydata.DirtyDataSummary;
 import com.baize.flux.framework.metrics.JobMetrics;
 
-import java.util.Objects;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Job 执行结果。
@@ -44,7 +44,9 @@ public final class JobResult {
         this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, commitSummary, DirtyDataSummary.empty(), Collections.<PipelineResult>emptyList());
     }
 
-    public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary) { this(jobName,status,startTimeMillis,endTimeMillis,metrics,failure,commitSummary,dirtyDataSummary,Collections.<PipelineResult>emptyList()); }
+    public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary) {
+        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, commitSummary, dirtyDataSummary, Collections.<PipelineResult>emptyList());
+    }
 
     public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary, List<PipelineResult> pipelineResults) {
 
@@ -126,7 +128,9 @@ public final class JobResult {
         return dirtyDataSummary;
     }
 
-    public List<PipelineResult> getPipelineResults() { return pipelineResults; }
+    public List<PipelineResult> getPipelineResults() {
+        return pipelineResults;
+    }
 
     public boolean isSuccess() {
         return status == JobStatus.SUCCEEDED;

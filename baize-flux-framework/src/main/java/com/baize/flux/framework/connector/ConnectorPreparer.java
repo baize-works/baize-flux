@@ -162,7 +162,8 @@ public final class ConnectorPreparer {
                 metadata = factory.createPreparer(definition.getOptions())
                         .prepare(new SinkPrepareContext(definition.getOptions(), oneTable));
             }
-            if (metadata == null) throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
+            if (metadata == null)
+                throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
             List<PreparedSink> sinks = new java.util.ArrayList<PreparedSink>(parallelism);
             for (int i = 0; i < parallelism; i++)
                 sinks.add(new PreparedSink(definition.getType(), factory, definition.getOptions(), metadata, registry.getClassLoader(factory)));

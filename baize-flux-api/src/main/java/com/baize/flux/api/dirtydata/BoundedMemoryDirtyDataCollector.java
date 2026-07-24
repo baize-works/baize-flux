@@ -20,7 +20,7 @@ public class BoundedMemoryDirtyDataCollector implements DirtyDataCollector {
         this.maxPercentage = maxPercentage;
     }
 
-    public void open() throws IOException{
+    public void open() throws IOException {
     }
 
     public void recordAttempt(long count) {
@@ -42,6 +42,6 @@ public class BoundedMemoryDirtyDataCollector implements DirtyDataCollector {
         return new DirtyDataSummary(dirty, attempted, m, dirty > maxCount, attempted > 0 && ((double) dirty / attempted) > maxPercentage, samples.size(), null);
     }
 
-    public void close(boolean successful) throws IOException{
+    public void close(boolean successful) throws IOException {
     }
 }

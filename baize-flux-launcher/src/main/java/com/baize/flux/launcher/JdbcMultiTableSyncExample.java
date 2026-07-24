@@ -12,7 +12,7 @@ public final class JdbcMultiTableSyncExample {
                     + "\n"
                     + "env {\n"
                     + "  pipeline-parallelism = 2\n"
-                    + "  source-parallelism = 4\n"
+                    + "  source-parallelism = 2\n"
                     + "  sink-parallelism = 2\n"
                     + "  channel-capacity = 32\n"
                     + "}\n"
@@ -53,7 +53,7 @@ public final class JdbcMultiTableSyncExample {
                     + "\n"
                     + "  table = \"test1.sink_${table_name}\"\n"
                     + "  schema_save_mode = CREATE_SCHEMA_WHEN_NOT_EXIST\n"
-                    + "  data_save_mode = APPEND_DATA\n"
+                    + "  data_save_mode = DROP_DATA\n"
                     + "}\n";
 
     private JdbcMultiTableSyncExample() {

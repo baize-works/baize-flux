@@ -128,7 +128,9 @@ public final class SinkTask
                         // Connector-specific failures may refine this later; JDBC outcome is otherwise unknown.
                         context.getMetrics().addUnknownStateRecords(recordCount);
                         throw writeFailure;
-                    } finally { context.getMetrics().addSqlExecutionNanos(System.nanoTime() - sqlStart); }
+                    } finally {
+                        context.getMetrics().addSqlExecutionNanos(System.nanoTime() - sqlStart);
+                    }
                 }
 
                 /*

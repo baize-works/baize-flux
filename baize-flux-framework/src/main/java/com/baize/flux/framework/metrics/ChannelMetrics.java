@@ -128,14 +128,33 @@ public final class ChannelMetrics {
         return rateLimitedNanos.get() / 1_000_000L;
     }
 
-    public long getProducerBackpressureMillis() { return getWriteBlockedMillis(); }
-    public long getConsumerIdleMillis() { return getReadBlockedMillis(); }
-    public long getRateLimitedMillis() { return rateLimitedNanos.get() / 1_000_000L; }
-    private double ratio(long nanos) { return Math.min(1D, nanos / (double) Math.max(1, System.nanoTime() - createdNanos)); }
-    public double getProducerBackpressureRatio() { return ratio(writeBlockedNanos.get()); }
-    public double getConsumerIdleRatio() { return ratio(readBlockedNanos.get()); }
-    public double getRateLimitedRatio() { return ratio(rateLimitedNanos.get()); }
-    /** @deprecated combines producer backpressure, consumer idle time and rate limiting. */
+    public long getProducerBackpressureMillis() {
+        return getWriteBlockedMillis();
+    }
+
+    public long getConsumerIdleMillis() {
+        return getReadBlockedMillis();
+    }
+
+    private double ratio(long nanos) {
+        return Math.min(1D, nanos / (double) Math.max(1, System.nanoTime() - createdNanos));
+    }
+
+    public double getProducerBackpressureRatio() {
+        return ratio(writeBlockedNanos.get());
+    }
+
+    public double getConsumerIdleRatio() {
+        return ratio(readBlockedNanos.get());
+    }
+
+    public double getRateLimitedRatio() {
+        return ratio(rateLimitedNanos.get());
+    }
+
+    /**
+     * @deprecated combines producer backpressure, consumer idle time and rate limiting.
+     */
     public double getBlockedRatio() {
         long elapsed = Math.max(1, System.nanoTime() - createdNanos);
         return Math.min(1D, (writeBlockedNanos.get() + readBlockedNanos.get() + rateLimitedNanos.get()) / (double) elapsed);

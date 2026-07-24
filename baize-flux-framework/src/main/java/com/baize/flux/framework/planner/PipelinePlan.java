@@ -8,7 +8,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-/** 一个逻辑数据集的不可变执行边界。 */
+/**
+ * 一个逻辑数据集的不可变执行边界。
+ */
 public final class PipelinePlan {
     private final String pipelineId;
     private final String dataSetId;
@@ -25,14 +27,40 @@ public final class PipelinePlan {
         this.dataSetPath = Objects.requireNonNull(catalogTable.getTablePath(), "catalogTable.tablePath must not be null");
         this.sourceTaskPlans = immutable(sourceTaskPlans, "sourceTaskPlans");
         this.sinkTaskPlans = immutable(sinkTaskPlans, "sinkTaskPlans");
-        if (this.sourceTaskPlans.isEmpty() || this.sinkTaskPlans.isEmpty()) throw new IllegalArgumentException("pipeline tasks must not be empty");
+        if (this.sourceTaskPlans.isEmpty() || this.sinkTaskPlans.isEmpty())
+            throw new IllegalArgumentException("pipeline tasks must not be empty");
     }
-    private static String requireText(String value, String name) { if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(name + " must not be blank"); return value; }
-    private static <T> List<T> immutable(List<T> values, String name) { return Collections.unmodifiableList(new ArrayList<T>(Objects.requireNonNull(values, name + " must not be null"))); }
-    public String getPipelineId() { return pipelineId; }
-    public String getDataSetId() { return dataSetId; }
-    public TablePath getDataSetPath() { return dataSetPath; }
-    public CatalogTable getCatalogTable() { return catalogTable; }
-    public List<SourceTaskPlan<?>> getSourceTaskPlans() { return sourceTaskPlans; }
-    public List<SinkTaskPlan> getSinkTaskPlans() { return sinkTaskPlans; }
+
+    private static String requireText(String value, String name) {
+        if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(name + " must not be blank");
+        return value;
+    }
+
+    private static <T> List<T> immutable(List<T> values, String name) {
+        return Collections.unmodifiableList(new ArrayList<T>(Objects.requireNonNull(values, name + " must not be null")));
+    }
+
+    public String getPipelineId() {
+        return pipelineId;
+    }
+
+    public String getDataSetId() {
+        return dataSetId;
+    }
+
+    public TablePath getDataSetPath() {
+        return dataSetPath;
+    }
+
+    public CatalogTable getCatalogTable() {
+        return catalogTable;
+    }
+
+    public List<SourceTaskPlan<?>> getSourceTaskPlans() {
+        return sourceTaskPlans;
+    }
+
+    public List<SinkTaskPlan> getSinkTaskPlans() {
+        return sinkTaskPlans;
+    }
 }

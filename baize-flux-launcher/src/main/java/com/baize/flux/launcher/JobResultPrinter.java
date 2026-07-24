@@ -1,8 +1,88 @@
 package com.baize.flux.launcher;
-import com.baize.flux.framework.job.*; import com.baize.flux.framework.metrics.*; import java.io.PrintStream; import java.util.*;
-/** Concise default result output; callers may request task/channel detail explicitly. */
+
+import com.baize.flux.framework.job.CommitSummary;
+import com.baize.flux.framework.job.JobResult;
+import com.baize.flux.framework.job.PipelineResult;
+import com.baize.flux.framework.metrics.ChannelMetrics;
+import com.baize.flux.framework.metrics.JobMetrics;
+import com.baize.flux.framework.metrics.TaskMetrics;
+
+import java.io.PrintStream;
+import java.util.Locale;
+
+/**
+ * Concise default result output; callers may request task/channel detail explicitly.
+ */
 public final class JobResultPrinter {
- public enum DetailLevel { SUMMARY, TASK, CHANNEL, FULL } private JobResultPrinter(){}
- public static void print(JobResult r){print(r,System.out,DetailLevel.SUMMARY);} static void print(JobResult r,PrintStream out){print(r,out,DetailLevel.SUMMARY);} public static void print(JobResult r,PrintStream out,DetailLevel detail){JobMetrics m=r.getMetrics(); CommitSummary c=r.getCommitSummary();out.println(r.isSuccess()?"Flux 作业执行完成：":"Flux 作业执行失败：");line(out,"作业名称",r.getJobName());line(out,"执行状态",r.getStatus());line(out,"执行耗时（毫秒）",r.getDurationMillis());line(out,"Pipeline 总数",r.getPipelineResults().size());line(out,"读取批次数",m.getSourceBatchCount());line(out,"读取记录数",m.getSourceRecordCount());line(out,"源端平均读取速率（条/秒）",rate(m.getSourceAverageQps()));line(out,"接收批次数",m.getSinkReceivedBatchCount());line(out,"尝试写入记录数",m.getSinkAttemptedRecordCount());line(out,"确认写入成功记录数",m.getSinkRecordCount());line(out,"写入状态未知记录数",m.getUnknownStateRecordCount());line(out,"成功提交数据记录数",c.getSuccessfullyCommittedRecordCount());line(out,"有效数据提交 Task 数",c.getDataCommittedTaskCount());line(out,"空事务提交 Task 数",c.getEmptyCommittedTaskCount());line(out,"失败或未提交 Task 数",c.getFailedOrUncommittedTaskCount());line(out,"是否存在部分 Task 提交",c.isPartialTaskCommit());line(out,"是否存在部分数据提交",c.isPartialDataCommit());if(c.isPartialDataCommit())line(out,"提交风险",c.getWarning());line(out,"安全重跑建议",c.getRetryAdvice());for(PipelineResult p:r.getPipelineResults())if(p.getFailure()!=null){Throwable root=root(p.getFailure());out.println("  失败摘要：Pipeline="+p.getPipelineId()+"，表="+p.getDataSetId()+"，异常="+root.getClass().getSimpleName()+"，根因="+String.valueOf(root.getMessage()));}if(detail==DetailLevel.CHANNEL||detail==DetailLevel.FULL)channels(m,out);if(detail==DetailLevel.TASK||detail==DetailLevel.FULL)tasks(m,out);}
- private static Throwable root(Throwable t){while(t.getCause()!=null&&t.getCause()!=t)t=t.getCause();return t;} private static void tasks(JobMetrics m,PrintStream o){for(TaskMetrics t:m.getTaskMetrics().values())o.println("  Task="+t.getTaskId()+"，状态="+t.getState()+"，received="+t.getReceivedBatchCount()+"，attempted="+t.getAttemptedRecordCount()+"，successful="+t.getSinkWriteSuccessRecordCount()+"，unknown="+t.getUnknownStateRecordCount());} private static void channels(JobMetrics m,PrintStream o){for(ChannelMetrics c:m.getChannelMetrics())o.println("  Channel="+c.getChannelId()+"，入队批次数="+c.getEnqueuedCount()+"，出队批次数="+c.getDequeuedCount()+"，生产者反压占比="+ratio(c.getProducerBackpressureRatio())+"，消费者等待占比="+ratio(c.getConsumerIdleRatio())+"，限流等待占比="+ratio(c.getRateLimitedRatio()));} private static String rate(double v){return String.format(Locale.ROOT,"%.2f",v);} private static String ratio(double v){return String.format(Locale.ROOT,"%.2f%%",v*100D);} private static void line(PrintStream o,String k,Object v){o.println("  "+k+"："+v);}
+    private JobResultPrinter() {
+    }
+
+    public static void print(JobResult r) {
+        print(r, System.out, DetailLevel.SUMMARY);
+    }
+
+    static void print(JobResult r, PrintStream out) {
+        print(r, out, DetailLevel.SUMMARY);
+    }
+
+    public static void print(JobResult r, PrintStream out, DetailLevel detail) {
+        JobMetrics m = r.getMetrics();
+        CommitSummary c = r.getCommitSummary();
+        out.println(r.isSuccess() ? "Flux 作业执行完成：" : "Flux 作业执行失败：");
+        line(out, "作业名称", r.getJobName());
+        line(out, "执行状态", r.getStatus());
+        line(out, "执行耗时（毫秒）", r.getDurationMillis());
+        line(out, "Pipeline 总数", r.getPipelineResults().size());
+        line(out, "读取批次数", m.getSourceBatchCount());
+        line(out, "读取记录数", m.getSourceRecordCount());
+        line(out, "源端平均读取速率（条/秒）", rate(m.getSourceAverageQps()));
+        line(out, "接收批次数", m.getSinkReceivedBatchCount());
+        line(out, "尝试写入记录数", m.getSinkAttemptedRecordCount());
+        line(out, "确认写入成功记录数", m.getSinkRecordCount());
+        line(out, "写入状态未知记录数", m.getUnknownStateRecordCount());
+        line(out, "成功提交数据记录数", c.getSuccessfullyCommittedRecordCount());
+        line(out, "有效数据提交 Task 数", c.getDataCommittedTaskCount());
+        line(out, "空事务提交 Task 数", c.getEmptyCommittedTaskCount());
+        line(out, "失败或未提交 Task 数", c.getFailedOrUncommittedTaskCount());
+        line(out, "是否存在部分 Task 提交", c.isPartialTaskCommit());
+        line(out, "是否存在部分数据提交", c.isPartialDataCommit());
+        if (c.isPartialDataCommit()) line(out, "提交风险", c.getWarning());
+        line(out, "安全重跑建议", c.getRetryAdvice());
+        for (PipelineResult p : r.getPipelineResults())
+            if (p.getFailure() != null) {
+                Throwable root = root(p.getFailure());
+                out.println("  失败摘要：Pipeline=" + p.getPipelineId() + "，表=" + p.getDataSetId() + "，异常=" + root.getClass().getSimpleName() + "，根因=" + String.valueOf(root.getMessage()));
+            }
+        if (detail == DetailLevel.CHANNEL || detail == DetailLevel.FULL) channels(m, out);
+        if (detail == DetailLevel.TASK || detail == DetailLevel.FULL) tasks(m, out);
+    }
+
+    private static Throwable root(Throwable t) {
+        while (t.getCause() != null && t.getCause() != t) t = t.getCause();
+        return t;
+    }
+
+    private static void tasks(JobMetrics m, PrintStream o) {
+        for (TaskMetrics t : m.getTaskMetrics().values())
+            o.println("  Task=" + t.getTaskId() + "，状态=" + t.getState() + "，received=" + t.getReceivedBatchCount() + "，attempted=" + t.getAttemptedRecordCount() + "，successful=" + t.getSinkWriteSuccessRecordCount() + "，unknown=" + t.getUnknownStateRecordCount());
+    }
+
+    private static void channels(JobMetrics m, PrintStream o) {
+        for (ChannelMetrics c : m.getChannelMetrics())
+            o.println("  Channel=" + c.getChannelId() + "，入队批次数=" + c.getEnqueuedCount() + "，出队批次数=" + c.getDequeuedCount() + "，生产者反压占比=" + ratio(c.getProducerBackpressureRatio()) + "，消费者等待占比=" + ratio(c.getConsumerIdleRatio()) + "，限流等待占比=" + ratio(c.getRateLimitedRatio()));
+    }
+
+    private static String rate(double v) {
+        return String.format(Locale.ROOT, "%.2f", v);
+    }
+
+    private static String ratio(double v) {
+        return String.format(Locale.ROOT, "%.2f%%", v * 100D);
+    }
+
+    private static void line(PrintStream o, String k, Object v) {
+        o.println("  " + k + "：" + v);
+    }
+
+    public enum DetailLevel {SUMMARY, TASK, CHANNEL, FULL}
 }

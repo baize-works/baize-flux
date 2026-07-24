@@ -75,12 +75,29 @@ public final class TaskMetrics {
         endTimeMillis = System.currentTimeMillis();
     }
 
-    public void incrementBatchCount() { batchCount.incrementAndGet(); }
-    public void incrementReceivedBatchCount() { receivedBatchCount.incrementAndGet(); }
-    public void addAttemptedRecords(long count) { addPositive(attemptedRecordCount, count); }
-    public void incrementSuccessfulBatchCount() { successfulBatchCount.incrementAndGet(); }
-    public void incrementFailedBatchCount() { failedBatchCount.incrementAndGet(); }
-    public void addUnknownStateRecords(long count) { addPositive(unknownStateRecordCount, count); }
+    public void incrementBatchCount() {
+        batchCount.incrementAndGet();
+    }
+
+    public void incrementReceivedBatchCount() {
+        receivedBatchCount.incrementAndGet();
+    }
+
+    public void addAttemptedRecords(long count) {
+        addPositive(attemptedRecordCount, count);
+    }
+
+    public void incrementSuccessfulBatchCount() {
+        successfulBatchCount.incrementAndGet();
+    }
+
+    public void incrementFailedBatchCount() {
+        failedBatchCount.incrementAndGet();
+    }
+
+    public void addUnknownStateRecords(long count) {
+        addPositive(unknownStateRecordCount, count);
+    }
 
     public void addRecordCount(long count) {
         if (count > 0) {
@@ -168,12 +185,29 @@ public final class TaskMetrics {
         return batchCount.get();
     }
 
-    public long getRecordCount() { return recordCount.get(); }
-    public long getReceivedBatchCount() { return receivedBatchCount.get(); }
-    public long getAttemptedRecordCount() { return attemptedRecordCount.get(); }
-    public long getSuccessfulBatchCount() { return successfulBatchCount.get(); }
-    public long getFailedBatchCount() { return failedBatchCount.get(); }
-    public long getUnknownStateRecordCount() { return unknownStateRecordCount.get(); }
+    public long getRecordCount() {
+        return recordCount.get();
+    }
+
+    public long getReceivedBatchCount() {
+        return receivedBatchCount.get();
+    }
+
+    public long getAttemptedRecordCount() {
+        return attemptedRecordCount.get();
+    }
+
+    public long getSuccessfulBatchCount() {
+        return successfulBatchCount.get();
+    }
+
+    public long getFailedBatchCount() {
+        return failedBatchCount.get();
+    }
+
+    public long getUnknownStateRecordCount() {
+        return unknownStateRecordCount.get();
+    }
 
     public long getSourceReadRecordCount() {
         return sourceReadRecordCount.get();

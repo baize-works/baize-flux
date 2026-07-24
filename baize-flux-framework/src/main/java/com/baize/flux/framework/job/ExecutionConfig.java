@@ -71,7 +71,9 @@ public final class ExecutionConfig {
         return sinkParallelism;
     }
 
-    public int getPipelineParallelism() { return pipelineParallelism; }
+    public int getPipelineParallelism() {
+        return pipelineParallelism;
+    }
 
     /**
      * Compatibility accessor for the historical channel-capacity setting.

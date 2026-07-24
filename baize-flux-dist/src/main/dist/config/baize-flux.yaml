@@ -1,16 +1,16 @@
 # HOCON job configuration. The .yaml extension is retained for deployment conventions.
 # Copy this file, store credentials in a secret manager, and pass the copy with -c.
-  job.name = "jdbc-sync"
-  env { pipeline-parallelism = 1, source-parallelism = 1, sink-parallelism = 1, channel-capacity = 256 }
-  source {
-  type = "jdbc"
-  batch-size = 500
-  url = "jdbc:mysql://127.0.0.1:3306/source_db?useSSL=false&serverTimezone=UTC"
-  driver = "com.mysql.cj.jdbc.Driver"
-  user = "change-me"
-  password = "change-me"
-  fetch_size = 500
-  table_list = [{ table_path = "source_db.orders" }]
+job.name = "jdbc-sync"
+env { pipeline-parallelism = 1, source-parallelism = 1, sink-parallelism = 1, channel-capacity = 256 }
+source {
+type = "jdbc"
+batch-size = 500
+url = "jdbc:mysql://127.0.0.1:3306/source_db?useSSL=false&serverTimezone=UTC"
+driver = "com.mysql.cj.jdbc.Driver"
+user = "change-me"
+password = "change-me"
+fetch_size = 500
+table_list = [{ table_path = "source_db.orders" }]
 }
   sink {
   type = "jdbc"

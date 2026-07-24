@@ -12,6 +12,7 @@ public final class LocalSplitQueue<SplitT extends SourceSplit> implements SplitP
     private final ArrayDeque<SplitT> pending = new ArrayDeque<SplitT>();
     private final Map<String, State> states = new HashMap<String, State>();
     private boolean cancelled;
+
     public LocalSplitQueue(Collection<SplitT> splits) {
         Objects.requireNonNull(splits, "splits must not be null");
         for (SplitT split : splits) {
