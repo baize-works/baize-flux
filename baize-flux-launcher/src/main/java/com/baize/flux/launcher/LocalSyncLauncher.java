@@ -79,7 +79,10 @@ public final class LocalSyncLauncher {
                             definition);
         }
 
-        JobResultPrinter.print(result);
+        JobResultPrinter.print(
+                result,
+                System.out,
+                JobResultPrinter.DetailLevel.FULL);
 
         result.throwIfFailed();
 

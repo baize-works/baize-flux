@@ -6,6 +6,12 @@ import com.baize.flux.framework.job.PipelineResult;
 import com.baize.flux.framework.metrics.ChannelMetrics;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.metrics.TaskMetrics;
+import com.baize.flux.framework.execution.TaskType;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.ToLongFunction;
 
 import java.io.PrintStream;
 import java.util.Locale;
@@ -53,8 +59,524 @@ public final class JobResultPrinter {
                 Throwable root = root(p.getFailure());
                 out.println("  失败摘要：Pipeline=" + p.getPipelineId() + "，表=" + p.getDataSetId() + "，异常=" + root.getClass().getSimpleName() + "，根因=" + String.valueOf(root.getMessage()));
             }
-        if (detail == DetailLevel.CHANNEL || detail == DetailLevel.FULL) channels(m, out);
-        if (detail == DetailLevel.TASK || detail == DetailLevel.FULL) tasks(m, out);
+        if (detail == DetailLevel.PIPELINE
+                || detail == DetailLevel.FULL) {
+
+            printPipelines(
+                    r,
+                    m,
+                    out,
+                    detail == DetailLevel.FULL);
+        }
+
+        if (detail == DetailLevel.TASK) {
+            tasks(m, out);
+        }
+
+        if (detail == DetailLevel.CHANNEL
+                || detail == DetailLevel.FULL) {
+
+            channels(m, out);
+        }
+    }
+
+    /**
+     * 按 Pipeline 展示 Source、Sink 和对应 Task 指标。
+     */
+    private static void printPipelines(
+            JobResult result,
+            JobMetrics metrics,
+            PrintStream out,
+            boolean printTaskDetail) {
+
+        List<PipelineResult> pipelines =
+                new ArrayList<PipelineResult>(
+                        result.getPipelineResults());
+
+        pipelines.sort(
+                Comparator.comparing(
+                        PipelineResult::getPipelineId));
+
+        out.println(
+                "  Pipeline 明细（"
+                        + pipelines.size()
+                        + "）：");
+
+        int index = 1;
+
+        for (PipelineResult pipeline : pipelines) {
+
+            List<TaskMetrics> sourceTasks =
+                    findTasks(
+                            metrics,
+                            pipeline.getPipelineId(),
+                            TaskType.SOURCE);
+
+            List<TaskMetrics> sinkTasks =
+                    findTasks(
+                            metrics,
+                            pipeline.getPipelineId(),
+                            TaskType.SINK);
+
+            out.println(
+                    "    ["
+                            + index++
+                            + "] "
+                            + pipeline.getPipelineId()
+                            + "：");
+
+            pipelineLine(
+                    out,
+                    "状态",
+                    pipeline.getStatus());
+
+            pipelineLine(
+                    out,
+                    "数据集",
+                    pipeline.getDataSetId());
+
+            printSource(
+                    pipeline,
+                    sourceTasks,
+                    out,
+                    printTaskDetail);
+
+            printSink(
+                    pipeline,
+                    sinkTasks,
+                    out,
+                    printTaskDetail);
+
+            if (pipeline.getFailure() != null) {
+
+                Throwable root =
+                        root(
+                                pipeline.getFailure());
+
+                pipelineLine(
+                        out,
+                        "失败原因",
+                        root.getClass().getSimpleName()
+                                + ": "
+                                + String.valueOf(
+                                root.getMessage()));
+            }
+        }
+    }
+
+    private static void printSource(
+            PipelineResult pipeline,
+            List<TaskMetrics> tasks,
+            PrintStream out,
+            boolean printTaskDetail) {
+
+        out.println("      Source：");
+
+        detailLine(
+                out,
+                "Connector",
+                pipeline.getSourceIdentifier());
+
+        detailLine(
+                out,
+                "源表",
+                pipeline.getSourceTable());
+
+        detailLine(
+                out,
+                "Task 数",
+                taskCount(
+                        pipeline.getSourceTaskCount(),
+                        tasks));
+
+        detailLine(
+                out,
+                "读取批次数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value.getBatchCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "读取记录数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value
+                                        .getSourceReadRecordCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "完成分片数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value
+                                        .getCompletedSplitCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "平均读取速率（条/秒）",
+                rate(
+                        averageQps(
+                                tasks,
+                                TaskType.SOURCE)));
+
+        if (printTaskDetail) {
+            printSourceTasks(
+                    tasks,
+                    out);
+        }
+    }
+
+    private static void printSink(
+            PipelineResult pipeline,
+            List<TaskMetrics> tasks,
+            PrintStream out,
+            boolean printTaskDetail) {
+
+        CommitSummary summary =
+                pipeline.getCommitSummary();
+
+        out.println("      Sink：");
+
+        detailLine(
+                out,
+                "Connector",
+                pipeline.getSinkIdentifier());
+
+        detailLine(
+                out,
+                "目标表",
+                pipeline.getSinkTable());
+
+        detailLine(
+                out,
+                "Task 数",
+                taskCount(
+                        pipeline.getSinkTaskCount(),
+                        tasks));
+
+        detailLine(
+                out,
+                "接收批次数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value
+                                        .getReceivedBatchCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "尝试写入记录数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value
+                                        .getAttemptedRecordCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "确认写入成功记录数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value
+                                        .getSinkWriteSuccessRecordCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "写入状态未知记录数",
+                sum(
+                        tasks,
+                        new ToLongFunction<TaskMetrics>() {
+                            @Override
+                            public long applyAsLong(
+                                    TaskMetrics value) {
+
+                                return value
+                                        .getUnknownStateRecordCount();
+                            }
+                        }));
+
+        detailLine(
+                out,
+                "成功提交记录数",
+                summary.getSuccessfullyCommittedRecordCount());
+
+        detailLine(
+                out,
+                "有效提交 Task 数",
+                summary.getDataCommittedTaskCount());
+
+        detailLine(
+                out,
+                "空事务提交 Task 数",
+                summary.getEmptyCommittedTaskCount());
+
+        detailLine(
+                out,
+                "失败或未提交 Task 数",
+                summary.getFailedOrUncommittedTaskCount());
+
+        detailLine(
+                out,
+                "平均写入速率（条/秒）",
+                rate(
+                        averageQps(
+                                tasks,
+                                TaskType.SINK)));
+
+        if (printTaskDetail) {
+            printSinkTasks(
+                    tasks,
+                    out);
+        }
+    }
+
+    private static void printSourceTasks(
+            List<TaskMetrics> tasks,
+            PrintStream out) {
+
+        for (TaskMetrics task : tasks) {
+
+            out.println(
+                    "        Task="
+                            + task.getTaskId()
+                            + "，状态="
+                            + task.getState()
+                            + "，批次数="
+                            + task.getBatchCount()
+                            + "，读取记录数="
+                            + task.getSourceReadRecordCount()
+                            + "，完成分片数="
+                            + task.getCompletedSplitCount()
+                            + "，执行耗时（毫秒）="
+                            + task.getDurationMillis()
+                            + position(task));
+        }
+    }
+
+    private static void printSinkTasks(
+            List<TaskMetrics> tasks,
+            PrintStream out) {
+
+        for (TaskMetrics task : tasks) {
+
+            out.println(
+                    "        Task="
+                            + task.getTaskId()
+                            + "，状态="
+                            + task.getState()
+                            + "，接收批次数="
+                            + task.getReceivedBatchCount()
+                            + "，尝试写入记录数="
+                            + task.getAttemptedRecordCount()
+                            + "，成功写入记录数="
+                            + task.getSinkWriteSuccessRecordCount()
+                            + "，状态未知记录数="
+                            + task.getUnknownStateRecordCount()
+                            + "，执行耗时（毫秒）="
+                            + task.getDurationMillis()
+                            + position(task));
+        }
+    }
+
+    private static List<TaskMetrics> findTasks(
+            JobMetrics metrics,
+            String pipelineId,
+            TaskType taskType) {
+
+        List<TaskMetrics> result =
+                new ArrayList<TaskMetrics>();
+
+        for (TaskMetrics task
+                : metrics.getTaskMetrics().values()) {
+
+            if (pipelineId.equals(
+                    task.getTaskId()
+                            .getPipelineId())
+                    && taskType
+                    == task.getTaskId()
+                    .getTaskType()) {
+
+                result.add(task);
+            }
+        }
+
+        result.sort(
+                new Comparator<TaskMetrics>() {
+                    @Override
+                    public int compare(
+                            TaskMetrics left,
+                            TaskMetrics right) {
+
+                        return Integer.compare(
+                                left.getTaskId()
+                                        .getSubtaskIndex(),
+                                right.getTaskId()
+                                        .getSubtaskIndex());
+                    }
+                });
+
+        return result;
+    }
+
+    private static long sum(
+            List<TaskMetrics> tasks,
+            ToLongFunction<TaskMetrics> getter) {
+
+        long total = 0L;
+
+        for (TaskMetrics task : tasks) {
+            total += getter.applyAsLong(task);
+        }
+
+        return total;
+    }
+
+    private static double averageQps(
+            List<TaskMetrics> tasks,
+            TaskType type) {
+
+        long records = 0L;
+        long start = Long.MAX_VALUE;
+        long end = 0L;
+
+        for (TaskMetrics task : tasks) {
+
+            if (type == TaskType.SOURCE) {
+                records +=
+                        task.getSourceReadRecordCount();
+            } else {
+                records +=
+                        task.getSinkWriteSuccessRecordCount();
+            }
+
+            if (task.getStartTimeMillis() > 0L) {
+
+                start =
+                        Math.min(
+                                start,
+                                task.getStartTimeMillis());
+
+                long taskEnd =
+                        task.getEndTimeMillis() > 0L
+                                ? task.getEndTimeMillis()
+                                : System.currentTimeMillis();
+
+                end =
+                        Math.max(
+                                end,
+                                taskEnd);
+            }
+        }
+
+        if (start == Long.MAX_VALUE
+                || end <= start) {
+
+            return 0D;
+        }
+
+        return records
+                * 1000D
+                / (end - start);
+    }
+
+    private static int taskCount(
+            int plannedTaskCount,
+            List<TaskMetrics> tasks) {
+
+        return plannedTaskCount > 0
+                ? plannedTaskCount
+                : tasks.size();
+    }
+
+    private static String position(
+            TaskMetrics task) {
+
+        if (task.getCurrentTable() == null
+                && task.getCurrentSplit() == null) {
+
+            return "";
+        }
+
+        return "，表="
+                + valueOrDash(
+                task.getCurrentTable())
+                + "，分片="
+                + valueOrDash(
+                task.getCurrentSplit());
+    }
+
+    private static String valueOrDash(
+            String value) {
+
+        return value == null
+                || value.trim().isEmpty()
+                ? "-"
+                : value;
+    }
+
+    private static void pipelineLine(
+            PrintStream out,
+            String key,
+            Object value) {
+
+        out.println(
+                "      "
+                        + key
+                        + "："
+                        + value);
+    }
+
+    private static void detailLine(
+            PrintStream out,
+            String key,
+            Object value) {
+
+        out.println(
+                "        "
+                        + key
+                        + "："
+                        + value);
     }
 
     private static Throwable root(Throwable t) {
@@ -84,5 +606,11 @@ public final class JobResultPrinter {
         o.println("  " + k + "：" + v);
     }
 
-    public enum DetailLevel {SUMMARY, TASK, CHANNEL, FULL}
+    public enum DetailLevel {
+        SUMMARY,
+        PIPELINE,
+        TASK,
+        CHANNEL,
+        FULL
+    }
 }

@@ -15,6 +15,10 @@ import com.baize.flux.framework.planner.PipelinePlan;
 import com.baize.flux.framework.planner.SourceTaskPlan;
 import com.baize.flux.framework.routing.Partitioner;
 
+import com.baize.flux.api.table.catalog.CatalogTable;
+import com.baize.flux.framework.connector.PreparedSink;
+import com.baize.flux.framework.planner.SinkTaskPlan;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -67,9 +71,19 @@ final class PipelineExecution {
                     }
                 });
                 ExecutionCoordinator.ExecutionOutcome outcome = outcomeCoordinator.execute(sinks, sources);
-                if (outcome.getFailure() != null)
-                    return new PipelineResult(plan.getPipelineId(), plan.getDataSetId(), token.isCancelled() ? PipelineStatus.CANCELED : PipelineStatus.FAILED, outcome.getCommitSummary(), outcome.getFailure());
-                return new PipelineResult(plan.getPipelineId(), plan.getDataSetId(), PipelineStatus.SUCCEEDED, outcome.getCommitSummary(), null);
+                if (outcome.getFailure() != null) {
+                    return createPipelineResult(
+                            token.isCancelled()
+                                    ? PipelineStatus.CANCELED
+                                    : PipelineStatus.FAILED,
+                            outcome.getCommitSummary(),
+                            outcome.getFailure());
+                }
+
+                return createPipelineResult(
+                        PipelineStatus.SUCCEEDED,
+                        outcome.getCommitSummary(),
+                        null);
             }
         } finally {
             for (DataChannel<RecordEnvelope<FluxRow>> c : channels)
@@ -78,6 +92,64 @@ final class PipelineExecution {
                 } catch (Throwable ignored) {
                 }
         }
+    }
+
+    /**
+     * 创建包含 Source、Sink 和目标表信息的 Pipeline 结果。
+     */
+    private PipelineResult createPipelineResult(
+            PipelineStatus status,
+            CommitSummary commitSummary,
+            Throwable failure) {
+
+        SourceTaskPlan<?> sourceTaskPlan =
+                plan.getSourceTaskPlans()
+                        .get(0);
+
+        SinkTaskPlan sinkTaskPlan =
+                plan.getSinkTaskPlans()
+                        .get(0);
+
+        String sourceIdentifier =
+                sourceTaskPlan
+                        .getPreparedSource()
+                        .getFactoryIdentifier();
+
+        PreparedSink preparedSink =
+                sinkTaskPlan.getPreparedSink();
+
+        String sinkIdentifier =
+                preparedSink.getFactoryIdentifier();
+
+        CatalogTable targetTable =
+                preparedSink
+                        .getMetadata()
+                        .getTargetTable(
+                                plan.getDataSetPath());
+
+        String sinkTablePath = "-";
+
+        if (targetTable != null
+                && targetTable.getTablePath() != null) {
+
+            sinkTablePath =
+                    targetTable
+                            .getTablePath()
+                            .toString();
+        }
+
+        return new PipelineResult(
+                plan.getPipelineId(),
+                plan.getDataSetId(),
+                sourceIdentifier,
+                plan.getDataSetPath().toString(),
+                plan.getSourceTaskPlans().size(),
+                sinkIdentifier,
+                sinkTablePath,
+                plan.getSinkTaskPlans().size(),
+                status,
+                commitSummary,
+                failure);
     }
 
     private void cancelProviders() {
