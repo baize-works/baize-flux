@@ -90,6 +90,21 @@ public final class JdbcSourceOptions
                     .defaultValue(false)
                     .withDescription("是否启用分片并行读取");
 
+    public static final Option<SplitPlanningMode> SPLIT_PLANNING_MODE =
+            Options.key("split_planning_mode").enumType(SplitPlanningMode.class)
+                    .defaultValue(SplitPlanningMode.MANUAL).withDescription("分片边界规划模式");
+    public static final Option<Integer> STATISTICS_QUERY_TIMEOUT =
+            Options.key("statistics_query_timeout").intType().defaultValue(30)
+                    .withDescription("统计查询超时秒数");
+    public static final Option<Integer> SAMPLE_SIZE =
+            Options.key("sample_size").intType().defaultValue(1000).withDescription("统计样本大小");
+    public static final Option<Boolean> ALLOW_STATISTICS_FALLBACK =
+            Options.key("allow_statistics_fallback").booleanType().defaultValue(false)
+                    .withDescription("是否允许统计模式降级");
+    public static final Option<Boolean> NULL_PARTITION_SINGLE_SPLIT =
+            Options.key("null_partition_single_split").booleanType().defaultValue(false)
+                    .withDescription("分区列全 NULL 时是否返回单 split");
+
     public static final Option<String> PARTITION_COLUMN =
             Options.key("partition_column")
                     .stringType()

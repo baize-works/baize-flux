@@ -46,6 +46,11 @@ public final class JdbcSourceConfig
 
     /** Requested consistency for the source read. */
     private final ReadConsistency readConsistency;
+    private final SplitPlanningMode splitPlanningMode;
+    private final int statisticsQueryTimeout;
+    private final int sampleSize;
+    private final boolean allowStatisticsFallback;
+    private final boolean nullPartitionSingleSplit;
 
     /**
      * MySQL 整数类型缩小策略。
@@ -64,6 +69,7 @@ public final class JdbcSourceConfig
             String whereCondition,
             int fetchSize,
             ReadConsistency readConsistency,
+            SplitPlanningMode splitPlanningMode, int statisticsQueryTimeout, int sampleSize, boolean allowStatisticsFallback, boolean nullPartitionSingleSplit,
             boolean intTypeNarrowing,
             MultiTableFailurePolicy
                     multiTableFailurePolicy) {
@@ -88,6 +94,10 @@ public final class JdbcSourceConfig
         this.fetchSize = fetchSize;
         this.readConsistency = Objects.requireNonNull(
                 readConsistency, "readConsistency must not be null");
+        this.splitPlanningMode = Objects.requireNonNull(splitPlanningMode, "splitPlanningMode");
+        if (statisticsQueryTimeout <= 0 || sampleSize <= 0) throw new IllegalArgumentException("statistics_query_timeout and sample_size must be positive");
+        this.statisticsQueryTimeout = statisticsQueryTimeout; this.sampleSize = sampleSize;
+        this.allowStatisticsFallback = allowStatisticsFallback; this.nullPartitionSingleSplit = nullPartitionSingleSplit;
         this.intTypeNarrowing =
                 intTypeNarrowing;
 
@@ -120,6 +130,7 @@ public final class JdbcSourceConfig
                         JdbcSourceOptions.FETCH_SIZE),
                 config.get(
                         JdbcSourceOptions.READ_CONSISTENCY),
+                config.get(JdbcSourceOptions.SPLIT_PLANNING_MODE), config.get(JdbcSourceOptions.STATISTICS_QUERY_TIMEOUT), config.get(JdbcSourceOptions.SAMPLE_SIZE), config.get(JdbcSourceOptions.ALLOW_STATISTICS_FALLBACK), config.get(JdbcSourceOptions.NULL_PARTITION_SINGLE_SPLIT),
                 config.get(
                         JdbcCommonOptions
                                 .INT_TYPE_NARROWING),
@@ -243,6 +254,12 @@ public final class JdbcSourceConfig
         return readConsistency;
     }
 
+    public SplitPlanningMode getSplitPlanningMode() { return splitPlanningMode; }
+    public int getStatisticsQueryTimeout() { return statisticsQueryTimeout; }
+    public int getSampleSize() { return sampleSize; }
+    public boolean isAllowStatisticsFallback() { return allowStatisticsFallback; }
+    public boolean isNullPartitionSingleSplit() { return nullPartitionSingleSplit; }
+
     public boolean isIntTypeNarrowing() {
         return intTypeNarrowing;
     }
@@ -357,6 +374,7 @@ public final class JdbcSourceConfig
                 + fetchSize
                 + ", readConsistency="
                 + readConsistency
+                + ", splitPlanningMode=" + splitPlanningMode
                 + ", intTypeNarrowing="
                 + intTypeNarrowing
                 + ", multiTableFailurePolicy="
