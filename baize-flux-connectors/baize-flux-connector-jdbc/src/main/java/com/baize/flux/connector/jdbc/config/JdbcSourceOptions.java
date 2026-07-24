@@ -63,6 +63,15 @@ public final class JdbcSourceOptions
                     .noDefaultValue()
                     .withDescription("公共查询过滤条件，不需要包含 where");
 
+    /**
+     * Requested consistency for the source read.
+     */
+    public static final Option<ReadConsistency> READ_CONSISTENCY =
+            Options.key("read_consistency")
+                    .enumType(ReadConsistency.class)
+                    .defaultValue(ReadConsistency.BEST_EFFORT)
+                    .withDescription("JDBC Source 读取一致性");
+
     public static final Option<Integer> FETCH_SIZE =
             Options.key("fetch_size")
                     .intType()

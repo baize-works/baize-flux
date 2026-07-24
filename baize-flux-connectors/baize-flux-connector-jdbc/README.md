@@ -41,7 +41,8 @@ INSERT/UPSERT SQL for the resolved target and ignores `custom_sql`/`query`.
 | `username` | no | empty | JDBC user name. |
 | `password` | no | empty | JDBC password. |
 | `driver` | no | — | JDBC driver class to load before connecting. |
-| `fetch-size` | no | `1000` | Maximum number of rows emitted in one batch. |
+| `fetch_size` | no | `1000` | JDBC fetch size used while reading. |
+| `read_consistency` | no | `BEST_EFFORT` | Read consistency: `BEST_EFFORT`, `SINGLE_CONNECTION_SNAPSHOT`, or a dialect-provided `DATABASE_SNAPSHOT`. |
 
 The result columns retain their query order and use JDBC column labels as the
 `FluxRow` field names.
@@ -60,5 +61,13 @@ env {
 ```
 
 The launcher creates at most `parallelism` source readers and assigns every split to one reader exactly once. JDBC uses this value while planning range splits, so an unspecified `partition_num` produces no more than this many chunks per table. Batches from different tables or ranges can be read concurrently, while the local sink remains single-threaded because the current `SinkWriter` owns one transactional JDBC connection and is not safe to share across writers.
+
+### Read consistency
+
+`BEST_EFFORT` is the default and preserves the existing parallel reader behavior. With more than one source reader, separate JDBC connections can observe different database snapshots; the connector emits a preparation-time warning without connection credentials or tokens.
+
+`SINGLE_CONNECTION_SNAPSHOT` requires `env.parallelism = 1`. The reader configures its JDBC connection as read-only, disables auto-commit, and requests repeatable-read isolation before reading. It is available only when the selected JDBC dialect declares support.
+
+`DATABASE_SNAPSHOT` is reserved for dialects that can coordinate one database snapshot across multiple readers. The built-in MySQL dialect does not implement it yet, so preparation fails before any source task is created.
 
 For string keys, configure a fixed-width ASCII column using a binary/ASCII-compatible database collation. Locale-aware and variable-width strings are not safe range keys.

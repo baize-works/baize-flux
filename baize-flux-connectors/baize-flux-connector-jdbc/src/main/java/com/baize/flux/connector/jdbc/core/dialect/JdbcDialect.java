@@ -4,6 +4,7 @@ import com.baize.flux.api.table.catalog.Catalog;
 import com.baize.flux.api.table.catalog.Column;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
+import com.baize.flux.connector.jdbc.config.ReadConsistency;
 import com.baize.flux.connector.jdbc.core.converter.JdbcRowConverter;
 import com.baize.flux.connector.jdbc.core.split.StringRangeSplitDecision;
 import com.baize.flux.connector.jdbc.source.JdbcSourceTable;
@@ -91,6 +92,33 @@ public interface JdbcDialect extends Serializable {
      * JDBC 行读取和写入转换器。
      */
     JdbcRowConverter rowConverter();
+
+    /**
+     * Returns the read consistency modes implemented by this dialect.
+     */
+    default Set<ReadConsistency> supportedReadConsistencies() {
+        return Collections.singleton(ReadConsistency.BEST_EFFORT);
+    }
+
+    /**
+     * Configures a connection for a requested snapshot read. Dialects that
+     * support database-coordinated snapshots should override this method.
+     */
+    default void configureSnapshotConnection(
+            Connection connection,
+            ReadConsistency consistency) throws SQLException {
+
+        if (connection == null) {
+            throw new IllegalArgumentException("connection must not be null");
+        }
+        if (consistency != ReadConsistency.SINGLE_CONNECTION_SNAPSHOT) {
+            throw new UnsupportedOperationException(
+                    "Read consistency is not supported by dialect " + name());
+        }
+        connection.setReadOnly(true);
+        connection.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+        connection.setAutoCommit(false);
+    }
 
     /**
      * 解析配置中的表路径。

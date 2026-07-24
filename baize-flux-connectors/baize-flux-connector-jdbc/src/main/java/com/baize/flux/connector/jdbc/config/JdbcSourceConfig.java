@@ -44,6 +44,9 @@ public final class JdbcSourceConfig
      */
     private final int fetchSize;
 
+    /** Requested consistency for the source read. */
+    private final ReadConsistency readConsistency;
+
     /**
      * MySQL 整数类型缩小策略。
      */
@@ -60,6 +63,7 @@ public final class JdbcSourceConfig
             List<JdbcSourceTableConfig> tableConfigs,
             String whereCondition,
             int fetchSize,
+            ReadConsistency readConsistency,
             boolean intTypeNarrowing,
             MultiTableFailurePolicy
                     multiTableFailurePolicy) {
@@ -82,6 +86,8 @@ public final class JdbcSourceConfig
         }
 
         this.fetchSize = fetchSize;
+        this.readConsistency = Objects.requireNonNull(
+                readConsistency, "readConsistency must not be null");
         this.intTypeNarrowing =
                 intTypeNarrowing;
 
@@ -112,6 +118,8 @@ public final class JdbcSourceConfig
                         .orElse(null),
                 config.get(
                         JdbcSourceOptions.FETCH_SIZE),
+                config.get(
+                        JdbcSourceOptions.READ_CONSISTENCY),
                 config.get(
                         JdbcCommonOptions
                                 .INT_TYPE_NARROWING),
@@ -231,6 +239,10 @@ public final class JdbcSourceConfig
         return fetchSize;
     }
 
+    public ReadConsistency getReadConsistency() {
+        return readConsistency;
+    }
+
     public boolean isIntTypeNarrowing() {
         return intTypeNarrowing;
     }
@@ -343,6 +355,8 @@ public final class JdbcSourceConfig
                 + '\''
                 + ", fetchSize="
                 + fetchSize
+                + ", readConsistency="
+                + readConsistency
                 + ", intTypeNarrowing="
                 + intTypeNarrowing
                 + ", multiTableFailurePolicy="
