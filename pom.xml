@@ -43,6 +43,7 @@
         <module>baize-flux-bom</module>
         <module>baize-flux-api</module>
         <module>baize-flux-connectors</module>
+        <module>baize-flux-dist</module>
     </modules>
 
 
