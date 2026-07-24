@@ -36,11 +36,11 @@ public final class JobPlanner {
             SplitProvider<SplitT> provider = config.getSplitAssignmentMode() == SplitAssignmentMode.DYNAMIC ? new LocalSplitQueue<SplitT>(entry.getValue()) : null;
             String pipelineId = "pipeline-" + dataSetId;
             List<SourceTaskPlan<?>> sources = new ArrayList<SourceTaskPlan<?>>();
-            for (int i=0; i<assignments.size(); i++) sources.add(new SourceTaskPlan<SplitT>(new TaskId(pipelineId + "/source", i, assignments.size()), preparedSource, assignments.get(i), config.getBatchSize(), provider));
+            for (int i=0; i<assignments.size(); i++) sources.add(new SourceTaskPlan<SplitT>(new TaskId(pipelineId, com.baize.flux.framework.execution.TaskType.SOURCE, i, assignments.size()), preparedSource, assignments.get(i), config.getBatchSize(), provider));
             List<PreparedSink> sinks = job.getSinks(dataSetId);
-            int sinkCount = Math.min(config.getSinkParallelism(), sinks.size());
+            int sinkCount = Math.min(Math.min(config.getSinkParallelism(), sinks.size()), Math.max(1, entry.getValue().size()));
             List<SinkTaskPlan> sinkPlans = new ArrayList<SinkTaskPlan>();
-            for (int i=0; i<sinkCount; i++) sinkPlans.add(new SinkTaskPlan(new TaskId(pipelineId + "/sink", i, sinkCount), sinks.get(i)));
+            for (int i=0; i<sinkCount; i++) sinkPlans.add(new SinkTaskPlan(new TaskId(pipelineId, com.baize.flux.framework.execution.TaskType.SINK, i, sinkCount), sinks.get(i)));
             pipelines.add(new PipelinePlan(pipelineId, dataSetId, table, sources, sinkPlans));
         }
         return new ExecutionPlan(job.getJobName(), config, pipelines);

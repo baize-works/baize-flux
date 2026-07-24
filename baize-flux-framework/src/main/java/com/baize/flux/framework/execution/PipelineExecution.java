@@ -9,13 +9,15 @@ import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.*;
 import com.baize.flux.framework.routing.Partitioner;
 import com.baize.flux.framework.job.CommitSummary;
+import com.baize.flux.framework.job.PipelineResult;
+import com.baize.flux.framework.job.PipelineStatus;
 import java.util.*;
 
 /** Executes one Pipeline with channels and writers owned exclusively by that Pipeline. */
 final class PipelineExecution {
     private final PipelinePlan plan; private final com.baize.flux.framework.job.ExecutionConfig config; private final CancellationToken token; private final JobMetrics metrics; private final ClassLoader loader;
     PipelineExecution(PipelinePlan plan, com.baize.flux.framework.job.ExecutionConfig config, CancellationToken token, JobMetrics metrics, ClassLoader loader) { this.plan=plan; this.config=config; this.token=token; this.metrics=metrics; this.loader=loader; }
-    CommitSummary execute() {
+    PipelineResult execute() {
         List<DataChannel<RecordEnvelope<FluxRow>>> channels = new ArrayList<DataChannel<RecordEnvelope<FluxRow>>>();
         try {
             for (int i=0;i<plan.getSinkTaskPlans().size();i++) { LocalDataChannel<RecordEnvelope<FluxRow>> c = new LocalDataChannel<RecordEnvelope<FluxRow>>(plan.getPipelineId()+"-source-to-sink-"+i,config.getMaxBufferedBatches(),config.getMaxBufferedRecords(),config.getMaxBufferedBytes(),config.getMaxRecordsPerSecond(),config.getMaxBytesPerSecond(),plan.getSourceTaskPlans().size()); channels.add(c); metrics.registerChannel(c.getMetrics()); }
@@ -24,8 +26,8 @@ final class PipelineExecution {
             try (TaskExecutor executor = new TaskExecutor(sinks.size()+sources.size(), "baize-flux-"+plan.getPipelineId())) {
                 ExecutionCoordinator outcomeCoordinator = new ExecutionCoordinator(executor, token, metrics, loader, new Runnable(){ public void run(){ fail(channels, token.getCause()); cancelProviders(); }});
                 ExecutionCoordinator.ExecutionOutcome outcome=outcomeCoordinator.execute(sinks,sources);
-                if(outcome.getFailure()!=null) throw new PipelineFailure(outcome.getFailure(), outcome.getCommitSummary());
-                return outcome.getCommitSummary();
+                if(outcome.getFailure()!=null) return new PipelineResult(plan.getPipelineId(), plan.getDataSetId(), token.isCancelled() ? PipelineStatus.CANCELED : PipelineStatus.FAILED, outcome.getCommitSummary(), outcome.getFailure());
+                return new PipelineResult(plan.getPipelineId(), plan.getDataSetId(), PipelineStatus.SUCCEEDED, outcome.getCommitSummary(), null);
             }
         } finally { for(DataChannel<RecordEnvelope<FluxRow>> c:channels) try { c.close(); } catch(Throwable ignored) {} }
     }
