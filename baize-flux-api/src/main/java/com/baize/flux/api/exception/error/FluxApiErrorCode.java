@@ -1,8 +1,8 @@
-package com.baize.flux.common.exception.error;
+package com.baize.flux.api.exception.error;
 
-import com.baize.flux.common.exception.FluxErrorCode;
+import com.baize.flux.api.exception.FluxErrorCode;
 
-public enum FluxAPIErrorCode implements FluxErrorCode {
+public enum FluxApiErrorCode implements FluxErrorCode {
     CONFIG_VALIDATION_FAILED("API-01", "Configuration item validate failed"),
     OPTION_VALIDATION_FAILED("API-02", "Option item validate failed"),
     CATALOG_INITIALIZE_FAILED("API-03", "Catalog initialize failed"),
@@ -23,7 +23,7 @@ public enum FluxAPIErrorCode implements FluxErrorCode {
     private final String code;
     private final String description;
 
-    FluxAPIErrorCode(String code, String description) {
+    FluxApiErrorCode(String code, String description) {
         this.code = code;
         this.description = description;
     }

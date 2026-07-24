@@ -1,4 +1,4 @@
-package com.baize.flux.common.exception;
+package com.baize.flux.api.exception;
 
 import java.util.ArrayList;
 import java.util.List;

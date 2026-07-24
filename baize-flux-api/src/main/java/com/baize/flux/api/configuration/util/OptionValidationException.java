@@ -1,8 +1,8 @@
 package com.baize.flux.api.configuration.util;
 
 import com.baize.flux.api.configuration.Option;
-import com.baize.flux.common.exception.FluxRuntimeException;
-import com.baize.flux.common.exception.error.FluxAPIErrorCode;
+import com.baize.flux.api.exception.FluxRuntimeException;
+import com.baize.flux.api.exception.error.FluxApiErrorCode;
 
 /**
  * 配置项校验异常。
@@ -17,7 +17,7 @@ public class OptionValidationException
             Throwable cause) {
 
         super(
-                FluxAPIErrorCode.OPTION_VALIDATION_FAILED,
+                FluxApiErrorCode.OPTION_VALIDATION_FAILED,
                 message,
                 cause);
 
@@ -26,7 +26,7 @@ public class OptionValidationException
 
     public OptionValidationException(String message) {
         super(
-                FluxAPIErrorCode.OPTION_VALIDATION_FAILED,
+                FluxApiErrorCode.OPTION_VALIDATION_FAILED,
                 message);
 
         this.rawMessage = message;

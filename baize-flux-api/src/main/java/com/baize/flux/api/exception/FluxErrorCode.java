@@ -1,4 +1,4 @@
-package com.baize.flux.common.exception;
+package com.baize.flux.api.exception;
 
 /**
  * Baize Flux 统一错误码接口。
