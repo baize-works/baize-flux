@@ -179,21 +179,21 @@ public abstract class FluxServlet
 
     protected void doDelete(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response) throws IOException{
 
         throw methodNotAllowed(request);
     }
 
     protected void doPost(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response) throws IOException{
 
         throw methodNotAllowed(request);
     }
 
     protected void doGet(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response) throws IOException{
 
         throw methodNotAllowed(request);
     }
