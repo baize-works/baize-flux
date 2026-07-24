@@ -3,6 +3,7 @@ package com.baize.flux.framework.planner;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.execution.split.SplitProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,11 +24,17 @@ public final class SourceTaskPlan<
 
     private final int batchSize;
 
+    private final SplitProvider<SplitT> splitProvider;
+
     public SourceTaskPlan(
             TaskId taskId,
             PreparedSource<SplitT> preparedSource,
             List<SplitT> splits,
             int batchSize) {
+        this(taskId, preparedSource, splits, batchSize, null);
+    }
+
+    public SourceTaskPlan(TaskId taskId, PreparedSource<SplitT> preparedSource, List<SplitT> splits, int batchSize, SplitProvider<SplitT> splitProvider) {
 
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
@@ -52,6 +59,7 @@ public final class SourceTaskPlan<
                                         "splits must not be null")));
 
         this.batchSize = batchSize;
+        this.splitProvider = splitProvider;
     }
 
     public TaskId getTaskId() {
@@ -65,6 +73,8 @@ public final class SourceTaskPlan<
     public List<SplitT> getSplits() {
         return splits;
     }
+
+    public SplitProvider<SplitT> getSplitProvider() { return splitProvider; }
 
     public int getBatchSize() {
         return batchSize;

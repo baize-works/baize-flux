@@ -6,6 +6,11 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcSourceConfig;
+import com.baize.flux.connector.jdbc.config.ReadConsistency;
+import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
+import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +26,9 @@ public final class JdbcSource
 
     private static final long serialVersionUID = 1L;
 
+    private static final Logger LOG =
+            LoggerFactory.getLogger(JdbcSource.class);
+
     private final JdbcSourceConfig config;
 
     public JdbcSource(JdbcSourceConfig config) {
@@ -35,6 +43,32 @@ public final class JdbcSource
             throws Exception {
 
         return createSplits(tables, 1);
+    }
+
+    @Override
+    public void validateParallelism(int parallelism) {
+        Source.super.validateParallelism(parallelism);
+
+        ReadConsistency consistency = config.getReadConsistency();
+        if (consistency == ReadConsistency.BEST_EFFORT) {
+            if (parallelism > 1) {
+                LOG.warn("JDBC read_consistency=BEST_EFFORT with source parallelism {} does not guarantee a single snapshot across readers", parallelism);
+            }
+            return;
+        }
+
+        if (consistency == ReadConsistency.SINGLE_CONNECTION_SNAPSHOT
+                && parallelism != 1) {
+            throw new IllegalArgumentException(
+                    "read_consistency=SINGLE_CONNECTION_SNAPSHOT requires source parallelism=1");
+        }
+
+        JdbcDialect dialect = JdbcDialectLoader.load(config.getConnectionConfig());
+        if (!dialect.supportedReadConsistencies().contains(consistency)) {
+            throw new IllegalArgumentException(
+                    "JDBC dialect '" + dialect.name()
+                            + "' does not support read_consistency=" + consistency);
+        }
     }
 
     @Override

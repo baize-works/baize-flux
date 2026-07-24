@@ -94,6 +94,22 @@ public final class JdbcSourceReader
     }
 
     @Override
+    public void open() throws Exception {
+        open(Collections.<JdbcSourceSplit>emptyList());
+    }
+
+    @Override
+    public void openSplit(JdbcSourceSplit split) throws Exception {
+        checkOpened();
+        if (currentSplit != null) throw new IllegalStateException("A split is already open");
+        currentSplit = java.util.Objects.requireNonNull(split, "split must not be null");
+        inputFormat.open(currentSplit);
+    }
+
+    @Override
+    public void closeSplit() throws Exception { closeCurrentSplit(); }
+
+    @Override
     public RecordBatch<FluxRow> readBatch()
             throws Exception {
 

@@ -1,17 +1,14 @@
 package com.baize.flux.connector.jdbc.sink;
 
-import com.baize.flux.api.table.catalog.Catalog;
 import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.api.table.catalog.PrimaryKey;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.catalog.TableSchema;
-import com.baize.flux.api.table.catalog.WritableCatalog;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.internal.JdbcConnectionProvider;
-import com.baize.flux.connector.jdbc.sink.savemode.JdbcSaveModeHandler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +19,10 @@ import java.sql.Savepoint;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -64,11 +59,7 @@ public final class JdbcOutputFormat
 
     private final JdbcConnectionProvider connectionProvider;
 
-    /**
-     * 已经完成 SaveMode 处理的目标表。
-     */
-    private final Set<TablePath> preparedTables =
-            new HashSet<TablePath>();
+    private final PreparedSinkMetadata metadata;
 
     /** Rows skipped after the failed batch has been isolated to individual rows. */
     private final List<JdbcRowError> rowErrors =
@@ -89,7 +80,10 @@ public final class JdbcOutputFormat
     private boolean closed;
 
     JdbcOutputFormat(
-            JdbcSinkConfig config) {
+            JdbcSinkConfig config,
+            PreparedSinkMetadata metadata) {
+
+        this.metadata = Objects.requireNonNull(metadata, "metadata must not be null");
 
         this.config =
                 Objects.requireNonNull(
@@ -147,13 +141,10 @@ public final class JdbcOutputFormat
                 sourceTable,
                 "sourceTable must not be null");
 
-        CatalogTable targetTable =
-                resolveTargetTable(sourceTable);
-
-        /*
-         * SaveMode 和建表操作发生在数据写入前。
-         */
-        prepareTable(targetTable);
+        CatalogTable targetTable = metadata.getTargetTable(sourceTable.getTablePath());
+        if (targetTable == null) {
+            throw new IllegalArgumentException("Source table was not prepared: " + sourceTable.getTablePath());
+        }
 
         ensureTransactionConnection();
 
@@ -447,55 +438,6 @@ public final class JdbcOutputFormat
     }
 
     /**
-     * 准备目标表。
-     *
-     * <p>只有 SaveMode 完整执行成功后，才把目标表加入 preparedTables。
-     * 避免准备失败后，下一次调用错误地跳过该目标表。
-     */
-    private void prepareTable(
-            CatalogTable targetTable)
-            throws Exception {
-
-        TablePath tablePath =
-                targetTable.getTablePath();
-
-        if (preparedTables.contains(tablePath)) {
-            return;
-        }
-
-        Catalog catalog =
-                dialect.createCatalog(
-                        config.getConnectionConfig());
-
-        if (!(catalog instanceof WritableCatalog)) {
-            throw new IllegalStateException(
-                    "JDBC catalog does not support DDL: "
-                            + dialect.name());
-        }
-
-        JdbcSaveModeHandler saveModeHandler =
-                new JdbcSaveModeHandler(
-                        config.getSchemaSaveMode(),
-                        config.getDataSaveMode(),
-                        (WritableCatalog) catalog,
-                        targetTable,
-                        config.isCreatePrimaryKey());
-
-        try {
-            saveModeHandler.open();
-            saveModeHandler.handleSaveMode();
-
-            /*
-             * 只有处理成功以后才记录。
-             */
-            preparedTables.add(tablePath);
-
-        } finally {
-            saveModeHandler.close();
-        }
-    }
-
-    /**
      * 生成目标端写入 SQL。
      */
     private String createWriteSql(
@@ -511,7 +453,7 @@ public final class JdbcOutputFormat
                     .buildUpsertSql(
                             targetTable.getTablePath(),
                             fields,
-                            resolvePrimaryKeys(targetTable))
+                            resolvePreparedPrimaryKeys(targetTable))
                     .orElseThrow(
                             () -> new IllegalArgumentException(
                                     "Dialect does not support UPSERT: "
@@ -523,45 +465,15 @@ public final class JdbcOutputFormat
                 fields);
     }
 
-    /**
-     * 将源表映射为目标表。
-     */
-    private CatalogTable resolveTargetTable(
-            CatalogTable sourceTable) {
-
-        String targetTablePath =
-                config.resolveTargetTablePath(
-                        sourceTable.getTablePath());
-
-        TablePath resolvedPath =
-                targetTablePath == null
-                        ? sourceTable.getTablePath()
-                        : dialect.parseTablePath(
-                        targetTablePath);
-
-        return sourceTable.withPath(
-                resolvedPath);
-    }
-
-    /**
-     * 获取 Upsert 使用的主键字段。
-     */
-    private List<String> resolvePrimaryKeys(
-            CatalogTable table) {
-
-        if (config.hasConfiguredPrimaryKeys()) {
-            return config.getPrimaryKeys();
+    @SuppressWarnings("unchecked")
+    private List<String> resolvePreparedPrimaryKeys(CatalogTable targetTable) {
+        for (Map.Entry<TablePath, CatalogTable> entry : metadata.getTargetTables().entrySet()) {
+            if (entry.getValue().getTablePath().equals(targetTable.getTablePath())) {
+                Object keys = metadata.getAttribute(entry.getKey());
+                return keys instanceof List ? (List<String>) keys : Collections.<String>emptyList();
+            }
         }
-
-        PrimaryKey primaryKey =
-                table.getTableSchema()
-                        .getPrimaryKey();
-
-        if (primaryKey == null) {
-            return new ArrayList<String>();
-        }
-
-        return primaryKey.getColumnNames();
+        return Collections.emptyList();
     }
 
     /**

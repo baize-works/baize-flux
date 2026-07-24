@@ -44,6 +44,17 @@ public interface Source<SplitT extends SourceSplit>
     }
 
     /**
+     * Validates execution reader parallelism before source tasks are created.
+     * Connectors may override this to reject unsupported execution modes.
+     */
+    default void validateParallelism(int parallelism) {
+        if (parallelism <= 0) {
+            throw new IllegalArgumentException(
+                    "parallelism must be greater than 0");
+        }
+    }
+
+    /**
      * 创建 SourceReader。
      * <p>
      * 每个执行任务必须使用独立 Reader，

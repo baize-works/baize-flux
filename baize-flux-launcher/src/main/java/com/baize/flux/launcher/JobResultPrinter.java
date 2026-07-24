@@ -27,6 +27,14 @@ public final class JobResultPrinter {
         line(output, "作业名称", result.getJobName());
         line(output, "执行状态", result.getStatus());
         line(output, "执行耗时（毫秒）", result.getDurationMillis());
+        line(output, "提交语义", result.getCommitSummary().getCommitScope());
+        line(output, "成功提交 SinkTask 数", result.getCommitSummary().getCommittedTaskCount());
+        line(output, "失败或未提交 SinkTask 数", result.getCommitSummary().getFailedOrUncommittedTaskCount());
+        line(output, "是否部分提交", result.getCommitSummary().isPartialCommit());
+        if (result.getCommitSummary().isPartialCommit()) {
+            line(output, "警告", result.getCommitSummary().getWarning());
+        }
+        line(output, "安全重跑建议", result.getCommitSummary().getRetryAdvice());
 
         output.println("  汇总指标：");
         output.println("    数据源：");

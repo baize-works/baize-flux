@@ -2,6 +2,7 @@ package com.baize.flux.framework.job;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.typesafe.config.Config;
+import com.baize.flux.framework.job.SplitAssignmentMode;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigResolveOptions;
 
@@ -90,12 +91,16 @@ public final class JobConfigParser {
                         ReadonlyConfig.fromConfig(
                                 sinkConnectorConfig));
 
-        ExecutionConfig executionConfig =
-                new ExecutionConfig(
-                        batchSize,
-                        sourceParallelism,
-                        sinkParallelism,
-                        channelCapacity);
+        SinkPartitionStrategy sinkPartitionStrategy = root.hasPath("env.sink-partition-strategy")
+                ? SinkPartitionStrategy.valueOf(root.getString("env.sink-partition-strategy").trim().toUpperCase(java.util.Locale.ROOT))
+                : SinkPartitionStrategy.TABLE_AFFINITY;
+
+        SplitAssignmentMode splitAssignmentMode = root.hasPath("env.split-assignment-mode")
+                ? SplitAssignmentMode.valueOf(root.getString("env.split-assignment-mode").trim().toUpperCase(java.util.Locale.ROOT))
+                : SplitAssignmentMode.STATIC_ROUND_ROBIN;
+
+        ExecutionConfig executionConfig = new ExecutionConfig(batchSize, sourceParallelism, sinkParallelism,
+                channelCapacity, sinkPartitionStrategy, splitAssignmentMode);
 
         return new JobDefinition(
                 jobName,

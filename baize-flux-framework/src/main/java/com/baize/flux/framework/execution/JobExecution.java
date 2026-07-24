@@ -14,12 +14,14 @@ import com.baize.flux.framework.execution.task.SinkTask;
 import com.baize.flux.framework.execution.task.SourceTask;
 import com.baize.flux.framework.job.JobResult;
 import com.baize.flux.framework.job.JobStatus;
+import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.SinkTaskPlan;
 import com.baize.flux.framework.planner.SourceTaskPlan;
+import com.baize.flux.framework.execution.split.SplitProvider;
 import com.baize.flux.framework.routing.Partitioner;
-import com.baize.flux.framework.routing.TableHashPartitioner;
+import com.baize.flux.framework.routing.SinkPartitioner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,6 +77,7 @@ public final class JobExecution {
                         DataChannel<RecordEnvelope<FluxRow>>>();
 
         Throwable failure = null;
+        CommitSummary commitSummary = CommitSummary.empty();
 
         try {
             int sourceTaskCount =
@@ -98,6 +101,10 @@ public final class JobExecution {
             List<ExecutionTask> sourceTasks =
                     createSourceTasks(channels);
 
+            for (SourceTaskPlan<?> plan : executionPlan.getSourceTaskPlans()) {
+                jobMetrics.registerSplitProvider(plan.getSplitProvider());
+            }
+
             int totalTaskCount =
                     sinkTasks.size()
                             + sourceTasks.size();
@@ -116,17 +123,14 @@ public final class JobExecution {
                                 new Runnable() {
                                     @Override
                                     public void run() {
-                                        failChannels(
-                                                channels,
-                                                cancellationToken
-                                                        .getCause());
+                                        failChannels(channels, cancellationToken.getCause());
+                                        cancelSplitProviders(executionPlan.getSourceTaskPlans(), cancellationToken.getCause());
                                     }
                                 });
 
-                failure =
-                        coordinator.execute(
-                                sinkTasks,
-                                sourceTasks);
+                ExecutionCoordinator.ExecutionOutcome outcome = coordinator.execute(sinkTasks, sourceTasks);
+                failure = outcome.getFailure();
+                commitSummary = outcome.getCommitSummary();
             }
 
         } catch (Throwable throwable) {
@@ -145,7 +149,13 @@ public final class JobExecution {
 
         JobStatus status;
 
-        if (failure != null) {
+        if (commitSummary.isPartialCommit()) {
+            /* A partial task-local commit must never be presented as a successful or canceled Job. */
+            status = JobStatus.FAILED;
+            if (failure == null) {
+                failure = new IllegalStateException(commitSummary.getWarning());
+            }
+        } else if (failure != null) {
             status = JobStatus.FAILED;
         } else if (cancellationToken.isCancelled()) {
             status = JobStatus.CANCELED;
@@ -159,13 +169,20 @@ public final class JobExecution {
                 startTime,
                 System.currentTimeMillis(),
                 jobMetrics,
-                failure);
+                failure,
+                commitSummary);
     }
 
     public void cancel() {
         cancellationToken.cancel(
                 new java.util.concurrent.CancellationException(
                         "Job was cancelled by caller"));
+    }
+
+    private static void cancelSplitProviders(List<SourceTaskPlan<?>> plans, Throwable cause) {
+        java.util.HashSet<SplitProvider<?>> providers = new java.util.HashSet<SplitProvider<?>>();
+        for (SourceTaskPlan<?> plan : plans) if (plan.getSplitProvider() != null) providers.add(plan.getSplitProvider());
+        for (SplitProvider<?> provider : providers) provider.cancel(cause);
     }
 
     private void createChannels(
@@ -282,7 +299,7 @@ public final class JobExecution {
          */
         Partitioner<RecordEnvelope<FluxRow>>
                 partitioner =
-                new TableHashPartitioner<FluxRow>();
+                new SinkPartitioner<FluxRow>(executionPlan.getExecutionConfig().getSinkPartitionStrategy());
 
         OutputGate<RecordEnvelope<FluxRow>>
                 outputGate =

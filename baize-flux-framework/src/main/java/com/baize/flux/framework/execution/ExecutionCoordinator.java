@@ -1,6 +1,8 @@
 package com.baize.flux.framework.execution;
 
 import com.baize.flux.framework.execution.task.ExecutionTask;
+import com.baize.flux.framework.execution.task.SinkTask;
+import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.metrics.TaskMetrics;
 
@@ -68,7 +70,7 @@ public final class ExecutionCoordinator {
                         "cancellationHook must not be null");
     }
 
-    public Throwable execute(
+    public ExecutionOutcome execute(
             List<ExecutionTask> sinkTasks,
             List<ExecutionTask> sourceTasks) {
 
@@ -90,7 +92,7 @@ public final class ExecutionCoordinator {
         allTasks.addAll(sourceTasks);
 
         if (allTasks.isEmpty()) {
-            return null;
+            return new ExecutionOutcome(null, CommitSummary.empty());
         }
 
         List<Future<TaskResult>> futures =
@@ -175,7 +177,36 @@ public final class ExecutionCoordinator {
                     throwable);
         }
 
-        return firstFailure;
+        return new ExecutionOutcome(firstFailure, summarizeCommits(sinkTasks));
+    }
+
+    private CommitSummary summarizeCommits(List<ExecutionTask> sinkTasks) {
+        int committed = 0;
+        String retryAdvice = "This sink commits per task; verify already committed targets before retrying.";
+        com.baize.flux.api.sink.CommitScope scope = com.baize.flux.api.sink.CommitScope.TASK_LOCAL;
+        for (ExecutionTask task : sinkTasks) {
+            if (task instanceof SinkTask) {
+                SinkTask sinkTask = (SinkTask) task;
+                if (sinkTask.isCommitted()) committed++;
+                scope = sinkTask.getCommitScope();
+                retryAdvice = sinkTask.getRetryAdvice();
+            }
+        }
+        return new CommitSummary(committed, sinkTasks.size() - committed, scope, retryAdvice);
+    }
+
+    /** Result of task coordination, including local sink commit observations. */
+    public static final class ExecutionOutcome {
+        private final Throwable failure;
+        private final CommitSummary commitSummary;
+
+        private ExecutionOutcome(Throwable failure, CommitSummary commitSummary) {
+            this.failure = failure;
+            this.commitSummary = commitSummary;
+        }
+
+        public Throwable getFailure() { return failure; }
+        public CommitSummary getCommitSummary() { return commitSummary; }
     }
 
     private void cancelAll(

@@ -3,6 +3,8 @@ package com.baize.flux.framework.connector;
 import com.baize.flux.api.configuration.util.ConfigValidator;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.source.Source;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
+import com.baize.flux.api.sink.SinkPrepareContext;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
@@ -60,13 +62,16 @@ public final class ConnectorPreparer {
 
         PreparedSource<?> source =
                 prepareSource(
-                        definition.getSource());
+                        definition.getSource(),
+                        definition.getExecutionConfig()
+                                .getSourceParallelism());
 
         List<PreparedSink> sinks =
                 prepareSinks(
                         definition.getSink(),
                         definition.getExecutionConfig()
-                                .getSinkParallelism());
+                                .getSinkParallelism(),
+                        source.getTables());
 
         return new PreparedJob(
                 definition.getName(),
@@ -76,7 +81,8 @@ public final class ConnectorPreparer {
     }
 
     private PreparedSource<?> prepareSource(
-            SourceDefinition definition) throws Exception {
+            SourceDefinition definition,
+            int sourceParallelism) throws Exception {
 
         TableSourceFactory<?> factory =
                 registry.getSourceFactory(
@@ -95,14 +101,16 @@ public final class ConnectorPreparer {
         return createPreparedSource(
                 definition.getType(),
                 factory,
-                context);
+                context,
+                sourceParallelism);
     }
 
     private <SplitT extends SourceSplit>
     PreparedSource<SplitT> createPreparedSource(
             String identifier,
             TableSourceFactory<SplitT> factory,
-            SourceFactoryContext context) throws Exception {
+            SourceFactoryContext context,
+            int sourceParallelism) throws Exception {
 
         Source<SplitT> source =
                 factory.createSource(context);
@@ -113,6 +121,8 @@ public final class ConnectorPreparer {
                             + identifier
                             + "' returned a null source");
         }
+
+        source.validateParallelism(sourceParallelism);
 
         List<CatalogTable> catalogTables =
                 factory.discoverTableSchemas(context);
@@ -130,7 +140,8 @@ public final class ConnectorPreparer {
 
     private List<PreparedSink> prepareSinks(
             SinkDefinition definition,
-            int parallelism) {
+            int parallelism,
+            Map<TablePath, CatalogTable> sourceTables) throws Exception {
 
         SinkFactory factory =
                 registry.getSinkFactory(
@@ -141,6 +152,12 @@ public final class ConnectorPreparer {
                 .validate(
                         factory.optionRule());
 
+        PreparedSinkMetadata metadata = factory.createPreparer(definition.getOptions())
+                .prepare(new SinkPrepareContext(definition.getOptions(), sourceTables));
+        if (metadata == null) {
+            throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
+        }
+
         List<PreparedSink> sinks =
                 new java.util.ArrayList<PreparedSink>(
                         parallelism);
@@ -150,7 +167,8 @@ public final class ConnectorPreparer {
                     new PreparedSink(
                             definition.getType(),
                             factory,
-                            definition.getOptions()));
+                            definition.getOptions(),
+                            metadata));
         }
 
         return sinks;

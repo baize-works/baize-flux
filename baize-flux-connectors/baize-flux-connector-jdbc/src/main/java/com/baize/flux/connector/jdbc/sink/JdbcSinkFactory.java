@@ -4,6 +4,8 @@ import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.util.OptionRule;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.SinkPreparer;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcCommonOptions;
 import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
@@ -33,7 +35,12 @@ public final class JdbcSinkFactory implements SinkFactory {
     }
 
     @Override
-    public SinkWriter<FluxRow> createSink(ReadonlyConfig config) {
-        return new JdbcSinkWriter(JdbcSinkConfig.of(config));
+    public SinkPreparer createPreparer(ReadonlyConfig config) {
+        return new JdbcSinkPreparer(JdbcSinkConfig.of(config));
+    }
+
+    @Override
+    public SinkWriter<FluxRow> createSink(ReadonlyConfig config, PreparedSinkMetadata metadata) {
+        return new JdbcSinkWriter(JdbcSinkConfig.of(config), metadata);
     }
 }

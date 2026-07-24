@@ -12,6 +12,7 @@ import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskContext;
 import com.baize.flux.framework.execution.TaskId;
 import com.baize.flux.framework.planner.SourceTaskPlan;
+import com.baize.flux.framework.execution.split.SplitProvider;
 
 import java.util.Map;
 import java.util.Objects;
@@ -74,14 +75,17 @@ public final class SourceTask<
                         "Source returned a null reader");
             }
 
+            SplitProvider<SplitT> provider = plan.getSplitProvider();
+            if (provider != null) {
+                executeDynamically(reader, provider, context, preparedSource);
+                return;
+            }
+
+            context.getMetrics().setTotalSplitCount(plan.getSplits().size());
             reader.open(plan.getSplits());
 
-            while (!context
-                    .getCancellationToken()
-                    .isCancelled()) {
-
-                RecordBatch<FluxRow> batch =
-                        reader.readBatch();
+            while (!context.getCancellationToken().isCancelled()) {
+                RecordBatch<FluxRow> batch = reader.readBatch();
 
                 if (batch == null) {
                     throw new IllegalStateException(
@@ -156,6 +160,49 @@ public final class SourceTask<
 
                 throw propagate(
                         closeFailure);
+            }
+        }
+    }
+
+    private void executeDynamically(SourceReader<FluxRow, SplitT> reader, SplitProvider<SplitT> provider,
+            TaskContext context, PreparedSource<SplitT> preparedSource) throws Exception {
+        reader.open();
+        while (!context.getCancellationToken().isCancelled()) {
+            SplitT split = provider.acquire(context.getCancellationToken());
+            if (split == null) return;
+            context.getMetrics().markSplitRunning();
+            boolean completed = false;
+            try {
+                reader.openSplit(split);
+                while (!context.getCancellationToken().isCancelled()) {
+                    RecordBatch<FluxRow> batch = reader.readBatch();
+                    if (batch == null) throw new IllegalStateException("SourceReader returned a null RecordBatch");
+                    if (batch.isEndOfInput()) { completed = true; break; }
+                    context.getMetrics().setCurrentPosition(batch.getDataSetId(), batch.getSplitId());
+                    context.getMetrics().incrementBatchCount();
+                    context.getMetrics().addSourceReadRecords(batch.getRecords().size());
+                    outputGate.write(createEnvelope(batch, preparedSource.getTables()));
+                }
+            } catch (Throwable failure) {
+                provider.fail(split, failure);
+                context.getMetrics().markSplitFailed();
+                try {
+                    reader.closeSplit();
+                } catch (Throwable closeFailure) {
+                    failure.addSuppressed(closeFailure);
+                }
+                throw failure;
+            } finally {
+                if (completed) reader.closeSplit();
+            }
+            if (completed) {
+                provider.complete(split);
+                context.getMetrics().markSplitFinished();
+                context.getMetrics().markSplitCompleted(split.splitId());
+            } else {
+                provider.returnSplit(split);
+                context.getMetrics().markSplitFinished();
+                return;
             }
         }
     }

@@ -6,6 +6,7 @@ import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.catalog.JdbcCatalogConfig;
 import com.baize.flux.connector.jdbc.catalog.mysql.MySqlCatalog;
 import com.baize.flux.connector.jdbc.config.JdbcConnectionConfig;
+import com.baize.flux.connector.jdbc.config.ReadConsistency;
 import com.baize.flux.connector.jdbc.core.converter.JdbcRowConverter;
 import com.baize.flux.connector.jdbc.core.dialect.DatabaseIdentifier;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
@@ -71,6 +72,13 @@ public final class MySqlDialect
     @Override
     public JdbcRowConverter rowConverter() {
         return new MySqlJdbcRowConverter();
+    }
+
+    @Override
+    public Set<ReadConsistency> supportedReadConsistencies() {
+        return EnumSet.of(
+                ReadConsistency.BEST_EFFORT,
+                ReadConsistency.SINGLE_CONNECTION_SNAPSHOT);
     }
 
     @Override

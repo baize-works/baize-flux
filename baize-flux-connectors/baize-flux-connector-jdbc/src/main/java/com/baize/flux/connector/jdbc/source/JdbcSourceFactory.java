@@ -96,6 +96,7 @@ public final class JdbcSourceFactory
                         JdbcSourceOptions.QUERY,
                         JdbcSourceOptions.WHERE_CONDITION,
                         JdbcSourceOptions.FETCH_SIZE,
+                        JdbcSourceOptions.READ_CONSISTENCY,
                         JdbcSourceOptions.PARTITION_COLUMN,
                         JdbcSourceOptions.PARTITION_LOWER_BOUND,
                         JdbcSourceOptions.PARTITION_UPPER_BOUND,
