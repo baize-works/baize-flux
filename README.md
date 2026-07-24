@@ -18,7 +18,7 @@ mvn -pl baize-flux-launcher -am compile exec:java \
   -Dexec.args=baize-flux-launcher/examples/jdbc-single-table.conf
 ```
 
-Or extract `baize-flux-launcher/target/baize-flux-1.0.0.tar.gz`, copy and edit `config/baize-flux.yaml`, then run:
+Or extract `baize-flux-dist/target/baize-flux-1.0.0.tar.gz`, copy and edit `config/baize-flux.yaml`, then run:
 
 ```bash
 bin/baize-flux.sh --config config/baize-flux.yaml
