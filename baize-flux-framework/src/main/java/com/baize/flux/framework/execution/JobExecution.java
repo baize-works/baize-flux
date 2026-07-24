@@ -19,6 +19,7 @@ import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.SinkTaskPlan;
 import com.baize.flux.framework.planner.SourceTaskPlan;
+import com.baize.flux.framework.execution.split.SplitProvider;
 import com.baize.flux.framework.routing.Partitioner;
 import com.baize.flux.framework.routing.SinkPartitioner;
 
@@ -100,6 +101,10 @@ public final class JobExecution {
             List<ExecutionTask> sourceTasks =
                     createSourceTasks(channels);
 
+            for (SourceTaskPlan<?> plan : executionPlan.getSourceTaskPlans()) {
+                jobMetrics.registerSplitProvider(plan.getSplitProvider());
+            }
+
             int totalTaskCount =
                     sinkTasks.size()
                             + sourceTasks.size();
@@ -118,10 +123,8 @@ public final class JobExecution {
                                 new Runnable() {
                                     @Override
                                     public void run() {
-                                        failChannels(
-                                                channels,
-                                                cancellationToken
-                                                        .getCause());
+                                        failChannels(channels, cancellationToken.getCause());
+                                        cancelSplitProviders(executionPlan.getSourceTaskPlans(), cancellationToken.getCause());
                                     }
                                 });
 
@@ -174,6 +177,12 @@ public final class JobExecution {
         cancellationToken.cancel(
                 new java.util.concurrent.CancellationException(
                         "Job was cancelled by caller"));
+    }
+
+    private static void cancelSplitProviders(List<SourceTaskPlan<?>> plans, Throwable cause) {
+        java.util.HashSet<SplitProvider<?>> providers = new java.util.HashSet<SplitProvider<?>>();
+        for (SourceTaskPlan<?> plan : plans) if (plan.getSplitProvider() != null) providers.add(plan.getSplitProvider());
+        for (SplitProvider<?> provider : providers) provider.cancel(cause);
     }
 
     private void createChannels(

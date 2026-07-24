@@ -16,6 +16,15 @@ public interface SourceReader<T, SplitT extends SourceSplit>
      */
     void open(List<SplitT> splits) throws Exception;
 
+    /** Opens task-local resources for single-split processing. */
+    default void open() throws Exception { open(java.util.Collections.<SplitT>emptyList()); }
+
+    /** Opens one split. Implementations supporting dynamic assignment must override this method. */
+    default void openSplit(SplitT split) throws Exception { throw new UnsupportedOperationException("Single-split lifecycle is not supported"); }
+
+    /** Closes the currently opened split while keeping task-local resources open. */
+    default void closeSplit() throws Exception { }
+
     /**
      * 读取下一批数据。
      * <p>
