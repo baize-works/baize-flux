@@ -1,10 +1,6 @@
 package com.baize.flux.api.connector;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Small, transport-neutral description of a connector artifact.
@@ -20,7 +16,7 @@ public final class ConnectorDescriptor {
     private final String pluginPath;
 
     public ConnectorDescriptor(String identifier, String version, String apiVersion,
-            Set<ConnectorType> types, Set<String> requiredCapabilities, String pluginPath) {
+                               Set<ConnectorType> types, Set<String> requiredCapabilities, String pluginPath) {
         this.identifier = required(identifier, "identifier");
         this.version = required(version, "version");
         this.apiVersion = required(apiVersion, "apiVersion");
@@ -30,15 +26,34 @@ public final class ConnectorDescriptor {
                 ? new LinkedHashSet<String>() : new LinkedHashSet<String>(requiredCapabilities));
         this.pluginPath = pluginPath;
     }
-    public String getIdentifier() { return identifier; }
-    public String getVersion() { return version; }
-    public String getApiVersion() { return apiVersion; }
-    public Set<ConnectorType> getTypes() { return types; }
-    public Set<String> getRequiredCapabilities() { return requiredCapabilities; }
-    public String getPluginPath() { return pluginPath; }
+
     private static String required(String value, String name) {
         Objects.requireNonNull(value, name + " must not be null");
         if (value.trim().isEmpty()) throw new IllegalArgumentException(name + " must not be blank");
         return value;
+    }
+
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public String getApiVersion() {
+        return apiVersion;
+    }
+
+    public Set<ConnectorType> getTypes() {
+        return types;
+    }
+
+    public Set<String> getRequiredCapabilities() {
+        return requiredCapabilities;
+    }
+
+    public String getPluginPath() {
+        return pluginPath;
     }
 }

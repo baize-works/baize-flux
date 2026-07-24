@@ -1,9 +1,11 @@
 package com.baize.flux.connector.jdbc.sink;
 
-import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.api.dirtydata.*;
-import java.nio.file.Paths;
+import com.baize.flux.api.dirtydata.DirtyDataCollector;
+import com.baize.flux.api.dirtydata.DirtyDataContext;
+import com.baize.flux.api.dirtydata.DirtyDataSummary;
+import com.baize.flux.api.dirtydata.DirtyRecord;
 import com.baize.flux.api.sink.PreparedSinkMetadata;
+import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.catalog.TableSchema;
 import com.baize.flux.api.table.type.FluxRow;
@@ -11,20 +13,14 @@ import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.internal.JdbcConnectionProvider;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Savepoint;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.sql.Savepoint;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -62,16 +58,14 @@ public final class JdbcOutputFormat
     private final JdbcConnectionProvider connectionProvider;
 
     private final PreparedSinkMetadata metadata;
-
-    private DirtyDataCollector dirtyDataCollector;
-    private DirtyDataContext dirtyDataContext;
-
-    private Connection connection;
-
-    /** Statements are reused across internal batches and bounded for multi-table jobs. */
+    /**
+     * Statements are reused across internal batches and bounded for multi-table jobs.
+     */
     private final Map<TablePath, CachedStatement> preparedStatementCache =
             new LinkedHashMap<TablePath, CachedStatement>(16, 0.75F, true);
-
+    private DirtyDataCollector dirtyDataCollector;
+    private DirtyDataContext dirtyDataContext;
+    private Connection connection;
     private Boolean supportsSavepoints;
 
     private boolean opened;
@@ -102,14 +96,24 @@ public final class JdbcOutputFormat
                         dialect);
     }
 
+    private static String sanitize(String message) {
+        return message == null ? "" : message.replaceAll("(?i)(password|secret|token)=[^\\s,;]+", "$1=***");
+    }
+
     /**
      * 初始化输出组件。
      *
      * <p>这里暂时不立即创建连接，避免空任务无意义地连接数据库。
      * 第一批数据写入时才真正开启事务。
      */
-    public void setDirtyDataCollector(DirtyDataCollector collector, DirtyDataContext context) { this.dirtyDataCollector = collector; this.dirtyDataContext = context; }
-    public void updateDirtyDataContext(DirtyDataContext context) { this.dirtyDataContext = context; }
+    public void setDirtyDataCollector(DirtyDataCollector collector, DirtyDataContext context) {
+        this.dirtyDataCollector = collector;
+        this.dirtyDataContext = context;
+    }
+
+    public void updateDirtyDataContext(DirtyDataContext context) {
+        this.dirtyDataContext = context;
+    }
 
     public void open() throws Exception {
         if (closed) {
@@ -231,8 +235,9 @@ public final class JdbcOutputFormat
         }
     }
 
-    public DirtyDataSummary getDirtyDataSummary() { return dirtyDataCollector == null ? DirtyDataSummary.empty() : dirtyDataCollector.summary(); }
-    private static String sanitize(String message) { return message == null ? "" : message.replaceAll("(?i)(password|secret|token)=[^\\s,;]+", "$1=***"); }
+    public DirtyDataSummary getDirtyDataSummary() {
+        return dirtyDataCollector == null ? DirtyDataSummary.empty() : dirtyDataCollector.summary();
+    }
 
     /**
      * 执行一个 JDBC Batch。
@@ -275,7 +280,8 @@ public final class JdbcOutputFormat
                     if (dirtyDataCollector != null) {
                         DirtyDataContext context = dirtyDataContext == null ? new DirtyDataContext(null, null, "jdbc", null, null) : dirtyDataContext;
                         dirtyDataCollector.collect(DirtyRecord.from(rowFailure, sanitize(rowFailure.getMessage()), context));
-                        if (dirtyDataCollector.summary().isThresholdExceeded()) throw new IllegalStateException("Dirty-data threshold exceeded");
+                        if (dirtyDataCollector.summary().isThresholdExceeded())
+                            throw new IllegalStateException("Dirty-data threshold exceeded");
                     }
                     LOG.warn(
                             "Skipping dirty JDBC row because dirty_data_policy=SKIP; table={}, row={}",
@@ -431,16 +437,6 @@ public final class JdbcOutputFormat
             statement.close();
         } catch (SQLException ignored) {
             // Connection close is still attempted below.
-        }
-    }
-
-    private static final class CachedStatement {
-        private final String sql;
-        private final PreparedStatement statement;
-
-        private CachedStatement(String sql, PreparedStatement statement) {
-            this.sql = sql;
-            this.statement = statement;
         }
     }
 
@@ -621,8 +617,23 @@ public final class JdbcOutputFormat
         }
 
         if (dirtyDataCollector != null) {
-            try { dirtyDataCollector.close(failure == null && committed); } catch (Exception collectorFailure) { if (failure == null) failure = collectorFailure; else failure.addSuppressed(collectorFailure); }
+            try {
+                dirtyDataCollector.close(failure == null && committed);
+            } catch (Exception collectorFailure) {
+                if (failure == null) failure = collectorFailure;
+                else failure.addSuppressed(collectorFailure);
+            }
         }
         if (failure != null) throw failure;
+    }
+
+    private static final class CachedStatement {
+        private final String sql;
+        private final PreparedStatement statement;
+
+        private CachedStatement(String sql, PreparedStatement statement) {
+            this.sql = sql;
+            this.statement = statement;
+        }
     }
 }

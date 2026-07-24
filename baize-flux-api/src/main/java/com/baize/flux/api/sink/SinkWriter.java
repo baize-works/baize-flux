@@ -38,15 +38,21 @@ public interface SinkWriter<T> extends AutoCloseable {
             CatalogTable sourceTable)
             throws Exception;
 
-    /** Validates that this task is ready to commit; no coordinator is implied. */
+    /**
+     * Validates that this task is ready to commit; no coordinator is implied.
+     */
     default void prepareCommit() throws Exception {
     }
 
-    /** Commits this SinkTask only. */
+    /**
+     * Commits this SinkTask only.
+     */
     default void commit() throws Exception {
     }
 
-    /** Aborts uncommitted work for this SinkTask only. */
+    /**
+     * Aborts uncommitted work for this SinkTask only.
+     */
     default void abort() throws Exception {
         rollback();
     }
@@ -68,7 +74,9 @@ public interface SinkWriter<T> extends AutoCloseable {
         return CommitScope.TASK_LOCAL;
     }
 
-    /** Human-readable retry guidance to surface when this task has committed. */
+    /**
+     * Human-readable retry guidance to surface when this task has committed.
+     */
     default String getRetryAdvice() {
         return "This sink commits per task; verify already committed targets before retrying.";
     }

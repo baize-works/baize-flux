@@ -6,10 +6,10 @@ import com.baize.flux.framework.connector.PreparedJob;
 import com.baize.flux.framework.connector.PreparedSink;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskId;
-import com.baize.flux.framework.job.ExecutionConfig;
-import com.baize.flux.framework.job.SplitAssignmentMode;
 import com.baize.flux.framework.execution.split.LocalSplitQueue;
 import com.baize.flux.framework.execution.split.SplitProvider;
+import com.baize.flux.framework.job.ExecutionConfig;
+import com.baize.flux.framework.job.SplitAssignmentMode;
 
 import java.util.ArrayList;
 import java.util.List;

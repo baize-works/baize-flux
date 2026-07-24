@@ -195,20 +195,6 @@ public final class ExecutionCoordinator {
         return new CommitSummary(committed, sinkTasks.size() - committed, scope, retryAdvice);
     }
 
-    /** Result of task coordination, including local sink commit observations. */
-    public static final class ExecutionOutcome {
-        private final Throwable failure;
-        private final CommitSummary commitSummary;
-
-        private ExecutionOutcome(Throwable failure, CommitSummary commitSummary) {
-            this.failure = failure;
-            this.commitSummary = commitSummary;
-        }
-
-        public Throwable getFailure() { return failure; }
-        public CommitSummary getCommitSummary() { return commitSummary; }
-    }
-
     private void cancelAll(
             List<ExecutionTask> tasks,
             List<Future<TaskResult>> futures,
@@ -234,6 +220,27 @@ public final class ExecutionCoordinator {
 
         for (Future<TaskResult> future : futures) {
             future.cancel(true);
+        }
+    }
+
+    /**
+     * Result of task coordination, including local sink commit observations.
+     */
+    public static final class ExecutionOutcome {
+        private final Throwable failure;
+        private final CommitSummary commitSummary;
+
+        private ExecutionOutcome(Throwable failure, CommitSummary commitSummary) {
+            this.failure = failure;
+            this.commitSummary = commitSummary;
+        }
+
+        public Throwable getFailure() {
+            return failure;
+        }
+
+        public CommitSummary getCommitSummary() {
+            return commitSummary;
         }
     }
 }

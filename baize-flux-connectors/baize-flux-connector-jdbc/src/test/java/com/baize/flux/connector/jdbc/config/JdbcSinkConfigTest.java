@@ -7,9 +7,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigResolveOptions;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class JdbcSinkConfigTest {
 
@@ -44,8 +42,8 @@ public class JdbcSinkConfigTest {
         JdbcSinkConfig config = JdbcSinkConfig.of(
                 ReadonlyConfig.fromConfig(
                         ConfigFactory.parseString(
-                                        "url = \"jdbc:mysql://localhost:3306/test1\"\n"
-                                                + "table = \"test1.sink_${table_name}\"")
+                                "url = \"jdbc:mysql://localhost:3306/test1\"\n"
+                                        + "table = \"test1.sink_${table_name}\"")
                                 .resolve(
                                         ConfigResolveOptions.defaults()
                                                 .setAllowUnresolved(true))));

@@ -20,84 +20,6 @@ public final class AsciiStringRangeSplitter
     private static final BigInteger RADIX = BigInteger.valueOf(
             LAST_PRINTABLE_ASCII - FIRST_PRINTABLE_ASCII + 1L);
 
-    @Override
-    public List<Chunk<String>> split(
-            String lower,
-            String upper,
-            int count) {
-
-        StringRangeSplitDecision decision = assess(lower, upper);
-
-        if (!decision.isSafe()) {
-            throw new IllegalArgumentException(decision.getReason());
-        }
-
-        if (count <= 0) {
-            throw new IllegalArgumentException(
-                    "chunkCount must be greater than 0");
-        }
-
-        if (lower.equals(upper)) {
-            return Collections.singletonList(
-                    new Chunk<String>(lower, upper, true));
-        }
-
-        BigInteger low = encode(lower);
-        BigInteger high = encode(upper);
-
-        /*
-         * 字符串映射后的值是离散空间，因此数量为 high - low + 1。
-         */
-        BigInteger cardinality =
-                high.subtract(low).add(BigInteger.ONE);
-
-        int actualCount =
-                cardinality.min(BigInteger.valueOf(count)).intValue();
-
-        BigInteger[] division =
-                cardinality.divideAndRemainder(
-                        BigInteger.valueOf(actualCount));
-
-        BigInteger baseSize = division[0];
-        int remainder = division[1].intValue();
-
-        List<Chunk<String>> result =
-                new ArrayList<Chunk<String>>(actualCount);
-
-        BigInteger start = low;
-
-        for (int index = 0; index < actualCount; index++) {
-            BigInteger chunkSize =
-                    baseSize.add(index < remainder
-                            ? BigInteger.ONE
-                            : BigInteger.ZERO);
-
-            boolean last = index == actualCount - 1;
-            BigInteger end = last ? high : start.add(chunkSize);
-
-            String startValue =
-                    index == 0
-                            ? lower
-                            : decode(start, lower.length());
-
-            String endValue =
-                    last
-                            ? upper
-                            : decode(end, lower.length());
-
-            result.add(
-                    new Chunk<String>(
-                            startValue,
-                            endValue,
-                            last));
-
-            start = end;
-        }
-
-        validateGeneratedChunks(result);
-        return Collections.unmodifiableList(result);
-    }
-
     /**
      * 只校验字符串本身是否可以进行 ASCII 范围映射。
      *
@@ -201,5 +123,83 @@ public final class AsciiStringRangeSplitter
                 }
             }
         }
+    }
+
+    @Override
+    public List<Chunk<String>> split(
+            String lower,
+            String upper,
+            int count) {
+
+        StringRangeSplitDecision decision = assess(lower, upper);
+
+        if (!decision.isSafe()) {
+            throw new IllegalArgumentException(decision.getReason());
+        }
+
+        if (count <= 0) {
+            throw new IllegalArgumentException(
+                    "chunkCount must be greater than 0");
+        }
+
+        if (lower.equals(upper)) {
+            return Collections.singletonList(
+                    new Chunk<String>(lower, upper, true));
+        }
+
+        BigInteger low = encode(lower);
+        BigInteger high = encode(upper);
+
+        /*
+         * 字符串映射后的值是离散空间，因此数量为 high - low + 1。
+         */
+        BigInteger cardinality =
+                high.subtract(low).add(BigInteger.ONE);
+
+        int actualCount =
+                cardinality.min(BigInteger.valueOf(count)).intValue();
+
+        BigInteger[] division =
+                cardinality.divideAndRemainder(
+                        BigInteger.valueOf(actualCount));
+
+        BigInteger baseSize = division[0];
+        int remainder = division[1].intValue();
+
+        List<Chunk<String>> result =
+                new ArrayList<Chunk<String>>(actualCount);
+
+        BigInteger start = low;
+
+        for (int index = 0; index < actualCount; index++) {
+            BigInteger chunkSize =
+                    baseSize.add(index < remainder
+                            ? BigInteger.ONE
+                            : BigInteger.ZERO);
+
+            boolean last = index == actualCount - 1;
+            BigInteger end = last ? high : start.add(chunkSize);
+
+            String startValue =
+                    index == 0
+                            ? lower
+                            : decode(start, lower.length());
+
+            String endValue =
+                    last
+                            ? upper
+                            : decode(end, lower.length());
+
+            result.add(
+                    new Chunk<String>(
+                            startValue,
+                            endValue,
+                            last));
+
+            start = end;
+        }
+
+        validateGeneratedChunks(result);
+        return Collections.unmodifiableList(result);
     }
 }

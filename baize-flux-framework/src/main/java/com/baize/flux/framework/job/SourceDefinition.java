@@ -27,14 +27,6 @@ public final class SourceDefinition {
                         "options must not be null");
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public ReadonlyConfig getOptions() {
-        return options;
-    }
-
     private static String requireType(String type) {
         Objects.requireNonNull(
                 type,
@@ -48,5 +40,13 @@ public final class SourceDefinition {
         }
 
         return normalized;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public ReadonlyConfig getOptions() {
+        return options;
     }
 }

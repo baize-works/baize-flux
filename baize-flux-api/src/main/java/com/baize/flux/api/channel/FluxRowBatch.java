@@ -1,7 +1,7 @@
 package com.baize.flux.api.channel;
 
-import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.api.source.RecordSizeEstimator;
+import com.baize.flux.api.table.type.FluxRow;
 
 import java.io.Serializable;
 import java.util.ArrayList;

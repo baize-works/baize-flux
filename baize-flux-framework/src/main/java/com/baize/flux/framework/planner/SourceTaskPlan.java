@@ -74,7 +74,9 @@ public final class SourceTaskPlan<
         return splits;
     }
 
-    public SplitProvider<SplitT> getSplitProvider() { return splitProvider; }
+    public SplitProvider<SplitT> getSplitProvider() {
+        return splitProvider;
+    }
 
     public int getBatchSize() {
         return batchSize;

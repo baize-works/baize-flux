@@ -5,12 +5,12 @@ import com.baize.flux.framework.execution.LocalFluxEngine;
 import com.baize.flux.framework.job.JobConfigParser;
 import com.baize.flux.framework.job.JobDefinition;
 import com.baize.flux.framework.job.JobResult;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * 本地离线同步启动器。

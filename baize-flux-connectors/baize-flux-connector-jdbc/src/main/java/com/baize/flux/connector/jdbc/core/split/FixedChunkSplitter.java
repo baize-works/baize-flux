@@ -33,6 +33,35 @@ public final class FixedChunkSplitter implements ChunkSplitter<BigDecimal> {
         this.integral = integral;
     }
 
+    private static int resolveIntegralChunkCount(
+            BigInteger cardinality,
+            int requestedCount) {
+
+        BigInteger requested = BigInteger.valueOf(requestedCount);
+        return cardinality.min(requested).intValue();
+    }
+
+    private static void validate(
+            BigDecimal lower,
+            BigDecimal upper,
+            int count) {
+
+        if (lower == null || upper == null) {
+            throw new IllegalArgumentException(
+                    "numeric bounds must not be null");
+        }
+
+        if (lower.compareTo(upper) > 0) {
+            throw new IllegalArgumentException(
+                    "numeric lower bound must not be greater than upper bound");
+        }
+
+        if (count <= 0) {
+            throw new IllegalArgumentException(
+                    "chunkCount must be greater than 0");
+        }
+    }
+
     @Override
     public List<Chunk<BigDecimal>> split(
             BigDecimal lower,
@@ -157,34 +186,5 @@ public final class FixedChunkSplitter implements ChunkSplitter<BigDecimal> {
         }
 
         return Collections.unmodifiableList(result);
-    }
-
-    private static int resolveIntegralChunkCount(
-            BigInteger cardinality,
-            int requestedCount) {
-
-        BigInteger requested = BigInteger.valueOf(requestedCount);
-        return cardinality.min(requested).intValue();
-    }
-
-    private static void validate(
-            BigDecimal lower,
-            BigDecimal upper,
-            int count) {
-
-        if (lower == null || upper == null) {
-            throw new IllegalArgumentException(
-                    "numeric bounds must not be null");
-        }
-
-        if (lower.compareTo(upper) > 0) {
-            throw new IllegalArgumentException(
-                    "numeric lower bound must not be greater than upper bound");
-        }
-
-        if (count <= 0) {
-            throw new IllegalArgumentException(
-                    "chunkCount must be greater than 0");
-        }
     }
 }

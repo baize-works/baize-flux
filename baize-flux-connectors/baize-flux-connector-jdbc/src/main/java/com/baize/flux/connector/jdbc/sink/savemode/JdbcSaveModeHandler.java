@@ -6,7 +6,9 @@ import com.baize.flux.api.table.catalog.WritableCatalog;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 
-/** JDBC-specific save-mode handler that controls whether copied primary keys are created. */
+/**
+ * JDBC-specific save-mode handler that controls whether copied primary keys are created.
+ */
 public final class JdbcSaveModeHandler extends DefaultSaveModeHandler {
     private final boolean createPrimaryKey;
 

@@ -13,10 +13,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class JdbcReadConsistencyTest {
 
@@ -43,7 +40,7 @@ public class JdbcReadConsistencyTest {
         final List<String> calls = new ArrayList<String>();
         Connection connection = (Connection) Proxy.newProxyInstance(
                 getClass().getClassLoader(),
-                new Class<?>[] {Connection.class},
+                new Class<?>[]{Connection.class},
                 (proxy, method, args) -> {
                     if ("setReadOnly".equals(method.getName())) {
                         calls.add("readOnly=" + args[0]);

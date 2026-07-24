@@ -4,8 +4,8 @@ import com.baize.flux.framework.execution.TaskId;
 import com.baize.flux.framework.execution.TaskState;
 
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -56,6 +56,10 @@ public final class TaskMetrics {
                         "taskId must not be null");
     }
 
+    private static void addPositive(AtomicLong counter, long count) {
+        if (count > 0) counter.addAndGet(count);
+    }
+
     public void markStarted() {
         state.set(TaskState.RUNNING);
         startTimeMillis = System.currentTimeMillis();
@@ -86,37 +90,62 @@ public final class TaskMetrics {
         addRecordCount(count);
     }
 
-    public void addFailedRecords(long count) { addPositive(failedRecordCount, count); }
-    public void addSkippedRecords(long count) { addPositive(skippedRecordCount, count); }
-    public void addSourceReadBytes(long count) { addPositive(sourceReadBytes, count); }
-    public void addSinkWrittenBytes(long count) { addPositive(sinkWrittenBytes, count); }
-    public void incrementBatchRetryCount() { batchRetryCount.incrementAndGet(); }
-    public void addDatabaseCommitNanos(long nanos) { addPositive(databaseCommitNanos, nanos); }
-    public void addSqlExecutionNanos(long nanos) { addPositive(sqlExecutionNanos, nanos); }
+    public void addFailedRecords(long count) {
+        addPositive(failedRecordCount, count);
+    }
 
-    /** Records the table and split that this task is currently processing. */
+    public void addSkippedRecords(long count) {
+        addPositive(skippedRecordCount, count);
+    }
+
+    public void addSourceReadBytes(long count) {
+        addPositive(sourceReadBytes, count);
+    }
+
+    public void addSinkWrittenBytes(long count) {
+        addPositive(sinkWrittenBytes, count);
+    }
+
+    public void incrementBatchRetryCount() {
+        batchRetryCount.incrementAndGet();
+    }
+
+    public void addDatabaseCommitNanos(long nanos) {
+        addPositive(databaseCommitNanos, nanos);
+    }
+
+    public void addSqlExecutionNanos(long nanos) {
+        addPositive(sqlExecutionNanos, nanos);
+    }
+
+    /**
+     * Records the table and split that this task is currently processing.
+     */
     public void setCurrentPosition(String table, String split) {
         currentTable = table;
         currentSplit = split;
     }
 
-    public void setTotalSplitCount(long count) { totalSplitCount.set(Math.max(0L, count)); }
-    public void markSplitRunning() { runningSplitCount.incrementAndGet(); }
-    public void markSplitFinished() { if (runningSplitCount.get() > 0L) runningSplitCount.decrementAndGet(); }
-    public void markSplitFailed() { markSplitFinished(); failedSplitCount.incrementAndGet(); }
+    public void markSplitRunning() {
+        runningSplitCount.incrementAndGet();
+    }
 
-    /** Marks a split completed once; repeated notifications are intentionally idempotent. */
+    public void markSplitFinished() {
+        if (runningSplitCount.get() > 0L) runningSplitCount.decrementAndGet();
+    }
+
+    public void markSplitFailed() {
+        markSplitFinished();
+        failedSplitCount.incrementAndGet();
+    }
+
+    /**
+     * Marks a split completed once; repeated notifications are intentionally idempotent.
+     */
     public void markSplitCompleted(String splitId) {
         if (splitId != null && completedSplits.add(splitId)) {
             completedSplitCount.incrementAndGet();
         }
-    }
-
-    /** Sets the known total rows for ETA calculation, or a negative value when unknown. */
-    public void setExpectedRecordCount(long count) { expectedRecordCount = count; }
-
-    private static void addPositive(AtomicLong counter, long count) {
-        if (count > 0) counter.addAndGet(count);
     }
 
     public TaskId getTaskId() {
@@ -135,34 +164,103 @@ public final class TaskMetrics {
         return recordCount.get();
     }
 
-    public long getSourceReadRecordCount() { return sourceReadRecordCount.get(); }
-    public long getSinkWriteSuccessRecordCount() { return sinkWriteSuccessRecordCount.get(); }
-    public long getFailedRecordCount() { return failedRecordCount.get(); }
-    public long getSkippedRecordCount() { return skippedRecordCount.get(); }
-    public long getSourceReadBytes() { return sourceReadBytes.get(); }
-    public long getSinkWrittenBytes() { return sinkWrittenBytes.get(); }
-    public long getBatchRetryCount() { return batchRetryCount.get(); }
-    public long getDatabaseCommitMillis() { return databaseCommitNanos.get() / 1_000_000L; }
-    public long getSqlExecutionMillis() { return sqlExecutionNanos.get() / 1_000_000L; }
-    public String getCurrentTable() { return currentTable; }
-    public String getCurrentSplit() { return currentSplit; }
-    public long getCompletedSplitCount() { return completedSplitCount.get(); }
-    public long getTotalSplitCount() { return totalSplitCount.get(); }
-    public long getPendingSplitCount() { return Math.max(0L, totalSplitCount.get() - runningSplitCount.get() - completedSplitCount.get() - failedSplitCount.get()); }
-    public long getRunningSplitCount() { return runningSplitCount.get(); }
-    public long getFailedSplitCount() { return failedSplitCount.get(); }
-    public long getExpectedRecordCount() { return expectedRecordCount; }
+    public long getSourceReadRecordCount() {
+        return sourceReadRecordCount.get();
+    }
 
-    /** Rows per second since start, using source rows when available and sink rows otherwise. */
+    public long getSinkWriteSuccessRecordCount() {
+        return sinkWriteSuccessRecordCount.get();
+    }
+
+    public long getFailedRecordCount() {
+        return failedRecordCount.get();
+    }
+
+    public long getSkippedRecordCount() {
+        return skippedRecordCount.get();
+    }
+
+    public long getSourceReadBytes() {
+        return sourceReadBytes.get();
+    }
+
+    public long getSinkWrittenBytes() {
+        return sinkWrittenBytes.get();
+    }
+
+    public long getBatchRetryCount() {
+        return batchRetryCount.get();
+    }
+
+    public long getDatabaseCommitMillis() {
+        return databaseCommitNanos.get() / 1_000_000L;
+    }
+
+    public long getSqlExecutionMillis() {
+        return sqlExecutionNanos.get() / 1_000_000L;
+    }
+
+    public String getCurrentTable() {
+        return currentTable;
+    }
+
+    public String getCurrentSplit() {
+        return currentSplit;
+    }
+
+    public long getCompletedSplitCount() {
+        return completedSplitCount.get();
+    }
+
+    public long getTotalSplitCount() {
+        return totalSplitCount.get();
+    }
+
+    public void setTotalSplitCount(long count) {
+        totalSplitCount.set(Math.max(0L, count));
+    }
+
+    public long getPendingSplitCount() {
+        return Math.max(0L, totalSplitCount.get() - runningSplitCount.get() - completedSplitCount.get() - failedSplitCount.get());
+    }
+
+    public long getRunningSplitCount() {
+        return runningSplitCount.get();
+    }
+
+    public long getFailedSplitCount() {
+        return failedSplitCount.get();
+    }
+
+    public long getExpectedRecordCount() {
+        return expectedRecordCount;
+    }
+
+    /**
+     * Sets the known total rows for ETA calculation, or a negative value when unknown.
+     */
+    public void setExpectedRecordCount(long count) {
+        expectedRecordCount = count;
+    }
+
+    /**
+     * Rows per second since start, using source rows when available and sink rows otherwise.
+     */
     public double getAverageQps() {
         long duration = getDurationMillis();
         return duration == 0L ? 0D : getProgressRecordCount() * 1000D / duration;
     }
 
-    /** Current QPS is the live rate over the task's elapsed execution period. */
-    public double getCurrentQps() { return getAverageQps(); }
+    /**
+     * Current QPS is the live rate over the task's elapsed execution period.
+     */
+    public double getCurrentQps() {
+        return getAverageQps();
+    }
 
-    /** Returns -1 when the total work or a positive rate is not known yet. */
+    /**
+     * Returns -1 when the total work or a positive rate is not known yet.
+     */
     public long getEstimatedRemainingMillis() {
         if (expectedRecordCount < 0L) return -1L;
         double qps = getAverageQps();

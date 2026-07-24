@@ -227,7 +227,9 @@ public interface JdbcDialect extends Serializable {
         return sql.toString();
     }
 
-    /** Builds portable MIN/MAX/COUNT statistics SQL. Custom queries are safely wrapped. */
+    /**
+     * Builds portable MIN/MAX/COUNT statistics SQL. Custom queries are safely wrapped.
+     */
     default String buildSplitStatisticsSql(JdbcSourceTable table, boolean includeCount) {
         String source;
         if (hasText(table.getQuery())) {
@@ -240,7 +242,9 @@ public interface JdbcDialect extends Serializable {
                 + (includeCount ? ", COUNT(*) AS flux_count" : "") + " FROM " + source;
     }
 
-    /** Optional dialect-specific sampled statistics SQL. */
+    /**
+     * Optional dialect-specific sampled statistics SQL.
+     */
     default Optional<String> buildSampleSplitStatisticsSql(JdbcSourceTable table, int sampleSize) {
         return Optional.empty();
     }

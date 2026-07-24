@@ -25,14 +25,6 @@ public final class SinkDefinition {
                         "options must not be null");
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public ReadonlyConfig getOptions() {
-        return options;
-    }
-
     private static String requireType(String type) {
         Objects.requireNonNull(
                 type,
@@ -46,5 +38,13 @@ public final class SinkDefinition {
         }
 
         return normalized;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public ReadonlyConfig getOptions() {
+        return options;
     }
 }

@@ -1,17 +1,16 @@
 package com.baize.flux.connector.jdbc.sink;
 
-import com.baize.flux.api.sink.SinkWriter;
-import com.baize.flux.api.sink.DirtyDataAwareSinkWriter;
 import com.baize.flux.api.dirtydata.*;
-import java.nio.file.Paths;
 import com.baize.flux.api.sink.CommitScope;
+import com.baize.flux.api.sink.DirtyDataAwareSinkWriter;
 import com.baize.flux.api.sink.PreparedSinkMetadata;
+import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.source.RecordBatch;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 
-import java.util.List;
+import java.nio.file.Paths;
 import java.util.Objects;
 
 /**
@@ -45,16 +44,23 @@ public final class JdbcSinkWriter
     public void configureDirtyData(DirtyDataContext context) {
         DirtyDataCollector collector;
         switch (config.getDirtyDataOutputType()) {
-            case LOGGING: collector = new LoggingDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage()); break;
-            case JSONL: collector = new JsonLinesDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage(), Paths.get(config.getDirtyDataOutputPath())); break;
-            default: collector = new BoundedMemoryDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage());
+            case LOGGING:
+                collector = new LoggingDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage());
+                break;
+            case JSONL:
+                collector = new JsonLinesDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage(), Paths.get(config.getDirtyDataOutputPath()));
+                break;
+            default:
+                collector = new BoundedMemoryDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage());
         }
         dirtyDataContext = context;
         outputFormat.setDirtyDataCollector(collector, context);
     }
 
     @Override
-    public DirtyDataSummary getDirtyDataSummary() { return outputFormat.getDirtyDataSummary(); }
+    public DirtyDataSummary getDirtyDataSummary() {
+        return outputFormat.getDirtyDataSummary();
+    }
 
     @Override
     public void open() throws Exception {
@@ -73,7 +79,8 @@ public final class JdbcSinkWriter
             return;
         }
 
-        if (dirtyDataContext != null) outputFormat.updateDirtyDataContext(dirtyDataContext.withDataSet(batch.getDataSetId(), batch.getSplitId()));
+        if (dirtyDataContext != null)
+            outputFormat.updateDirtyDataContext(dirtyDataContext.withDataSet(batch.getDataSetId(), batch.getSplitId()));
 
         outputFormat.write(
                 batch.getRecords(),

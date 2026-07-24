@@ -44,7 +44,9 @@ public final class JdbcSourceConfig
      */
     private final int fetchSize;
 
-    /** Requested consistency for the source read. */
+    /**
+     * Requested consistency for the source read.
+     */
     private final ReadConsistency readConsistency;
     private final SplitPlanningMode splitPlanningMode;
     private final int statisticsQueryTimeout;
@@ -95,9 +97,12 @@ public final class JdbcSourceConfig
         this.readConsistency = Objects.requireNonNull(
                 readConsistency, "readConsistency must not be null");
         this.splitPlanningMode = Objects.requireNonNull(splitPlanningMode, "splitPlanningMode");
-        if (statisticsQueryTimeout <= 0 || sampleSize <= 0) throw new IllegalArgumentException("statistics_query_timeout and sample_size must be positive");
-        this.statisticsQueryTimeout = statisticsQueryTimeout; this.sampleSize = sampleSize;
-        this.allowStatisticsFallback = allowStatisticsFallback; this.nullPartitionSingleSplit = nullPartitionSingleSplit;
+        if (statisticsQueryTimeout <= 0 || sampleSize <= 0)
+            throw new IllegalArgumentException("statistics_query_timeout and sample_size must be positive");
+        this.statisticsQueryTimeout = statisticsQueryTimeout;
+        this.sampleSize = sampleSize;
+        this.allowStatisticsFallback = allowStatisticsFallback;
+        this.nullPartitionSingleSplit = nullPartitionSingleSplit;
         this.intTypeNarrowing =
                 intTypeNarrowing;
 
@@ -254,11 +259,25 @@ public final class JdbcSourceConfig
         return readConsistency;
     }
 
-    public SplitPlanningMode getSplitPlanningMode() { return splitPlanningMode; }
-    public int getStatisticsQueryTimeout() { return statisticsQueryTimeout; }
-    public int getSampleSize() { return sampleSize; }
-    public boolean isAllowStatisticsFallback() { return allowStatisticsFallback; }
-    public boolean isNullPartitionSingleSplit() { return nullPartitionSingleSplit; }
+    public SplitPlanningMode getSplitPlanningMode() {
+        return splitPlanningMode;
+    }
+
+    public int getStatisticsQueryTimeout() {
+        return statisticsQueryTimeout;
+    }
+
+    public int getSampleSize() {
+        return sampleSize;
+    }
+
+    public boolean isAllowStatisticsFallback() {
+        return allowStatisticsFallback;
+    }
+
+    public boolean isNullPartitionSingleSplit() {
+        return nullPartitionSingleSplit;
+    }
 
     public boolean isIntTypeNarrowing() {
         return intTypeNarrowing;

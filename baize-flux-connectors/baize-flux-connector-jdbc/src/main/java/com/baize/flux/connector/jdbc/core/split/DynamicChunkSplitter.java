@@ -31,18 +31,6 @@ public final class DynamicChunkSplitter<T>
         this.maxChunks = maxChunks;
     }
 
-    @Override
-    public List<Chunk<T>> split(
-            T lower,
-            T upper,
-            int requestedChunks) {
-
-        return delegate.split(
-                lower,
-                upper,
-                effectiveChunkCount(requestedChunks, maxChunks));
-    }
-
     static int effectiveChunkCount(
             int requestedChunks,
             int parallelism) {
@@ -58,5 +46,17 @@ public final class DynamicChunkSplitter<T>
         }
 
         return Math.min(requestedChunks, parallelism);
+    }
+
+    @Override
+    public List<Chunk<T>> split(
+            T lower,
+            T upper,
+            int requestedChunks) {
+
+        return delegate.split(
+                lower,
+                upper,
+                effectiveChunkCount(requestedChunks, maxChunks));
     }
 }

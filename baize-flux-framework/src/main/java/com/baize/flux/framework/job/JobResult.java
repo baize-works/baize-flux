@@ -1,7 +1,7 @@
 package com.baize.flux.framework.job;
 
-import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.api.dirtydata.DirtyDataSummary;
+import com.baize.flux.framework.metrics.JobMetrics;
 
 import java.util.Objects;
 
@@ -36,7 +36,9 @@ public final class JobResult {
 
     public JobResult(
             String jobName, JobStatus status, long startTimeMillis, long endTimeMillis,
-            JobMetrics metrics, Throwable failure, CommitSummary commitSummary) { this(jobName,status,startTimeMillis,endTimeMillis,metrics,failure,commitSummary,DirtyDataSummary.empty()); }
+            JobMetrics metrics, Throwable failure, CommitSummary commitSummary) {
+        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, commitSummary, DirtyDataSummary.empty());
+    }
 
     public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis, JobMetrics metrics, Throwable failure, CommitSummary commitSummary, DirtyDataSummary dirtyDataSummary) {
 
@@ -109,9 +111,13 @@ public final class JobResult {
         return failure;
     }
 
-    public CommitSummary getCommitSummary() { return commitSummary; }
+    public CommitSummary getCommitSummary() {
+        return commitSummary;
+    }
 
-    public DirtyDataSummary getDirtyDataSummary() { return dirtyDataSummary; }
+    public DirtyDataSummary getDirtyDataSummary() {
+        return dirtyDataSummary;
+    }
 
     public boolean isSuccess() {
         return status == JobStatus.SUCCEEDED;

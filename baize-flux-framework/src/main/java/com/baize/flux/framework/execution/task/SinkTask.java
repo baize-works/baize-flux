@@ -1,10 +1,10 @@
 package com.baize.flux.framework.execution.task;
 
-import com.baize.flux.api.sink.SinkWriter;
-import com.baize.flux.api.sink.CommitScope;
-import com.baize.flux.api.sink.DirtyDataAwareSinkWriter;
 import com.baize.flux.api.dirtydata.DirtyDataContext;
 import com.baize.flux.api.dirtydata.DirtyDataSummary;
+import com.baize.flux.api.sink.CommitScope;
+import com.baize.flux.api.sink.DirtyDataAwareSinkWriter;
+import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.InputGate;
 import com.baize.flux.framework.channel.RecordEnvelope;
@@ -47,150 +47,6 @@ public final class SinkTask
                         "inputGate must not be null");
     }
 
-    @Override
-    public TaskId getTaskId() {
-        return plan.getTaskId();
-    }
-
-    @Override
-    public void execute(
-            TaskContext context)
-            throws Exception {
-
-        try (com.baize.flux.framework.classloading.ClassLoaderScope ignored =
-                com.baize.flux.framework.classloading.ClassLoaderScope.open(plan.getPreparedSink().getClassLoader())) {
-        SinkWriter<FluxRow> writer = null;
-
-        Throwable failure = null;
-
-        try {
-            writer =
-                    plan.getPreparedSink()
-                            .createWriter();
-
-            if (writer instanceof DirtyDataAwareSinkWriter) ((DirtyDataAwareSinkWriter) writer).configureDirtyData(new DirtyDataContext(plan.getTaskId().getStageName(), getTaskId().toString(), plan.getPreparedSink().getClass().getName(), null, null));
-            writer.open();
-            commitScope = writer.getCommitScope();
-            retryAdvice = writer.getRetryAdvice();
-
-            while (true) {
-                /*
-                 * 不能因为其他 Task 触发取消，就正常退出并提交部分数据。
-                 */
-                if (context
-                        .getCancellationToken()
-                        .isCancelled()) {
-
-                    throw new CancellationException(
-                            "SinkTask was cancelled: "
-                                    + getTaskId());
-                }
-
-                RecordEnvelope<FluxRow> envelope =
-                        inputGate.read();
-
-                /*
-                 * 所有 SourceTask 均已结束。
-                 */
-                if (envelope == null) {
-                    break;
-                }
-
-                long sqlStart = System.nanoTime();
-                try {
-                    writer.write(
-                            envelope.getBatch(),
-                            envelope.getCatalogTable());
-                } finally {
-                    context.getMetrics().addSqlExecutionNanos(
-                            System.nanoTime() - sqlStart);
-                }
-
-                context.getMetrics().setCurrentPosition(
-                        envelope.getBatch().getDataSetId(),
-                        envelope.getBatch().getSplitId());
-
-                context.getMetrics()
-                        .incrementBatchCount();
-
-                context.getMetrics()
-                        .addSinkWriteSuccessRecords(
-                                envelope
-                                        .getBatch()
-                                        .getRecords()
-                                        .size());
-            }
-
-            /*
-             * 在读取结束与提交之间再次检查取消状态，
-             * 防止最后一批处理完成时其他任务刚好失败。
-             */
-            if (context
-                    .getCancellationToken()
-                    .isCancelled()) {
-
-                throw new CancellationException(
-                        "SinkTask was cancelled before commit: "
-                                + getTaskId());
-            }
-
-            long commitStart = System.nanoTime();
-            writer.prepareCommit();
-            writer.commit();
-            context.getMetrics().addDatabaseCommitNanos(System.nanoTime() - commitStart);
-
-            committed = true;
-
-        } catch (Throwable throwable) {
-            failure = throwable;
-
-            if (writer != null) {
-                try {
-                    writer.abort();
-                } catch (Throwable rollbackFailure) {
-                    throwable.addSuppressed(
-                            rollbackFailure);
-                }
-            }
-
-            throw propagate(throwable);
-
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                    if (writer instanceof DirtyDataAwareSinkWriter) dirtyDataSummary = ((DirtyDataAwareSinkWriter) writer).getDirtyDataSummary();
-                } catch (Throwable closeFailure) {
-                    if (failure != null) {
-                        failure.addSuppressed(
-                                closeFailure);
-
-                    } else if (!committed) {
-                        /*
-                         * 事务尚未提交时，关闭异常需要让任务失败。
-                         */
-                        throw propagate(
-                                closeFailure);
-                    }
-
-                    /*
-                     * 数据已经提交后，单纯连接关闭异常不能再把任务标记为失败。
-                     * 否则上层重试可能造成数据重复。
-                     */
-                }
-            }
-        }
-        }
-    }
-
-    public DirtyDataSummary getDirtyDataSummary() { return dirtyDataSummary; }
-
-    public boolean isCommitted() { return committed; }
-
-    public CommitScope getCommitScope() { return commitScope; }
-
-    public String getRetryAdvice() { return retryAdvice; }
-
     private static RuntimeException propagate(
             Throwable throwable)
             throws Exception {
@@ -205,5 +61,159 @@ public final class SinkTask
 
         return new RuntimeException(
                 throwable);
+    }
+
+    @Override
+    public TaskId getTaskId() {
+        return plan.getTaskId();
+    }
+
+    @Override
+    public void execute(
+            TaskContext context)
+            throws Exception {
+
+        try (com.baize.flux.framework.classloading.ClassLoaderScope ignored =
+                     com.baize.flux.framework.classloading.ClassLoaderScope.open(plan.getPreparedSink().getClassLoader())) {
+            SinkWriter<FluxRow> writer = null;
+
+            Throwable failure = null;
+
+            try {
+                writer =
+                        plan.getPreparedSink()
+                                .createWriter();
+
+                if (writer instanceof DirtyDataAwareSinkWriter)
+                    ((DirtyDataAwareSinkWriter) writer).configureDirtyData(new DirtyDataContext(plan.getTaskId().getStageName(), getTaskId().toString(), plan.getPreparedSink().getClass().getName(), null, null));
+                writer.open();
+                commitScope = writer.getCommitScope();
+                retryAdvice = writer.getRetryAdvice();
+
+                while (true) {
+                    /*
+                     * 不能因为其他 Task 触发取消，就正常退出并提交部分数据。
+                     */
+                    if (context
+                            .getCancellationToken()
+                            .isCancelled()) {
+
+                        throw new CancellationException(
+                                "SinkTask was cancelled: "
+                                        + getTaskId());
+                    }
+
+                    RecordEnvelope<FluxRow> envelope =
+                            inputGate.read();
+
+                    /*
+                     * 所有 SourceTask 均已结束。
+                     */
+                    if (envelope == null) {
+                        break;
+                    }
+
+                    long sqlStart = System.nanoTime();
+                    try {
+                        writer.write(
+                                envelope.getBatch(),
+                                envelope.getCatalogTable());
+                    } finally {
+                        context.getMetrics().addSqlExecutionNanos(
+                                System.nanoTime() - sqlStart);
+                    }
+
+                    context.getMetrics().setCurrentPosition(
+                            envelope.getBatch().getDataSetId(),
+                            envelope.getBatch().getSplitId());
+
+                    context.getMetrics()
+                            .incrementBatchCount();
+
+                    context.getMetrics()
+                            .addSinkWriteSuccessRecords(
+                                    envelope
+                                            .getBatch()
+                                            .getRecords()
+                                            .size());
+                }
+
+                /*
+                 * 在读取结束与提交之间再次检查取消状态，
+                 * 防止最后一批处理完成时其他任务刚好失败。
+                 */
+                if (context
+                        .getCancellationToken()
+                        .isCancelled()) {
+
+                    throw new CancellationException(
+                            "SinkTask was cancelled before commit: "
+                                    + getTaskId());
+                }
+
+                long commitStart = System.nanoTime();
+                writer.prepareCommit();
+                writer.commit();
+                context.getMetrics().addDatabaseCommitNanos(System.nanoTime() - commitStart);
+
+                committed = true;
+
+            } catch (Throwable throwable) {
+                failure = throwable;
+
+                if (writer != null) {
+                    try {
+                        writer.abort();
+                    } catch (Throwable rollbackFailure) {
+                        throwable.addSuppressed(
+                                rollbackFailure);
+                    }
+                }
+
+                throw propagate(throwable);
+
+            } finally {
+                if (writer != null) {
+                    try {
+                        writer.close();
+                        if (writer instanceof DirtyDataAwareSinkWriter)
+                            dirtyDataSummary = ((DirtyDataAwareSinkWriter) writer).getDirtyDataSummary();
+                    } catch (Throwable closeFailure) {
+                        if (failure != null) {
+                            failure.addSuppressed(
+                                    closeFailure);
+
+                        } else if (!committed) {
+                            /*
+                             * 事务尚未提交时，关闭异常需要让任务失败。
+                             */
+                            throw propagate(
+                                    closeFailure);
+                        }
+
+                        /*
+                         * 数据已经提交后，单纯连接关闭异常不能再把任务标记为失败。
+                         * 否则上层重试可能造成数据重复。
+                         */
+                    }
+                }
+            }
+        }
+    }
+
+    public DirtyDataSummary getDirtyDataSummary() {
+        return dirtyDataSummary;
+    }
+
+    public boolean isCommitted() {
+        return committed;
+    }
+
+    public CommitScope getCommitScope() {
+        return commitScope;
+    }
+
+    public String getRetryAdvice() {
+        return retryAdvice;
     }
 }

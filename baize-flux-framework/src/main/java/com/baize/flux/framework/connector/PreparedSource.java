@@ -67,7 +67,9 @@ public final class PreparedSource<
         return source;
     }
 
-    public ClassLoader getClassLoader() { return classLoader; }
+    public ClassLoader getClassLoader() {
+        return classLoader;
+    }
 
     public Map<TablePath, CatalogTable> getTables() {
         return tables;

@@ -32,6 +32,9 @@ public class RecordSizeEstimatorTest {
     }
 
     private static final class TestSplit implements SourceSplit {
-        @Override public String splitId() { return "split"; }
+        @Override
+        public String splitId() {
+            return "split";
+        }
     }
 }

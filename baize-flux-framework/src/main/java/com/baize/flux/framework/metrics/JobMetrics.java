@@ -3,11 +3,7 @@ package com.baize.flux.framework.metrics;
 import com.baize.flux.framework.execution.TaskId;
 import com.baize.flux.framework.execution.split.SplitProvider;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -38,13 +34,42 @@ public final class JobMetrics {
                 : previous;
     }
 
-    public void registerSplitProvider(SplitProvider<?> provider) { if (provider != null && !splitProviders.contains(provider)) splitProviders.add(provider); }
-    public long getTotalSplitCount() { return splitProviders.isEmpty() ? sumSplits(0) : splitCount(0); }
-    public long getPendingSplitCount() { return splitProviders.isEmpty() ? sumSplits(1) : splitCount(1); }
-    public long getRunningSplitCount() { return splitProviders.isEmpty() ? sumSplits(2) : splitCount(2); }
-    public long getFailedSplitCount() { return splitProviders.isEmpty() ? sumSplits(4) : splitCount(4); }
-    private long sumSplits(int type) { long total=0L; for (TaskMetrics m : taskMetrics.values()) { if (!"source".equals(m.getTaskId().getStageName())) continue; total += type == 0 ? m.getTotalSplitCount() : type == 1 ? m.getPendingSplitCount() : type == 2 ? m.getRunningSplitCount() : m.getFailedSplitCount(); } return total; }
-    private long splitCount(int type) { long total = 0L; for (SplitProvider<?> p : splitProviders) { total += type == 0 ? p.getTotalSplitCount() : type == 1 ? p.getPendingSplitCount() : type == 2 ? p.getRunningSplitCount() : p.getFailedSplitCount(); } return total; }
+    public void registerSplitProvider(SplitProvider<?> provider) {
+        if (provider != null && !splitProviders.contains(provider)) splitProviders.add(provider);
+    }
+
+    public long getTotalSplitCount() {
+        return splitProviders.isEmpty() ? sumSplits(0) : splitCount(0);
+    }
+
+    public long getPendingSplitCount() {
+        return splitProviders.isEmpty() ? sumSplits(1) : splitCount(1);
+    }
+
+    public long getRunningSplitCount() {
+        return splitProviders.isEmpty() ? sumSplits(2) : splitCount(2);
+    }
+
+    public long getFailedSplitCount() {
+        return splitProviders.isEmpty() ? sumSplits(4) : splitCount(4);
+    }
+
+    private long sumSplits(int type) {
+        long total = 0L;
+        for (TaskMetrics m : taskMetrics.values()) {
+            if (!"source".equals(m.getTaskId().getStageName())) continue;
+            total += type == 0 ? m.getTotalSplitCount() : type == 1 ? m.getPendingSplitCount() : type == 2 ? m.getRunningSplitCount() : m.getFailedSplitCount();
+        }
+        return total;
+    }
+
+    private long splitCount(int type) {
+        long total = 0L;
+        for (SplitProvider<?> p : splitProviders) {
+            total += type == 0 ? p.getTotalSplitCount() : type == 1 ? p.getPendingSplitCount() : type == 2 ? p.getRunningSplitCount() : p.getFailedSplitCount();
+        }
+        return total;
+    }
 
     public void registerChannel(
             ChannelMetrics metrics) {
@@ -80,24 +105,56 @@ public final class JobMetrics {
         return sumBatches("sink");
     }
 
-    /** Positive means more rows have been read than successfully written. */
+    /**
+     * Positive means more rows have been read than successfully written.
+     */
     public long getSourceSinkRecordDifference() {
         return getSourceRecordCount() - getSinkRecordCount();
     }
 
-    public long getFailedRecordCount() { return sumMetric(null, Metric.FAILED_RECORDS); }
-    public long getSkippedRecordCount() { return sumMetric(null, Metric.SKIPPED_RECORDS); }
-    public long getSourceReadBytes() { return sumMetric("source", Metric.SOURCE_BYTES); }
-    public long getSinkWrittenBytes() { return sumMetric("sink", Metric.SINK_BYTES); }
-    public long getCompletedSplitCount() { return splitProviders.isEmpty() ? sumMetric("source", Metric.COMPLETED_SPLITS) : splitCount(3); }
-    public long getBatchRetryCount() { return sumMetric(null, Metric.BATCH_RETRIES); }
-    public long getDatabaseCommitMillis() { return sumMetric("sink", Metric.COMMIT_MILLIS); }
-    public long getSqlExecutionMillis() { return sumMetric(null, Metric.SQL_MILLIS); }
+    public long getFailedRecordCount() {
+        return sumMetric(null, Metric.FAILED_RECORDS);
+    }
 
-    public double getCurrentQps() { return sumRate(false); }
-    public double getAverageQps() { return sumRate(true); }
+    public long getSkippedRecordCount() {
+        return sumMetric(null, Metric.SKIPPED_RECORDS);
+    }
 
-    /** Average of registered channel blocking ratios; zero when no channel is registered. */
+    public long getSourceReadBytes() {
+        return sumMetric("source", Metric.SOURCE_BYTES);
+    }
+
+    public long getSinkWrittenBytes() {
+        return sumMetric("sink", Metric.SINK_BYTES);
+    }
+
+    public long getCompletedSplitCount() {
+        return splitProviders.isEmpty() ? sumMetric("source", Metric.COMPLETED_SPLITS) : splitCount(3);
+    }
+
+    public long getBatchRetryCount() {
+        return sumMetric(null, Metric.BATCH_RETRIES);
+    }
+
+    public long getDatabaseCommitMillis() {
+        return sumMetric("sink", Metric.COMMIT_MILLIS);
+    }
+
+    public long getSqlExecutionMillis() {
+        return sumMetric(null, Metric.SQL_MILLIS);
+    }
+
+    public double getCurrentQps() {
+        return sumRate(false);
+    }
+
+    public double getAverageQps() {
+        return sumRate(true);
+    }
+
+    /**
+     * Average of registered channel blocking ratios; zero when no channel is registered.
+     */
     public double getChannelBlockedRatio() {
         if (channelMetrics.isEmpty()) return 0D;
         double total = 0D;
@@ -118,27 +175,43 @@ public final class JobMetrics {
         for (TaskMetrics metrics : taskMetrics.values()) {
             if (stageName == null || stageName.equals(metrics.getTaskId().getStageName())) {
                 switch (metric) {
-                    case SOURCE_READ_RECORDS: total += metrics.getSourceReadRecordCount(); break;
-                    case SINK_SUCCESS_RECORDS: total += metrics.getSinkWriteSuccessRecordCount(); break;
-                    case FAILED_RECORDS: total += metrics.getFailedRecordCount(); break;
-                    case SKIPPED_RECORDS: total += metrics.getSkippedRecordCount(); break;
-                    case SOURCE_BYTES: total += metrics.getSourceReadBytes(); break;
-                    case SINK_BYTES: total += metrics.getSinkWrittenBytes(); break;
-                    case COMPLETED_SPLITS: total += metrics.getCompletedSplitCount(); break;
-                    case BATCH_RETRIES: total += metrics.getBatchRetryCount(); break;
-                    case COMMIT_MILLIS: total += metrics.getDatabaseCommitMillis(); break;
-                    case SQL_MILLIS: total += metrics.getSqlExecutionMillis(); break;
-                    default: break;
+                    case SOURCE_READ_RECORDS:
+                        total += metrics.getSourceReadRecordCount();
+                        break;
+                    case SINK_SUCCESS_RECORDS:
+                        total += metrics.getSinkWriteSuccessRecordCount();
+                        break;
+                    case FAILED_RECORDS:
+                        total += metrics.getFailedRecordCount();
+                        break;
+                    case SKIPPED_RECORDS:
+                        total += metrics.getSkippedRecordCount();
+                        break;
+                    case SOURCE_BYTES:
+                        total += metrics.getSourceReadBytes();
+                        break;
+                    case SINK_BYTES:
+                        total += metrics.getSinkWrittenBytes();
+                        break;
+                    case COMPLETED_SPLITS:
+                        total += metrics.getCompletedSplitCount();
+                        break;
+                    case BATCH_RETRIES:
+                        total += metrics.getBatchRetryCount();
+                        break;
+                    case COMMIT_MILLIS:
+                        total += metrics.getDatabaseCommitMillis();
+                        break;
+                    case SQL_MILLIS:
+                        total += metrics.getSqlExecutionMillis();
+                        break;
+                    default:
+                        break;
                 }
             }
         }
 
         return total;
-    }
-
-    private enum Metric {
-        SOURCE_READ_RECORDS, SINK_SUCCESS_RECORDS, FAILED_RECORDS, SKIPPED_RECORDS,
-        SOURCE_BYTES, SINK_BYTES, COMPLETED_SPLITS, BATCH_RETRIES, COMMIT_MILLIS, SQL_MILLIS
     }
 
     private long sumBatches(String stageName) {
@@ -153,5 +226,10 @@ public final class JobMetrics {
         }
 
         return total;
+    }
+
+    private enum Metric {
+        SOURCE_READ_RECORDS, SINK_SUCCESS_RECORDS, FAILED_RECORDS, SKIPPED_RECORDS,
+        SOURCE_BYTES, SINK_BYTES, COMPLETED_SPLITS, BATCH_RETRIES, COMMIT_MILLIS, SQL_MILLIS
     }
 }

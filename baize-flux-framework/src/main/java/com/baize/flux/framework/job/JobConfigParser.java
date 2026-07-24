@@ -2,7 +2,6 @@ package com.baize.flux.framework.job;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.typesafe.config.Config;
-import com.baize.flux.framework.job.SplitAssignmentMode;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigResolveOptions;
 
@@ -10,6 +9,45 @@ import com.typesafe.config.ConfigResolveOptions;
  * HOCON Job 配置解析器。
  */
 public final class JobConfigParser {
+
+    private static long readOptionalLong(Config root, String path) {
+        return root.hasPath(path) ? root.getLong(path) : -1L;
+    }
+
+    private static void requireObject(
+            Config root,
+            String path) {
+
+        if (!root.hasPath(path)) {
+            throw new IllegalArgumentException(
+                    "HOCON configuration must contain '"
+                            + path
+                            + "' object");
+        }
+    }
+
+    private static String requireString(
+            Config config,
+            String path,
+            String fullPath) {
+
+        if (!config.hasPath(path)) {
+            throw new IllegalArgumentException(
+                    "HOCON configuration must contain '"
+                            + fullPath
+                            + "'");
+        }
+
+        String value =
+                config.getString(path).trim();
+
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException(
+                    fullPath + " must not be blank");
+        }
+
+        return value;
+    }
 
     public JobDefinition parse(String hocon) {
         if (hocon == null || hocon.trim().isEmpty()) {
@@ -127,44 +165,5 @@ public final class JobConfigParser {
         }
 
         return ExecutionConfig.DEFAULT_SOURCE_PARALLELISM;
-    }
-
-    private static long readOptionalLong(Config root, String path) {
-        return root.hasPath(path) ? root.getLong(path) : -1L;
-    }
-
-    private static void requireObject(
-            Config root,
-            String path) {
-
-        if (!root.hasPath(path)) {
-            throw new IllegalArgumentException(
-                    "HOCON configuration must contain '"
-                            + path
-                            + "' object");
-        }
-    }
-
-    private static String requireString(
-            Config config,
-            String path,
-            String fullPath) {
-
-        if (!config.hasPath(path)) {
-            throw new IllegalArgumentException(
-                    "HOCON configuration must contain '"
-                            + fullPath
-                            + "'");
-        }
-
-        String value =
-                config.getString(path).trim();
-
-        if (value.isEmpty()) {
-            throw new IllegalArgumentException(
-                    fullPath + " must not be blank");
-        }
-
-        return value;
     }
 }

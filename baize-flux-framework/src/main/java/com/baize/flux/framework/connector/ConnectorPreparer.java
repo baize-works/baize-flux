@@ -2,16 +2,16 @@ package com.baize.flux.framework.connector;
 
 import com.baize.flux.api.configuration.util.ConfigValidator;
 import com.baize.flux.api.factory.SinkFactory;
-import com.baize.flux.api.source.Source;
 import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.sink.SinkPrepareContext;
+import com.baize.flux.api.source.Source;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.factory.TableSourceFactory;
-import com.baize.flux.framework.job.JobDefinition;
 import com.baize.flux.framework.classloading.ClassLoaderScope;
+import com.baize.flux.framework.job.JobDefinition;
 import com.baize.flux.framework.job.SinkDefinition;
 import com.baize.flux.framework.job.SourceDefinition;
 

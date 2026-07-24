@@ -39,6 +39,21 @@ public final class JobDefinition {
                         "executionConfig must not be null");
     }
 
+    private static String requireName(String name) {
+        Objects.requireNonNull(
+                name,
+                "name must not be null");
+
+        String normalized = name.trim();
+
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "name must not be blank");
+        }
+
+        return normalized;
+    }
+
     public String getName() {
         return name;
     }
@@ -53,20 +68,5 @@ public final class JobDefinition {
 
     public ExecutionConfig getExecutionConfig() {
         return executionConfig;
-    }
-
-    private static String requireName(String name) {
-        Objects.requireNonNull(
-                name,
-                "name must not be null");
-
-        String normalized = name.trim();
-
-        if (normalized.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "name must not be blank");
-        }
-
-        return normalized;
     }
 }

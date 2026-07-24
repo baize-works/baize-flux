@@ -1,8 +1,8 @@
 package com.baize.flux.connector.jdbc.sink.savemode;
 
 import com.baize.flux.api.table.catalog.CatalogTable;
-import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.catalog.SchemaCompatibilityReport;
+import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.catalog.WritableCatalog;
 import com.baize.flux.api.table.catalog.exception.TableNotFoundException;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
@@ -10,7 +10,9 @@ import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 
 import java.util.Objects;
 
-/** Default implementation of the JDBC table save-mode lifecycle. */
+/**
+ * Default implementation of the JDBC table save-mode lifecycle.
+ */
 public class DefaultSaveModeHandler implements SaveModeHandler {
     protected final SchemaSaveMode schemaSaveMode;
     protected final DataSaveMode dataSaveMode;

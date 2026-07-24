@@ -16,13 +16,13 @@ public interface RecordSizeEstimator<T> {
 
     long UNKNOWN_RECORD_BYTES = 256L;
 
-    long estimateSizeBytes(T record);
-
     static RecordSizeEstimator<FluxRow> fluxRowEstimator() {
         return FluxRow::estimatedSizeBytes;
     }
 
-    /** Estimates common JVM values and uses a conservative value for unknown objects. */
+    /**
+     * Estimates common JVM values and uses a conservative value for unknown objects.
+     */
     static long estimateObjectSizeBytes(Object value) {
         if (value == null) return 4L;
         if (value instanceof Boolean || value instanceof Byte) return 16L;
@@ -39,4 +39,6 @@ public interface RecordSizeEstimator<T> {
         if (value instanceof FluxRow) return ((FluxRow) value).estimatedSizeBytes();
         return UNKNOWN_RECORD_BYTES;
     }
+
+    long estimateSizeBytes(T record);
 }

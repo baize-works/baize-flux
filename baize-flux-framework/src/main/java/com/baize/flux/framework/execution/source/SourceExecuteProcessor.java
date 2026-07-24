@@ -23,7 +23,34 @@ import java.util.concurrent.Future;
  */
 public final class SourceExecuteProcessor {
 
-    /** Executes with one reader for callers that do not configure an environment. */
+    /**
+     * Round-robin assignment balances table and range splits without duplication.
+     */
+    static <SplitT extends SourceSplit> List<List<SplitT>> assignSplits(
+            List<SplitT> splits, int parallelism) {
+        Objects.requireNonNull(splits, "splits must not be null");
+        if (parallelism <= 0) {
+            throw new IllegalArgumentException(
+                    "parallelism must be greater than 0");
+        }
+        int taskCount = Math.min(splits.size(), parallelism);
+        List<List<SplitT>> assignments = new ArrayList<>(taskCount);
+        for (int i = 0; i < taskCount; i++) {
+            assignments.add(new ArrayList<SplitT>());
+        }
+        for (int i = 0; i < splits.size(); i++) {
+            assignments.get(i % taskCount).add(splits.get(i));
+        }
+        List<List<SplitT>> immutable = new ArrayList<>(taskCount);
+        for (List<SplitT> assignment : assignments) {
+            immutable.add(Collections.unmodifiableList(assignment));
+        }
+        return Collections.unmodifiableList(immutable);
+    }
+
+    /**
+     * Executes with one reader for callers that do not configure an environment.
+     */
     public <SplitT extends SourceSplit> void execute(
             SourceAction<SplitT> action,
             RecordBatchConsumer<FluxRow> consumer)
@@ -103,28 +130,5 @@ public final class SourceExecuteProcessor {
         } finally {
             executor.shutdownNow();
         }
-    }
-
-    /** Round-robin assignment balances table and range splits without duplication. */
-    static <SplitT extends SourceSplit> List<List<SplitT>> assignSplits(
-            List<SplitT> splits, int parallelism) {
-        Objects.requireNonNull(splits, "splits must not be null");
-        if (parallelism <= 0) {
-            throw new IllegalArgumentException(
-                    "parallelism must be greater than 0");
-        }
-        int taskCount = Math.min(splits.size(), parallelism);
-        List<List<SplitT>> assignments = new ArrayList<>(taskCount);
-        for (int i = 0; i < taskCount; i++) {
-            assignments.add(new ArrayList<SplitT>());
-        }
-        for (int i = 0; i < splits.size(); i++) {
-            assignments.get(i % taskCount).add(splits.get(i));
-        }
-        List<List<SplitT>> immutable = new ArrayList<>(taskCount);
-        for (List<SplitT> assignment : assignments) {
-            immutable.add(Collections.unmodifiableList(assignment));
-        }
-        return Collections.unmodifiableList(immutable);
     }
 }

@@ -21,13 +21,42 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-/** Regression coverage for task-local sink commit and cleanup boundaries. */
+/**
+ * Regression coverage for task-local sink commit and cleanup boundaries.
+ */
 public class SinkTaskCommitLifecycleTest {
+
+    private static SinkTask task(final RecordingWriter writer, ChannelReader<RecordEnvelope<FluxRow>> reader) {
+        SinkFactory factory = new SinkFactory() {
+            @Override
+            public String factoryIdentifier() {
+                return "test";
+            }
+
+            @Override
+            public OptionRule optionRule() {
+                return OptionRule.builder().build();
+            }
+
+            @Override
+            public SinkWriter<FluxRow> createSink(ReadonlyConfig config) {
+                return writer;
+            }
+        };
+        PreparedSink sink = new PreparedSink("test", factory,
+                ReadonlyConfig.fromMap(Collections.<String, Object>emptyMap()),
+                new PreparedSinkMetadata(Collections.emptyMap()));
+        TaskId id = new TaskId("sink", 0, 1);
+        return new SinkTask(new SinkTaskPlan(id, sink), new InputGate<RecordEnvelope<FluxRow>>(reader));
+    }
+
+    private static TaskContext context() {
+        TaskId id = new TaskId("sink", 0, 1);
+        return new TaskContext(id, new CancellationToken(), new TaskMetrics(id),
+                SinkTaskCommitLifecycleTest.class.getClassLoader());
+    }
 
     @Test
     public void commitsOneTaskAfterPrepare() throws Exception {
@@ -78,41 +107,47 @@ public class SinkTaskCommitLifecycleTest {
         }
     }
 
-    private static SinkTask task(final RecordingWriter writer, ChannelReader<RecordEnvelope<FluxRow>> reader) {
-        SinkFactory factory = new SinkFactory() {
-            @Override public String factoryIdentifier() { return "test"; }
-            @Override public OptionRule optionRule() { return OptionRule.builder().build(); }
-            @Override public SinkWriter<FluxRow> createSink(ReadonlyConfig config) { return writer; }
-        };
-        PreparedSink sink = new PreparedSink("test", factory,
-                ReadonlyConfig.fromMap(Collections.<String, Object>emptyMap()),
-                new PreparedSinkMetadata(Collections.emptyMap()));
-        TaskId id = new TaskId("sink", 0, 1);
-        return new SinkTask(new SinkTaskPlan(id, sink), new InputGate<RecordEnvelope<FluxRow>>(reader));
-    }
-
-    private static TaskContext context() {
-        TaskId id = new TaskId("sink", 0, 1);
-        return new TaskContext(id, new CancellationToken(), new TaskMetrics(id),
-                SinkTaskCommitLifecycleTest.class.getClassLoader());
-    }
-
     private static final class EndReader implements ChannelReader<RecordEnvelope<FluxRow>> {
-        @Override public RecordEnvelope<FluxRow> read() { return null; }
+        @Override
+        public RecordEnvelope<FluxRow> read() {
+            return null;
+        }
     }
+
     private static final class FailingReader implements ChannelReader<RecordEnvelope<FluxRow>> {
-        @Override public RecordEnvelope<FluxRow> read() { throw new IllegalStateException("write failed"); }
+        @Override
+        public RecordEnvelope<FluxRow> read() {
+            throw new IllegalStateException("write failed");
+        }
     }
+
     private static final class RecordingWriter implements SinkWriter<FluxRow> {
         int prepareCount;
         int commitCount;
         int abortCount;
         boolean closeFailure;
-        @Override public void write(RecordBatch<FluxRow> batch, CatalogTable table) { }
-        @Override public void prepareCommit() { prepareCount++; }
-        @Override public void commit() { commitCount++; }
-        @Override public void abort() { abortCount++; }
-        @Override public void close() {
+
+        @Override
+        public void write(RecordBatch<FluxRow> batch, CatalogTable table) {
+        }
+
+        @Override
+        public void prepareCommit() {
+            prepareCount++;
+        }
+
+        @Override
+        public void commit() {
+            commitCount++;
+        }
+
+        @Override
+        public void abort() {
+            abortCount++;
+        }
+
+        @Override
+        public void close() {
             if (closeFailure) throw new IllegalStateException("close failed");
         }
     }

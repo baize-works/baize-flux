@@ -107,7 +107,9 @@ public final class JdbcSourceReader
     }
 
     @Override
-    public void closeSplit() throws Exception { closeCurrentSplit(); }
+    public void closeSplit() throws Exception {
+        closeCurrentSplit();
+    }
 
     @Override
     public RecordBatch<FluxRow> readBatch()

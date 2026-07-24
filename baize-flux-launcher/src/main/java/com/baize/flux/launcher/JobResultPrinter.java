@@ -1,9 +1,9 @@
 package com.baize.flux.launcher;
 
+import com.baize.flux.framework.job.JobResult;
 import com.baize.flux.framework.metrics.ChannelMetrics;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.metrics.TaskMetrics;
-import com.baize.flux.framework.job.JobResult;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -11,7 +11,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-/** 以中文分类展示已完成作业的汇总、任务和通道指标。 */
+/**
+ * 以中文分类展示已完成作业的汇总、任务和通道指标。
+ */
 public final class JobResultPrinter {
 
     private JobResultPrinter() {

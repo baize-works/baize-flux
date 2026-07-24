@@ -3,8 +3,8 @@ package com.baize.flux.connector.jdbc.config;
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
-import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.baize.flux.connector.jdbc.sink.DirtyDataOutputType;
+import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 import lombok.Getter;
 
@@ -140,9 +140,13 @@ public final class JdbcSinkConfig
         this.dirtyDataPolicy = Objects.requireNonNull(dirtyDataPolicy, "dirtyDataPolicy must not be null");
         this.dirtyDataOutputType = Objects.requireNonNull(dirtyDataOutputType, "dirtyDataOutputType must not be null");
         this.dirtyDataOutputPath = normalize(dirtyDataOutputPath);
-        if (dirtyDataMaxSamples < 0 || dirtyDataMaxCount < 0 || dirtyDataMaxPercentage < 0D || dirtyDataMaxPercentage > 1D) throw new IllegalArgumentException("Invalid dirty-data limits");
-        if (dirtyDataOutputType == DirtyDataOutputType.JSONL && this.dirtyDataOutputPath == null) throw new IllegalArgumentException("dirty_data_output_path is required for JSONL output");
-        this.dirtyDataMaxSamples = dirtyDataMaxSamples; this.dirtyDataMaxCount = dirtyDataMaxCount; this.dirtyDataMaxPercentage = dirtyDataMaxPercentage;
+        if (dirtyDataMaxSamples < 0 || dirtyDataMaxCount < 0 || dirtyDataMaxPercentage < 0D || dirtyDataMaxPercentage > 1D)
+            throw new IllegalArgumentException("Invalid dirty-data limits");
+        if (dirtyDataOutputType == DirtyDataOutputType.JSONL && this.dirtyDataOutputPath == null)
+            throw new IllegalArgumentException("dirty_data_output_path is required for JSONL output");
+        this.dirtyDataMaxSamples = dirtyDataMaxSamples;
+        this.dirtyDataMaxCount = dirtyDataMaxCount;
+        this.dirtyDataMaxPercentage = dirtyDataMaxPercentage;
         this.createPrimaryKey =
                 createPrimaryKey;
     }
@@ -247,7 +251,7 @@ public final class JdbcSinkConfig
      *
      * @param sourceTablePath the table that produced the current batch
      * @return the configured and expanded target table path, or {@code null}
-     *     when the source path should be retained
+     * when the source path should be retained
      */
     public String resolveTargetTablePath(TablePath sourceTablePath) {
         if (targetTablePath == null) {

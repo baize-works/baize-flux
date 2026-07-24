@@ -22,7 +22,7 @@ public final class SchemaCompatibilityReport implements Serializable {
     private final Map<String, String> sourceToTarget;
 
     private SchemaCompatibilityReport(List<Column> missing, List<String> incompatible,
-            List<String> warnings, Map<String, String> mapping) {
+                                      List<String> warnings, Map<String, String> mapping) {
         this.missingTargetColumns = Collections.unmodifiableList(new ArrayList<>(missing));
         this.incompatibleColumns = Collections.unmodifiableList(new ArrayList<>(incompatible));
         this.warnings = Collections.unmodifiableList(new ArrayList<>(warnings));
@@ -94,10 +94,27 @@ public final class SchemaCompatibilityReport implements Serializable {
                 + target.getSourceType() + ")";
     }
 
-    private static String normalize(String name) { return name.toLowerCase(Locale.ROOT); }
-    public List<Column> getMissingTargetColumns() { return missingTargetColumns; }
-    public List<String> getIncompatibleColumns() { return incompatibleColumns; }
-    public List<String> getWarnings() { return warnings; }
-    public Map<String, String> getSourceToTarget() { return sourceToTarget; }
-    public boolean isCompatible() { return incompatibleColumns.isEmpty(); }
+    private static String normalize(String name) {
+        return name.toLowerCase(Locale.ROOT);
+    }
+
+    public List<Column> getMissingTargetColumns() {
+        return missingTargetColumns;
+    }
+
+    public List<String> getIncompatibleColumns() {
+        return incompatibleColumns;
+    }
+
+    public List<String> getWarnings() {
+        return warnings;
+    }
+
+    public Map<String, String> getSourceToTarget() {
+        return sourceToTarget;
+    }
+
+    public boolean isCompatible() {
+        return incompatibleColumns.isEmpty();
+    }
 }

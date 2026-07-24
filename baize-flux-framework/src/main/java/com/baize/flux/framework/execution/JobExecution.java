@@ -1,31 +1,25 @@
 package com.baize.flux.framework.execution;
 
+import com.baize.flux.api.dirtydata.DirtyDataSummary;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.api.table.type.FluxRow;
-import com.baize.flux.framework.channel.ChannelReader;
-import com.baize.flux.framework.channel.ChannelWriter;
-import com.baize.flux.framework.channel.DataChannel;
-import com.baize.flux.framework.channel.InputGate;
-import com.baize.flux.framework.channel.LocalDataChannel;
-import com.baize.flux.framework.channel.OutputGate;
-import com.baize.flux.framework.channel.RecordEnvelope;
+import com.baize.flux.framework.channel.*;
+import com.baize.flux.framework.execution.split.SplitProvider;
 import com.baize.flux.framework.execution.task.ExecutionTask;
 import com.baize.flux.framework.execution.task.SinkTask;
 import com.baize.flux.framework.execution.task.SourceTask;
+import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.job.JobResult;
 import com.baize.flux.framework.job.JobStatus;
-import com.baize.flux.framework.job.CommitSummary;
-import com.baize.flux.api.dirtydata.DirtyDataSummary;
-import java.util.LinkedHashMap;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.SinkTaskPlan;
 import com.baize.flux.framework.planner.SourceTaskPlan;
-import com.baize.flux.framework.execution.split.SplitProvider;
 import com.baize.flux.framework.routing.Partitioner;
 import com.baize.flux.framework.routing.SinkPartitioner;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -57,6 +51,13 @@ public final class JobExecution {
                 Objects.requireNonNull(
                         classLoader,
                         "classLoader must not be null");
+    }
+
+    private static void cancelSplitProviders(List<SourceTaskPlan<?>> plans, Throwable cause) {
+        java.util.HashSet<SplitProvider<?>> providers = new java.util.HashSet<SplitProvider<?>>();
+        for (SourceTaskPlan<?> plan : plans)
+            if (plan.getSplitProvider() != null) providers.add(plan.getSplitProvider());
+        for (SplitProvider<?> provider : providers) provider.cancel(cause);
     }
 
     public JobResult execute() {
@@ -134,8 +135,22 @@ public final class JobExecution {
                 ExecutionCoordinator.ExecutionOutcome outcome = coordinator.execute(sinkTasks, sourceTasks);
                 failure = outcome.getFailure();
                 commitSummary = outcome.getCommitSummary();
-                long dirty = 0L, attempted = 0L; int samples = 0; boolean countExceeded = false, percentageExceeded = false; String outputPath = null; java.util.Map<String, Long> taskCounts = new LinkedHashMap<String, Long>();
-                for (ExecutionTask task : sinkTasks) if (task instanceof SinkTask) { DirtyDataSummary summary = ((SinkTask) task).getDirtyDataSummary(); dirty += summary.getDirtyCount(); attempted += summary.getAttemptedCount(); samples += summary.getSampleCount(); countExceeded |= summary.isCountThresholdExceeded(); percentageExceeded |= summary.isPercentageThresholdExceeded(); taskCounts.putAll(summary.getTaskCounts()); if (summary.getOutputPath() != null) outputPath = summary.getOutputPath(); }
+                long dirty = 0L, attempted = 0L;
+                int samples = 0;
+                boolean countExceeded = false, percentageExceeded = false;
+                String outputPath = null;
+                java.util.Map<String, Long> taskCounts = new LinkedHashMap<String, Long>();
+                for (ExecutionTask task : sinkTasks)
+                    if (task instanceof SinkTask) {
+                        DirtyDataSummary summary = ((SinkTask) task).getDirtyDataSummary();
+                        dirty += summary.getDirtyCount();
+                        attempted += summary.getAttemptedCount();
+                        samples += summary.getSampleCount();
+                        countExceeded |= summary.isCountThresholdExceeded();
+                        percentageExceeded |= summary.isPercentageThresholdExceeded();
+                        taskCounts.putAll(summary.getTaskCounts());
+                        if (summary.getOutputPath() != null) outputPath = summary.getOutputPath();
+                    }
                 dirtyDataSummary = new DirtyDataSummary(dirty, attempted, taskCounts, countExceeded, percentageExceeded, samples, outputPath);
             }
 
@@ -184,12 +199,6 @@ public final class JobExecution {
         cancellationToken.cancel(
                 new java.util.concurrent.CancellationException(
                         "Job was cancelled by caller"));
-    }
-
-    private static void cancelSplitProviders(List<SourceTaskPlan<?>> plans, Throwable cause) {
-        java.util.HashSet<SplitProvider<?>> providers = new java.util.HashSet<SplitProvider<?>>();
-        for (SourceTaskPlan<?> plan : plans) if (plan.getSplitProvider() != null) providers.add(plan.getSplitProvider());
-        for (SplitProvider<?> provider : providers) provider.cancel(cause);
     }
 
     private void createChannels(

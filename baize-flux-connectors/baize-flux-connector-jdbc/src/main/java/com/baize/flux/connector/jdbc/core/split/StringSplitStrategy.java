@@ -33,15 +33,6 @@ public enum StringSplitStrategy {
         this.value = value;
     }
 
-    public String getValue() {
-        return value;
-    }
-
-    public boolean matches(String candidate) {
-        return candidate != null
-                && value.equalsIgnoreCase(candidate.trim());
-    }
-
     public static StringSplitStrategy parse(String value) {
         if (value == null || value.trim().isEmpty()) {
             return AUTO;
@@ -59,6 +50,15 @@ public enum StringSplitStrategy {
                     "unsupported string split strategy: " + value,
                     e);
         }
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public boolean matches(String candidate) {
+        return candidate != null
+                && value.equalsIgnoreCase(candidate.trim());
     }
 
     @Override

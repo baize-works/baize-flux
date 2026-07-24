@@ -88,7 +88,9 @@ public final class FluxRow implements Serializable {
         return new FluxRow(fields, true);
     }
 
-    /** Returns a stable approximate size for backpressure accounting. */
+    /**
+     * Returns a stable approximate size for backpressure accounting.
+     */
     public long estimatedSizeBytes() {
         long size = 24L + 16L + fields.length * 8L;
         for (Object field : fields) {

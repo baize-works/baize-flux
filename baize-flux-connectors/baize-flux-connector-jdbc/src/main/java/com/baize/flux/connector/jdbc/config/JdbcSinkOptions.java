@@ -3,8 +3,8 @@ package com.baize.flux.connector.jdbc.config;
 import com.baize.flux.api.configuration.Option;
 import com.baize.flux.api.configuration.Options;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
-import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.baize.flux.connector.jdbc.sink.DirtyDataOutputType;
+import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 
 import java.util.List;

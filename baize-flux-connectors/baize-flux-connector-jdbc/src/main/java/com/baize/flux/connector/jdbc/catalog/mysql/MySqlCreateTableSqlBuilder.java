@@ -254,7 +254,9 @@ public final class MySqlCreateTableSqlBuilder {
                 definitions);
     }
 
-    /** Builds a reusable escaped column definition for ALTER TABLE ADD COLUMN. */
+    /**
+     * Builds a reusable escaped column definition for ALTER TABLE ADD COLUMN.
+     */
     public String buildColumnDefinition(Column column) {
         boolean preserveSourceType = "mysql".equalsIgnoreCase(
                 catalogTable.getOptions().get("dialect"));

@@ -17,21 +17,30 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 public class SinkPartitionerTest {
-    @Test public void tableAffinityKeepsAllSplitsTogether() {
-        SinkPartitioner<String> partitioner = new SinkPartitioner<String>(SinkPartitionStrategy.TABLE_AFFINITY);
-        assertEquals(partitioner.selectChannel(envelope("a"), 17), partitioner.selectChannel(envelope("b"), 17));
-    }
-    @Test public void splitHashIsStableAndUsesSplit() {
-        SinkPartitioner<String> partitioner = new SinkPartitioner<String>(SinkPartitionStrategy.SPLIT_HASH);
-        int first = partitioner.selectChannel(envelope("a"), 97);
-        assertEquals(first, partitioner.selectChannel(envelope("a"), 97));
-        assertNotEquals(first, partitioner.selectChannel(envelope("b"), 97));
-    }
     private static RecordEnvelope<String> envelope(final String splitId) {
         TablePath path = TablePath.of("orders");
         CatalogTable table = CatalogTable.builder(path, TableSchema.builder()
                 .column(Column.builder("id", BasicType.STRING_TYPE).build()).build()).build();
-        SourceSplit split = new SourceSplit() { @Override public String splitId() { return splitId; } };
+        SourceSplit split = new SourceSplit() {
+            @Override
+            public String splitId() {
+                return splitId;
+            }
+        };
         return new RecordEnvelope<String>(path, table, RecordBatch.of(split, Collections.singletonList("row")));
+    }
+
+    @Test
+    public void tableAffinityKeepsAllSplitsTogether() {
+        SinkPartitioner<String> partitioner = new SinkPartitioner<String>(SinkPartitionStrategy.TABLE_AFFINITY);
+        assertEquals(partitioner.selectChannel(envelope("a"), 17), partitioner.selectChannel(envelope("b"), 17));
+    }
+
+    @Test
+    public void splitHashIsStableAndUsesSplit() {
+        SinkPartitioner<String> partitioner = new SinkPartitioner<String>(SinkPartitionStrategy.SPLIT_HASH);
+        int first = partitioner.selectChannel(envelope("a"), 97);
+        assertEquals(first, partitioner.selectChannel(envelope("a"), 97));
+        assertNotEquals(first, partitioner.selectChannel(envelope("b"), 97));
     }
 }

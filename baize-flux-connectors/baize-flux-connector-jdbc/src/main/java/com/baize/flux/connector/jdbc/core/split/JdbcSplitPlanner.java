@@ -8,19 +8,12 @@ import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.source.JdbcSourceSplit;
 import com.baize.flux.connector.jdbc.source.JdbcSourceTable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 为有界 JDBC Source 生成启动时静态分片。

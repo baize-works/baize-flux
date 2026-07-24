@@ -10,7 +10,7 @@ import java.util.Objects;
  * <pre>
  * [start, end)
  * </pre>
- *
+ * <p>
  * 最后一个分片可以通过 {@code endInclusive=true} 包含右边界。
  */
 public final class Chunk<T> {
