@@ -62,6 +62,14 @@ public class JdbcSinkConfigTest {
     }
 
     @Test
+    public void shouldUseBoundedPreparedStatementCacheAndQueryTimeout() {
+        JdbcSinkConfig config = config("prepared_statement_cache_size = 8\nquery_timeout_sec = 15");
+
+        assertEquals(8, config.getPreparedStatementCacheSize());
+        assertEquals(15, config.getQueryTimeoutSec());
+    }
+
+    @Test
     public void shouldAllowSkippingDirtyRows() {
         JdbcSinkConfig config = config("dirty_data_policy = SKIP");
 

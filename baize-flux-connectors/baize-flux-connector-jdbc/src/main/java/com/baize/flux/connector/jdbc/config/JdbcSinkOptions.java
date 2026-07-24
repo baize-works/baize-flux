@@ -92,6 +92,26 @@ public final class JdbcSinkOptions
                     .defaultValue(1000)
                     .withDescription("JDBC executeBatch 每批写入数量");
 
+    /**
+     * Number of write statements retained per SinkTask. The cache is bounded
+     * so dynamic multi-table routing cannot grow JDBC driver resources without limit.
+     */
+    public static final Option<Integer> PREPARED_STATEMENT_CACHE_SIZE =
+            Options.key("prepared_statement_cache_size")
+                    .intType()
+                    .defaultValue(32)
+                    .withDescription("每个 SinkTask 缓存的目标表 PreparedStatement 数量上限");
+
+    /**
+     * JDBC query timeout applied to every cached write statement. A value of
+     * {@code 0} leaves timeout handling to the JDBC driver.
+     */
+    public static final Option<Integer> QUERY_TIMEOUT_SEC =
+            Options.key("query_timeout_sec")
+                    .intType()
+                    .defaultValue(0)
+                    .withDescription("写入 PreparedStatement 的查询超时时间，单位秒，0 表示不主动限制");
+
     public static final Option<Integer> MAX_RETRIES =
             Options.key("max_retries")
                     .intType()

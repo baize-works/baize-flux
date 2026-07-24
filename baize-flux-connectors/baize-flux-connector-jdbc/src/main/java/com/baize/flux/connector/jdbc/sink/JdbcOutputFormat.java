@@ -20,7 +20,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -67,6 +69,10 @@ public final class JdbcOutputFormat
             new ArrayList<JdbcRowError>();
 
     private Connection connection;
+
+    /** Statements are reused across internal batches and bounded for multi-table jobs. */
+    private final Map<TablePath, CachedStatement> preparedStatementCache =
+            new LinkedHashMap<TablePath, CachedStatement>(16, 0.75F, true);
 
     private Boolean supportsSavepoints;
 
@@ -168,6 +174,7 @@ public final class JdbcOutputFormat
                             rows.size());
 
             executeBatch(
+                    targetTable.getTablePath(),
                     sql,
                     rows.subList(start, end),
                     targetTable.getTableSchema());
@@ -234,6 +241,7 @@ public final class JdbcOutputFormat
      * 这里通过 Savepoint 只回滚当前失败批次。
      */
     private void executeBatch(
+            TablePath tablePath,
             String sql,
             List<FluxRow> rows,
             TableSchema schema)
@@ -242,7 +250,7 @@ public final class JdbcOutputFormat
         ensureTransactionConnection();
 
         try {
-            executeRows(sql, rows, schema);
+            executeRows(tablePath, sql, rows, schema);
         } catch (Exception batchFailure) {
             if (!config.shouldSkipDirtyData()) {
                 throw batchFailure;
@@ -259,7 +267,7 @@ public final class JdbcOutputFormat
              */
             for (FluxRow row : rows) {
                 try {
-                    executeRows(sql, Collections.singletonList(row), schema);
+                    executeRows(tablePath, sql, Collections.singletonList(row), schema);
                 } catch (Exception rowFailure) {
                     if (!isTransactionConnectionValid()) {
                         throw rowFailure;
@@ -271,6 +279,7 @@ public final class JdbcOutputFormat
     }
 
     private void executeRows(
+            TablePath tablePath,
             String sql,
             List<FluxRow> rows,
             TableSchema schema)
@@ -307,25 +316,18 @@ public final class JdbcOutputFormat
                                         + attempt);
             }
 
-            try (PreparedStatement statement =
-                         connection.prepareStatement(sql)) {
+            try {
+                PreparedStatement statement = getPreparedStatement(tablePath, sql);
+                statement.clearBatch();
 
                 for (FluxRow row : rows) {
-                    dialect.rowConverter()
-                            .write(
-                                    statement,
-                                    row,
-                                    schema);
-
+                    dialect.rowConverter().write(statement, row, schema);
                     statement.addBatch();
                 }
 
                 statement.executeBatch();
-
-                releaseSavepointQuietly(
-                        savepoint,
-                        null);
-
+                statement.clearBatch();
+                releaseSavepointQuietly(savepoint, null);
                 return;
 
             } catch (Exception exception) {
@@ -379,6 +381,58 @@ public final class JdbcOutputFormat
                 ? new IllegalStateException(
                 "JDBC batch execution failed")
                 : lastFailure;
+    }
+
+    private PreparedStatement getPreparedStatement(
+            TablePath tablePath, String sql) throws SQLException {
+        CachedStatement cached = preparedStatementCache.get(tablePath);
+        if (cached != null && cached.sql.equals(sql) && !cached.statement.isClosed()) {
+            return cached.statement;
+        }
+        if (cached != null) {
+            closeStatementQuietly(cached.statement);
+            preparedStatementCache.remove(tablePath);
+        }
+        PreparedStatement statement = connection.prepareStatement(sql);
+        if (config.getQueryTimeoutSec() > 0) {
+            statement.setQueryTimeout(config.getQueryTimeoutSec());
+        }
+        preparedStatementCache.put(tablePath, new CachedStatement(sql, statement));
+        evictPreparedStatements();
+        return statement;
+    }
+
+    private void evictPreparedStatements() {
+        while (preparedStatementCache.size() > config.getPreparedStatementCacheSize()) {
+            TablePath eldest = preparedStatementCache.keySet().iterator().next();
+            CachedStatement evicted = preparedStatementCache.remove(eldest);
+            closeStatementQuietly(evicted.statement);
+        }
+    }
+
+    private void closePreparedStatements() {
+        for (CachedStatement cached : preparedStatementCache.values()) {
+            closeStatementQuietly(cached.statement);
+        }
+        preparedStatementCache.clear();
+    }
+
+    private void closeStatementQuietly(PreparedStatement statement) {
+        try {
+            statement.close();
+        } catch (SQLException ignored) {
+            // Connection close is still attempted below.
+        }
+    }
+
+    private static final class CachedStatement {
+        private final String sql;
+        private final PreparedStatement statement;
+
+        private CachedStatement(String sql, PreparedStatement statement) {
+            this.sql = sql;
+            this.statement = statement;
+        }
     }
 
     /**
@@ -623,6 +677,7 @@ public final class JdbcOutputFormat
         }
 
         try {
+            closePreparedStatements();
             connectionProvider.closeConnection();
         } catch (Exception closeFailure) {
             if (failure == null) {
