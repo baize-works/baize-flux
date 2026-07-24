@@ -37,7 +37,6 @@
     </properties>
 
     <modules>
-        <module>baize-flux-common</module>
         <module>baize-flux-framework</module>
         <module>baize-flux-launcher</module>
         <module>baize-flux-bom</module>

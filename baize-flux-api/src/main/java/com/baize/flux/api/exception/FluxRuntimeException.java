@@ -1,4 +1,4 @@
-package com.baize.flux.common.exception;
+package com.baize.flux.api.exception;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
