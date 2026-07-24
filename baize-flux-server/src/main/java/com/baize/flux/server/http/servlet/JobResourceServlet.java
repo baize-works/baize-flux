@@ -33,21 +33,17 @@ public final class JobResourceServlet
 
     protected void doGet(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response)
+            throws IOException {
 
         List<String> segments =
                 pathSegments(request);
 
         if (segments.size() == 1) {
-            try {
-                write(
-                        response,
-                        200,
-                        service.job(
-                                segments.get(0)));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            write(
+                    response,
+                    200,
+                    service.job(segments.get(0)));
             return;
         }
 
@@ -59,38 +55,26 @@ public final class JobResourceServlet
                     segments.get(1);
 
             if ("pipelines".equals(resource)) {
-                try {
-                    write(
-                            response,
-                            200,
-                            service.pipelines(jobId));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                write(
+                        response,
+                        200,
+                        service.pipelines(jobId));
                 return;
             }
 
             if ("tasks".equals(resource)) {
-                try {
-                    write(
-                            response,
-                            200,
-                            service.tasks(jobId));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                write(
+                        response,
+                        200,
+                        service.tasks(jobId));
                 return;
             }
 
             if ("metrics".equals(resource)) {
-                try {
-                    write(
-                            response,
-                            200,
-                            service.metrics(jobId));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                write(
+                        response,
+                        200,
+                        service.metrics(jobId));
                 return;
             }
         }
@@ -101,7 +85,8 @@ public final class JobResourceServlet
 
     protected void doDelete(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response)
+            throws IOException {
 
         List<String> segments =
                 pathSegments(request);
@@ -111,14 +96,9 @@ public final class JobResourceServlet
                     request.getRequestURI());
         }
 
-        try {
-            write(
-                    response,
-                    202,
-                    service.cancel(
-                            segments.get(0)));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        write(
+                response,
+                202,
+                service.cancel(segments.get(0)));
     }
 }
