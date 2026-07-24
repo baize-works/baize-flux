@@ -70,6 +70,12 @@ public final class JobConfigParser {
                         ? root.getInt("env.channel-capacity")
                         : ExecutionConfig.DEFAULT_CHANNEL_CAPACITY;
 
+        ExecutionConfig.SplitAssignmentMode splitAssignmentMode =
+                root.hasPath("env.split-assignment-mode")
+                        ? ExecutionConfig.SplitAssignmentMode.valueOf(root.getString(
+                                "env.split-assignment-mode").trim().toUpperCase(java.util.Locale.ROOT))
+                        : ExecutionConfig.SplitAssignmentMode.STATIC_ROUND_ROBIN;
+
         Config sourceConnectorConfig =
                 sourceConfig
                         .withoutPath("type")
@@ -95,7 +101,8 @@ public final class JobConfigParser {
                         batchSize,
                         sourceParallelism,
                         sinkParallelism,
-                        channelCapacity);
+                        channelCapacity,
+                        splitAssignmentMode);
 
         return new JobDefinition(
                 jobName,

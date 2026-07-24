@@ -1,6 +1,7 @@
 package com.baize.flux.framework.metrics;
 
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.execution.split.LocalSplitQueue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +21,8 @@ public final class JobMetrics {
 
     private final List<ChannelMetrics> channelMetrics =
             new CopyOnWriteArrayList<ChannelMetrics>();
+    private volatile LocalSplitQueue<?> splitQueue;
+    private volatile long staticTotalSplitCount;
 
     public TaskMetrics registerTask(TaskId taskId) {
         TaskMetrics created =
@@ -79,6 +82,12 @@ public final class JobMetrics {
     public long getSourceReadBytes() { return sumMetric("source", Metric.SOURCE_BYTES); }
     public long getSinkWrittenBytes() { return sumMetric("sink", Metric.SINK_BYTES); }
     public long getCompletedSplitCount() { return sumMetric("source", Metric.COMPLETED_SPLITS); }
+    public void registerSplitQueue(LocalSplitQueue<?> queue) { splitQueue = queue; }
+    public void setStaticTotalSplitCount(long count) { staticTotalSplitCount = count; }
+    public long getTotalSplitCount() { return splitQueue == null ? staticTotalSplitCount : splitQueue.getTotalSplitCount(); }
+    public long getPendingSplitCount() { return splitQueue == null ? Math.max(0L, staticTotalSplitCount - getCompletedSplitCount()) : splitQueue.getPendingSplitCount(); }
+    public long getRunningSplitCount() { return splitQueue == null ? 0L : splitQueue.getRunningSplitCount(); }
+    public long getFailedSplitCount() { return splitQueue == null ? 0L : splitQueue.getFailedSplitCount(); }
     public long getBatchRetryCount() { return sumMetric(null, Metric.BATCH_RETRIES); }
     public long getDatabaseCommitMillis() { return sumMetric("sink", Metric.COMMIT_MILLIS); }
     public long getSqlExecutionMillis() { return sumMetric(null, Metric.SQL_MILLIS); }

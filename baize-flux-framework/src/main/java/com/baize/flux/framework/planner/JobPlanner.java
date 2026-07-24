@@ -6,6 +6,7 @@ import com.baize.flux.framework.connector.PreparedJob;
 import com.baize.flux.framework.connector.PreparedSink;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.execution.split.LocalSplitQueue;
 import com.baize.flux.framework.job.ExecutionConfig;
 
 import java.util.ArrayList;
@@ -65,10 +66,13 @@ public final class JobPlanner {
                     "Source returned null splits");
         }
 
-        List<List<SplitT>> assignments =
-                splitAssigner.assign(
-                        splits,
-                        config.getSourceParallelism());
+        boolean dynamic = config.getSplitAssignmentMode()
+                == ExecutionConfig.SplitAssignmentMode.DYNAMIC;
+        List<List<SplitT>> assignments = dynamic
+                ? dynamicAssignments(splits, config.getSourceParallelism())
+                : splitAssigner.assign(splits, config.getSourceParallelism());
+        LocalSplitQueue<SplitT> splitQueue = dynamic
+                ? new LocalSplitQueue<SplitT>(splits) : null;
 
         List<SourceTaskPlan<?>> sourcePlans =
                 new ArrayList<SourceTaskPlan<?>>();
@@ -88,7 +92,8 @@ public final class JobPlanner {
                             taskId,
                             preparedSource,
                             assignments.get(i),
-                            config.getBatchSize()));
+                            config.getBatchSize(),
+                            splitQueue));
         }
 
         List<SinkTaskPlan> sinkPlans =
@@ -122,5 +127,13 @@ public final class JobPlanner {
                 config,
                 sourcePlans,
                 sinkPlans);
+    }
+
+    private static <SplitT extends SourceSplit> List<List<SplitT>> dynamicAssignments(
+            List<SplitT> splits, int parallelism) {
+        List<List<SplitT>> assignments = new ArrayList<List<SplitT>>();
+        int taskCount = Math.min(splits.size(), parallelism);
+        for (int i = 0; i < taskCount; i++) assignments.add(new ArrayList<SplitT>());
+        return assignments;
     }
 }

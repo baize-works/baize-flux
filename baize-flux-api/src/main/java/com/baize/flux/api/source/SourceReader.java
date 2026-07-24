@@ -14,7 +14,26 @@ public interface SourceReader<T, SplitT extends SourceSplit>
     /**
      * 打开 Reader，并设置当前 Reader 负责的分片。
      */
-    void open(List<SplitT> splits) throws Exception;
+    default void open(List<SplitT> splits) throws Exception {
+        throw new UnsupportedOperationException(
+                "This SourceReader does not support opening a split list");
+    }
+
+    /** Opens task-scoped resources before individual splits are processed. */
+    default void open() throws Exception {
+        // Optional for legacy readers.
+    }
+
+    /** Opens resources for exactly one split. */
+    default void openSplit(SplitT split) throws Exception {
+        throw new UnsupportedOperationException(
+                "This SourceReader does not support single-split reading");
+    }
+
+    /** Closes resources associated with the current split. */
+    default void closeSplit() throws Exception {
+        // Optional for legacy readers.
+    }
 
     /**
      * 读取下一批数据。

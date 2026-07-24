@@ -3,6 +3,7 @@ package com.baize.flux.framework.execution;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Job 级取消信号。
@@ -14,6 +15,7 @@ public final class CancellationToken {
 
     private final AtomicReference<Throwable> cause =
             new AtomicReference<Throwable>();
+    private final CopyOnWriteArrayList<Runnable> listeners = new CopyOnWriteArrayList<Runnable>();
 
     public boolean cancel(Throwable cancellationCause) {
         if (cancellationCause != null) {
@@ -22,9 +24,17 @@ public final class CancellationToken {
                     cancellationCause);
         }
 
-        return cancelled.compareAndSet(
+        boolean changed = cancelled.compareAndSet(
                 false,
                 true);
+        if (changed) for (Runnable listener : listeners) listener.run();
+        return changed;
+    }
+
+    /** Registers a wake-up action for components blocked on job cancellation. */
+    public void onCancel(Runnable listener) {
+        listeners.add(java.util.Objects.requireNonNull(listener, "listener must not be null"));
+        if (isCancelled()) listener.run();
     }
 
     public boolean isCancelled() {

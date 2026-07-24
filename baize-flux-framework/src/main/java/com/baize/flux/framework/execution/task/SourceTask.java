@@ -11,6 +11,7 @@ import com.baize.flux.framework.channel.RecordEnvelope;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskContext;
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.execution.split.LocalSplitQueue;
 import com.baize.flux.framework.planner.SourceTaskPlan;
 
 import java.util.Map;
@@ -74,51 +75,19 @@ public final class SourceTask<
                         "Source returned a null reader");
             }
 
-            reader.open(plan.getSplits());
-
-            while (!context
-                    .getCancellationToken()
-                    .isCancelled()) {
-
-                RecordBatch<FluxRow> batch =
-                        reader.readBatch();
-
-                if (batch == null) {
-                    throw new IllegalStateException(
-                            "SourceReader returned a null RecordBatch");
-                }
-
-                /*
-                 * 兼容现有 SourceReader API。
-                 * endOfInput 不再发送到 Channel。
-                 */
-                if (batch.isEndOfInput()) {
-                    for (SplitT split : plan.getSplits()) {
-                        context.getMetrics().markSplitCompleted(split.splitId());
-                    }
-                    break;
-                }
-
-                context.getMetrics().setCurrentPosition(batch.getDataSetId(), batch.getSplitId());
-
-                RecordEnvelope<FluxRow> envelope =
-                        createEnvelope(
-                                batch,
-                                preparedSource.getTables());
-
-                context.getMetrics()
-                        .incrementBatchCount();
-
-                context.getMetrics()
-                        .addSourceReadRecords(
-                                batch.getRecords().size());
-
-                outputGate.write(envelope);
+            if (plan.isDynamicSplitAssignment()) {
+                executeDynamically(reader, preparedSource, context);
+            } else {
+                executeStatically(reader, preparedSource, context);
             }
 
         } catch (Throwable throwable) {
             failure = throwable;
 
+            if (plan.getSplitQueue() != null) {
+                plan.getSplitQueue().cancel(throwable);
+            }
+            context.getCancellationToken().cancel(throwable);
             outputGate.fail(throwable);
 
             throw propagate(throwable);
@@ -140,24 +109,95 @@ public final class SourceTask<
                 if (closeFailure == null) {
                     closeFailure = throwable;
                 } else {
-                    closeFailure.addSuppressed(
-                            throwable);
+                    closeFailure.addSuppressed(throwable);
                 }
             }
 
-            if (failure != null
-                    && closeFailure != null) {
+            if (failure != null && closeFailure != null) failure.addSuppressed(closeFailure);
+            else if (failure == null && closeFailure != null) throw propagate(closeFailure);
+        }
+    }
 
-                failure.addSuppressed(
-                        closeFailure);
+    private void executeStatically(SourceReader<FluxRow, SplitT> reader,
+            PreparedSource<SplitT> preparedSource, TaskContext context) throws Exception {
+        reader.open(plan.getSplits());
+        while (!context.getCancellationToken().isCancelled()) {
 
-            } else if (failure == null
-                    && closeFailure != null) {
+                RecordBatch<FluxRow> batch =
+                        reader.readBatch();
 
-                throw propagate(
-                        closeFailure);
+                if (batch == null) {
+                    throw new IllegalStateException(
+                            "SourceReader returned a null RecordBatch");
+                }
+
+                /*
+                 * 兼容现有 SourceReader API。
+                 * endOfInput 不再发送到 Channel。
+                 */
+                if (batch.isEndOfInput()) {
+                for (SplitT split : plan.getSplits()) context.getMetrics().markSplitCompleted(split.splitId());
+                break;
+                }
+
+                context.getMetrics().setCurrentPosition(batch.getDataSetId(), batch.getSplitId());
+
+                RecordEnvelope<FluxRow> envelope =
+                        createEnvelope(
+                                batch,
+                                preparedSource.getTables());
+
+                context.getMetrics()
+                        .incrementBatchCount();
+
+                context.getMetrics()
+                        .addSourceReadRecords(
+                                batch.getRecords().size());
+
+                outputGate.write(envelope);
+        }
+    }
+
+    private void executeDynamically(SourceReader<FluxRow, SplitT> reader,
+            PreparedSource<SplitT> preparedSource, TaskContext context) throws Exception {
+        LocalSplitQueue<SplitT> queue = plan.getSplitQueue();
+        reader.open();
+        while (true) {
+            SplitT split = queue.acquire(context.getCancellationToken());
+            if (split == null) return;
+            boolean splitOpen = false;
+            try {
+                reader.openSplit(split);
+                splitOpen = true;
+                while (true) {
+                    RecordBatch<FluxRow> batch = reader.readBatch();
+                    if (batch == null) throw new IllegalStateException("SourceReader returned a null RecordBatch");
+                    if (batch.isEndOfInput()) break;
+                    writeBatch(batch, preparedSource, context);
+                }
+                try {
+                    reader.closeSplit();
+                } finally {
+                    splitOpen = false;
+                }
+                queue.complete(split);
+                context.getMetrics().markSplitCompleted(split.splitId());
+            } catch (Throwable failure) {
+                queue.fail(split, failure);
+                throw failure;
+            } finally {
+                if (splitOpen) reader.closeSplit();
             }
         }
+    }
+
+    private void writeBatch(RecordBatch<FluxRow> batch, PreparedSource<SplitT> preparedSource,
+            TaskContext context) throws Exception {
+        context.getMetrics().setCurrentPosition(batch.getDataSetId(), batch.getSplitId());
+        RecordEnvelope<FluxRow> envelope = createEnvelope(batch, preparedSource.getTables());
+        context.getMetrics().incrementBatchCount();
+        context.getMetrics().addSourceReadRecords(batch.getRecords().size());
+        outputGate.write(envelope);
     }
 
     private RecordEnvelope<FluxRow> createEnvelope(

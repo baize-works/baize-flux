@@ -5,6 +5,8 @@ package com.baize.flux.framework.job;
  */
 public final class ExecutionConfig {
 
+    public enum SplitAssignmentMode { STATIC_ROUND_ROBIN, DYNAMIC }
+
     public static final int DEFAULT_BATCH_SIZE = 1_000;
 
     public static final int DEFAULT_SOURCE_PARALLELISM = 1;
@@ -20,12 +22,19 @@ public final class ExecutionConfig {
     private final int sinkParallelism;
 
     private final int channelCapacity;
+    private final SplitAssignmentMode splitAssignmentMode;
 
     public ExecutionConfig(
             int batchSize,
             int sourceParallelism,
             int sinkParallelism,
             int channelCapacity) {
+        this(batchSize, sourceParallelism, sinkParallelism, channelCapacity,
+                SplitAssignmentMode.STATIC_ROUND_ROBIN);
+    }
+
+    public ExecutionConfig(int batchSize, int sourceParallelism, int sinkParallelism,
+            int channelCapacity, SplitAssignmentMode splitAssignmentMode) {
 
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
@@ -51,6 +60,8 @@ public final class ExecutionConfig {
         this.sourceParallelism = sourceParallelism;
         this.sinkParallelism = sinkParallelism;
         this.channelCapacity = channelCapacity;
+        this.splitAssignmentMode = java.util.Objects.requireNonNull(
+                splitAssignmentMode, "splitAssignmentMode must not be null");
     }
 
     public int getBatchSize() {
@@ -68,4 +79,5 @@ public final class ExecutionConfig {
     public int getChannelCapacity() {
         return channelCapacity;
     }
+    public SplitAssignmentMode getSplitAssignmentMode() { return splitAssignmentMode; }
 }

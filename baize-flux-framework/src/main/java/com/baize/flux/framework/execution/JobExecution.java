@@ -77,6 +77,7 @@ public final class JobExecution {
         Throwable failure = null;
 
         try {
+            registerSplitMetrics();
             int sourceTaskCount =
                     executionPlan
                             .getSourceTaskPlans()
@@ -116,6 +117,7 @@ public final class JobExecution {
                                 new Runnable() {
                                     @Override
                                     public void run() {
+                                        cancelSplitQueues();
                                         failChannels(
                                                 channels,
                                                 cancellationToken
@@ -162,10 +164,29 @@ public final class JobExecution {
                 failure);
     }
 
+    private void registerSplitMetrics() {
+        long total = 0L;
+        for (SourceTaskPlan<?> plan : executionPlan.getSourceTaskPlans()) {
+            total += plan.getSplits().size();
+            if (plan.getSplitQueue() != null) {
+                jobMetrics.registerSplitQueue(plan.getSplitQueue());
+                return;
+            }
+        }
+        jobMetrics.setStaticTotalSplitCount(total);
+    }
+
     public void cancel() {
         cancellationToken.cancel(
                 new java.util.concurrent.CancellationException(
-                        "Job was cancelled by caller"));
+                "Job was cancelled by caller"));
+        cancelSplitQueues();
+    }
+
+    private void cancelSplitQueues() {
+        for (SourceTaskPlan<?> plan : executionPlan.getSourceTaskPlans()) {
+            if (plan.getSplitQueue() != null) plan.getSplitQueue().cancel(cancellationToken.getCause());
+        }
     }
 
     private void createChannels(
