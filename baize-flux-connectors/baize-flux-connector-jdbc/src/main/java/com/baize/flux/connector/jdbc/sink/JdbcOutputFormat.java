@@ -13,6 +13,9 @@ import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.internal.JdbcConnectionProvider;
 import com.baize.flux.connector.jdbc.sink.savemode.JdbcSaveModeHandler;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Savepoint;
@@ -51,6 +54,9 @@ import java.util.stream.Collectors;
  */
 public final class JdbcOutputFormat
         implements AutoCloseable {
+
+    private static final Logger LOG =
+            LoggerFactory.getLogger(JdbcOutputFormat.class);
 
     private final JdbcSinkConfig config;
 
@@ -273,6 +279,11 @@ public final class JdbcOutputFormat
                         throw rowFailure;
                     }
                     rowErrors.add(new JdbcRowError(row, rowFailure));
+                    LOG.warn(
+                            "Skipping dirty JDBC row because dirty_data_policy=SKIP; table={}, row={}",
+                            tablePath,
+                            row,
+                            rowFailure);
                 }
             }
         }
