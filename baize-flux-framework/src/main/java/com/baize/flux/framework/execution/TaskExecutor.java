@@ -2,6 +2,9 @@ package com.baize.flux.framework.execution;
 
 import com.baize.flux.framework.execution.task.ExecutionTask;
 import com.baize.flux.framework.metrics.TaskMetrics;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -13,19 +16,40 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class TaskExecutor
         implements AutoCloseable {
 
+    private static final Logger LOG = LogManager.getLogger(TaskExecutor.class);
+
     private final ExecutorService executorService;
 
     private final ExecutorCompletionService<TaskResult>
             completionService;
 
+    private final String jobName;
+
+    private final long runId;
+
     public TaskExecutor(
             int threadCount,
             final String threadPrefix) {
+
+        this(threadCount, threadPrefix, "unnamed", System.currentTimeMillis());
+    }
+
+    public TaskExecutor(
+            int threadCount,
+            final String threadPrefix,
+            String jobName,
+            long runId) {
 
         if (threadCount <= 0) {
             throw new IllegalArgumentException(
                     "threadCount must be greater than 0");
         }
+
+        this.jobName = Objects.requireNonNull(jobName, "jobName must not be null");
+        if (runId < 0) {
+            throw new IllegalArgumentException("runId must not be negative");
+        }
+        this.runId = runId;
 
         final AtomicInteger sequence =
                 new AtomicInteger();
@@ -77,6 +101,9 @@ public final class TaskExecutor
                     @Override
                     public TaskResult call() {
 
+                        String taskLogFile = TaskLogFileName.create(jobName, task.getTaskId(), runId);
+                        ThreadContext.put("taskLogFile", taskLogFile);
+
                         TaskMetrics metrics =
                                 context.getMetrics();
 
@@ -87,6 +114,8 @@ public final class TaskExecutor
                             metrics.markFinished(
                                     TaskState.CANCELED);
 
+                            LOG.info("Task cancelled before execution: {}", task.getTaskId());
+                            ThreadContext.remove("taskLogFile");
                             return TaskResult.canceled(
                                     task.getTaskId(),
                                     context
@@ -95,6 +124,7 @@ public final class TaskExecutor
                         }
 
                         metrics.markStarted();
+                        LOG.info("Task started: {}", task.getTaskId());
 
                         try {
                             task.execute(context);
@@ -106,6 +136,7 @@ public final class TaskExecutor
                                 metrics.markFinished(
                                         TaskState.CANCELED);
 
+                                LOG.info("Task cancelled: {}", task.getTaskId());
                                 return TaskResult.canceled(
                                         task.getTaskId(),
                                         context
@@ -116,6 +147,7 @@ public final class TaskExecutor
                             metrics.markFinished(
                                     TaskState.FINISHED);
 
+                            LOG.info("Task finished: {}", task.getTaskId());
                             return TaskResult.finished(
                                     task.getTaskId());
 
@@ -132,6 +164,7 @@ public final class TaskExecutor
                                 metrics.markFinished(
                                         TaskState.CANCELED);
 
+                                LOG.info("Task cancelled: {}", task.getTaskId());
                                 return TaskResult.canceled(
                                         task.getTaskId(),
                                         throwable);
@@ -140,9 +173,13 @@ public final class TaskExecutor
                             metrics.markFinished(
                                     TaskState.FAILED);
 
+                            LOG.error("Task failed: " + task.getTaskId(), throwable);
+
                             return TaskResult.failed(
                                     task.getTaskId(),
                                     throwable);
+                        } finally {
+                            ThreadContext.remove("taskLogFile");
                         }
                     }
                 });

@@ -17,11 +17,27 @@
             </Policies>
             <DefaultRolloverStrategy max="14"/>
         </RollingFile>
+        <Routing name="TaskFiles">
+            <Routes pattern="$${ctx:taskLogFile}">
+                <Route key="$${ctx:taskLogFile}">
+                    <RollingFile name="TaskFile-$${ctx:taskLogFile}"
+                                 fileName="${LOG_DIR}/$${ctx:taskLogFile}"
+                                 filePattern="${LOG_DIR}/$${ctx:taskLogFile}.%i.gz">
+                        <PatternLayout pattern="${PATTERN}"/>
+                        <Policies>
+                            <SizeBasedTriggeringPolicy size="100 MB"/>
+                        </Policies>
+                        <DefaultRolloverStrategy max="14"/>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
     </Appenders>
     <Loggers>
         <Root level="INFO">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="File"/>
+            <AppenderRef ref="TaskFiles"/>
         </Root>
     </Loggers>
 </Configuration>
