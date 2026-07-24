@@ -1,5 +1,6 @@
 package com.baize.flux.api.dirtydata;
 
+import java.io.IOException;
 import java.util.*;
 
 public class BoundedMemoryDirtyDataCollector implements DirtyDataCollector {
@@ -19,14 +20,14 @@ public class BoundedMemoryDirtyDataCollector implements DirtyDataCollector {
         this.maxPercentage = maxPercentage;
     }
 
-    public void open() {
+    public void open() throws IOException{
     }
 
     public void recordAttempt(long count) {
         attempted += count;
     }
 
-    public void collect(DirtyRecord record) {
+    public void collect(DirtyRecord record) throws IOException {
         dirty++;
         if (samples.size() < maxSamples) samples.add(record);
     }
@@ -41,6 +42,6 @@ public class BoundedMemoryDirtyDataCollector implements DirtyDataCollector {
         return new DirtyDataSummary(dirty, attempted, m, dirty > maxCount, attempted > 0 && ((double) dirty / attempted) > maxPercentage, samples.size(), null);
     }
 
-    public void close(boolean successful) {
+    public void close(boolean successful) throws IOException{
     }
 }
