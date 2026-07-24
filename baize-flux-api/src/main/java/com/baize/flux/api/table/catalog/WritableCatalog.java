@@ -42,6 +42,16 @@ public interface WritableCatalog extends Catalog {
             TableAlreadyExistsException;
 
     /**
+     * Adds a column without changing existing data. Implementations that do
+     * not support schema evolution should fail explicitly instead of silently
+     * accepting a schema that cannot receive the source rows.
+     */
+    default void addColumn(TablePath tablePath, Column column)
+            throws CatalogException, TableNotFoundException {
+        throw new UnsupportedOperationException("Catalog does not support ADD COLUMN: " + name());
+    }
+
+    /**
      * 删除表。
      */
     void dropTable(
