@@ -2,6 +2,7 @@ package com.baize.flux.connector.jdbc.config;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.table.catalog.TablePath;
+import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigResolveOptions;
 import org.junit.Test;
@@ -52,6 +53,20 @@ public class JdbcSinkConfigTest {
         assertEquals(
                 "test1.sink_orders",
                 config.resolveTargetTablePath(TablePath.of("flux_test", "orders")));
+    }
+
+    @Test
+    public void shouldFailFastForDirtyDataByDefault() {
+        assertEquals(DirtyDataPolicy.FAIL_FAST, config("").getDirtyDataPolicy());
+        assertFalse(config("").shouldSkipDirtyData());
+    }
+
+    @Test
+    public void shouldAllowSkippingDirtyRows() {
+        JdbcSinkConfig config = config("dirty_data_policy = SKIP");
+
+        assertEquals(DirtyDataPolicy.SKIP, config.getDirtyDataPolicy());
+        assertTrue(config.shouldSkipDirtyData());
     }
 
     private JdbcSinkConfig config(String sinkOptions) {

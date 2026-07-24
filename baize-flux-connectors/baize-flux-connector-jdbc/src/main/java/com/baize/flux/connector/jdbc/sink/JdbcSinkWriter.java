@@ -6,6 +6,7 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -66,5 +67,12 @@ public final class JdbcSinkWriter
     @Override
     public void close() throws Exception {
         outputFormat.close();
+    }
+
+    /**
+     * Returns immutable snapshots of rows skipped under {@code dirty_data_policy=SKIP}.
+     */
+    public List<JdbcRowError> getRowErrors() {
+        return outputFormat.getRowErrors();
     }
 }
