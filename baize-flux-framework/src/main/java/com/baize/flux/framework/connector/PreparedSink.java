@@ -8,17 +8,17 @@ import com.baize.flux.api.table.type.FluxRow;
 import java.util.Objects;
 
 /**
- * 已完成 Factory 发现和配置校验的 Sink。
+ * 已完成 Factory 发现、配置校验和 Writer 初始化的 Sink。
  *
- * <p>每个 SinkTask 通过该对象创建独立 SinkWriter。
+ * <p>SinkWriter 在 Job Prepare 阶段创建，并在对应的 SinkTask 中执行。
  */
 public final class PreparedSink {
 
     private final String factoryIdentifier;
 
-    private final SinkFactory factory;
-
     private final ReadonlyConfig options;
+
+    private final SinkWriter<FluxRow> writer;
 
     public PreparedSink(
             String factoryIdentifier,
@@ -30,28 +30,28 @@ public final class PreparedSink {
                         factoryIdentifier,
                         "factoryIdentifier must not be null");
 
-        this.factory =
-                Objects.requireNonNull(
-                        factory,
-                        "factory must not be null");
-
         this.options =
                 Objects.requireNonNull(
                         options,
                         "options must not be null");
-    }
 
-    public SinkWriter<FluxRow> createWriter() {
-        SinkWriter<FluxRow> writer =
-                factory.createSink(options);
+        SinkFactory nonNullFactory =
+                Objects.requireNonNull(
+                        factory,
+                        "factory must not be null");
 
-        if (writer == null) {
+        this.writer =
+                nonNullFactory.createSink(options);
+
+        if (this.writer == null) {
             throw new ConnectorException(
                     "Sink factory '"
                             + factoryIdentifier
                             + "' returned a null writer");
         }
+    }
 
+    public SinkWriter<FluxRow> getWriter() {
         return writer;
     }
 

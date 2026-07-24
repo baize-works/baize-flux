@@ -62,14 +62,16 @@ public final class ConnectorPreparer {
                 prepareSource(
                         definition.getSource());
 
-        PreparedSink sink =
-                prepareSink(
-                        definition.getSink());
+        List<PreparedSink> sinks =
+                prepareSinks(
+                        definition.getSink(),
+                        definition.getExecutionConfig()
+                                .getSinkParallelism());
 
         return new PreparedJob(
                 definition.getName(),
                 source,
-                sink,
+                sinks,
                 definition.getExecutionConfig());
     }
 
@@ -126,8 +128,9 @@ public final class ConnectorPreparer {
                 tableMap);
     }
 
-    private PreparedSink prepareSink(
-            SinkDefinition definition) {
+    private List<PreparedSink> prepareSinks(
+            SinkDefinition definition,
+            int parallelism) {
 
         SinkFactory factory =
                 registry.getSinkFactory(
@@ -138,10 +141,19 @@ public final class ConnectorPreparer {
                 .validate(
                         factory.optionRule());
 
-        return new PreparedSink(
-                definition.getType(),
-                factory,
-                definition.getOptions());
+        List<PreparedSink> sinks =
+                new java.util.ArrayList<PreparedSink>(
+                        parallelism);
+
+        for (int i = 0; i < parallelism; i++) {
+            sinks.add(
+                    new PreparedSink(
+                            definition.getType(),
+                            factory,
+                            definition.getOptions()));
+        }
+
+        return sinks;
     }
 
     private Map<TablePath, CatalogTable> buildTableMap(
