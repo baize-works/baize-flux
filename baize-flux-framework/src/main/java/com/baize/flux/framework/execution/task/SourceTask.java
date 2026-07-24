@@ -93,8 +93,13 @@ public final class SourceTask<
                  * endOfInput 不再发送到 Channel。
                  */
                 if (batch.isEndOfInput()) {
+                    for (SplitT split : plan.getSplits()) {
+                        context.getMetrics().markSplitCompleted(split.splitId());
+                    }
                     break;
                 }
+
+                context.getMetrics().setCurrentPosition(batch.getDataSetId(), batch.getSplitId());
 
                 RecordEnvelope<FluxRow> envelope =
                         createEnvelope(
@@ -105,7 +110,7 @@ public final class SourceTask<
                         .incrementBatchCount();
 
                 context.getMetrics()
-                        .addRecordCount(
+                        .addSourceReadRecords(
                                 batch.getRecords().size());
 
                 outputGate.write(envelope);
