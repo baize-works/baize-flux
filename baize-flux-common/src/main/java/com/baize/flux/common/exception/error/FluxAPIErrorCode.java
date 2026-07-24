@@ -17,7 +17,8 @@ public enum FluxAPIErrorCode implements FluxErrorCode {
     LIST_DATABASES_FAILED("API-12", "List databases failed"),
     LIST_TABLES_FAILED("API-13", "List tables failed"),
     GET_PRIMARY_KEY_FAILED("API-14", "Get primary key failed"),
-    METADATA_PROVIDER_INITIALIZE_FAILED("API-15", "MetaData provider initialize failed");
+    METADATA_PROVIDER_INITIALIZE_FAILED("API-15", "MetaData provider initialize failed"),
+    CONNECTOR_INITIALIZE_FAILED("API-16", "Connector initialize failed");
 
     private final String code;
     private final String description;
