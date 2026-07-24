@@ -84,15 +84,25 @@ public final class SinkTask
                     break;
                 }
 
-                writer.write(
-                        envelope.getBatch(),
-                        envelope.getCatalogTable());
+                long sqlStart = System.nanoTime();
+                try {
+                    writer.write(
+                            envelope.getBatch(),
+                            envelope.getCatalogTable());
+                } finally {
+                    context.getMetrics().addSqlExecutionNanos(
+                            System.nanoTime() - sqlStart);
+                }
+
+                context.getMetrics().setCurrentPosition(
+                        envelope.getBatch().getDataSetId(),
+                        envelope.getBatch().getSplitId());
 
                 context.getMetrics()
                         .incrementBatchCount();
 
                 context.getMetrics()
-                        .addRecordCount(
+                        .addSinkWriteSuccessRecords(
                                 envelope
                                         .getBatch()
                                         .getRecords()
@@ -112,7 +122,9 @@ public final class SinkTask
                                 + getTaskId());
             }
 
+            long commitStart = System.nanoTime();
             writer.commit();
+            context.getMetrics().addDatabaseCommitNanos(System.nanoTime() - commitStart);
 
             committed = true;
 

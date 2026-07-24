@@ -54,11 +54,11 @@ public final class JobMetrics {
     }
 
     public long getSourceRecordCount() {
-        return sumRecords("source");
+        return sumMetric("source", Metric.SOURCE_READ_RECORDS);
     }
 
     public long getSinkRecordCount() {
-        return sumRecords("sink");
+        return sumMetric("sink", Metric.SINK_SUCCESS_RECORDS);
     }
 
     public long getSourceBatchCount() {
@@ -69,18 +69,65 @@ public final class JobMetrics {
         return sumBatches("sink");
     }
 
-    private long sumRecords(String stageName) {
+    /** Positive means more rows have been read than successfully written. */
+    public long getSourceSinkRecordDifference() {
+        return getSourceRecordCount() - getSinkRecordCount();
+    }
+
+    public long getFailedRecordCount() { return sumMetric(null, Metric.FAILED_RECORDS); }
+    public long getSkippedRecordCount() { return sumMetric(null, Metric.SKIPPED_RECORDS); }
+    public long getSourceReadBytes() { return sumMetric("source", Metric.SOURCE_BYTES); }
+    public long getSinkWrittenBytes() { return sumMetric("sink", Metric.SINK_BYTES); }
+    public long getCompletedSplitCount() { return sumMetric("source", Metric.COMPLETED_SPLITS); }
+    public long getBatchRetryCount() { return sumMetric(null, Metric.BATCH_RETRIES); }
+    public long getDatabaseCommitMillis() { return sumMetric("sink", Metric.COMMIT_MILLIS); }
+    public long getSqlExecutionMillis() { return sumMetric(null, Metric.SQL_MILLIS); }
+
+    public double getCurrentQps() { return sumRate(false); }
+    public double getAverageQps() { return sumRate(true); }
+
+    /** Average of registered channel blocking ratios; zero when no channel is registered. */
+    public double getChannelBlockedRatio() {
+        if (channelMetrics.isEmpty()) return 0D;
+        double total = 0D;
+        for (ChannelMetrics metrics : channelMetrics) total += metrics.getBlockedRatio();
+        return total / channelMetrics.size();
+    }
+
+    private double sumRate(boolean average) {
+        double total = 0D;
+        for (TaskMetrics metrics : taskMetrics.values())
+            total += average ? metrics.getAverageQps() : metrics.getCurrentQps();
+        return total;
+    }
+
+    private long sumMetric(String stageName, Metric metric) {
         long total = 0L;
 
         for (TaskMetrics metrics : taskMetrics.values()) {
-            if (stageName.equals(
-                    metrics.getTaskId().getStageName())) {
-
-                total += metrics.getRecordCount();
+            if (stageName == null || stageName.equals(metrics.getTaskId().getStageName())) {
+                switch (metric) {
+                    case SOURCE_READ_RECORDS: total += metrics.getSourceReadRecordCount(); break;
+                    case SINK_SUCCESS_RECORDS: total += metrics.getSinkWriteSuccessRecordCount(); break;
+                    case FAILED_RECORDS: total += metrics.getFailedRecordCount(); break;
+                    case SKIPPED_RECORDS: total += metrics.getSkippedRecordCount(); break;
+                    case SOURCE_BYTES: total += metrics.getSourceReadBytes(); break;
+                    case SINK_BYTES: total += metrics.getSinkWrittenBytes(); break;
+                    case COMPLETED_SPLITS: total += metrics.getCompletedSplitCount(); break;
+                    case BATCH_RETRIES: total += metrics.getBatchRetryCount(); break;
+                    case COMMIT_MILLIS: total += metrics.getDatabaseCommitMillis(); break;
+                    case SQL_MILLIS: total += metrics.getSqlExecutionMillis(); break;
+                    default: break;
+                }
             }
         }
 
         return total;
+    }
+
+    private enum Metric {
+        SOURCE_READ_RECORDS, SINK_SUCCESS_RECORDS, FAILED_RECORDS, SKIPPED_RECORDS,
+        SOURCE_BYTES, SINK_BYTES, COMPLETED_SPLITS, BATCH_RETRIES, COMMIT_MILLIS, SQL_MILLIS
     }
 
     private long sumBatches(String stageName) {

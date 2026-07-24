@@ -29,6 +29,8 @@ public final class ChannelMetrics {
     private final AtomicLong readBlockedNanos =
             new AtomicLong();
 
+    private final long createdNanos = System.nanoTime();
+
     public ChannelMetrics(String channelId) {
         this.channelId =
                 Objects.requireNonNull(
@@ -99,5 +101,11 @@ public final class ChannelMetrics {
 
     public long getReadBlockedMillis() {
         return readBlockedNanos.get() / 1_000_000L;
+    }
+
+    /** Fraction of channel lifetime spent waiting on either side, capped at one. */
+    public double getBlockedRatio() {
+        long elapsed = Math.max(1L, System.nanoTime() - createdNanos);
+        return Math.min(1D, (writeBlockedNanos.get() + readBlockedNanos.get()) / (double) elapsed);
     }
 }
