@@ -4,6 +4,7 @@ import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.table.type.FluxRow;
+import com.baize.flux.framework.plugin.ClassLoaderScope;
 
 import java.util.Objects;
 
@@ -40,8 +41,9 @@ public final class PreparedSink {
                         factory,
                         "factory must not be null");
 
-        this.writer =
-                nonNullFactory.createSink(options);
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(nonNullFactory.getClass().getClassLoader())) {
+            this.writer = nonNullFactory.createSink(options);
+        }
 
         if (this.writer == null) {
             throw new ConnectorException(

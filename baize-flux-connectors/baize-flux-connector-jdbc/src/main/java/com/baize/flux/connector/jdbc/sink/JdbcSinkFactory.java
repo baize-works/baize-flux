@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.sink;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
+import com.baize.flux.api.connector.ConnectorDescriptor;
 import com.baize.flux.api.configuration.util.OptionRule;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.sink.SinkWriter;
@@ -15,6 +16,13 @@ import com.google.auto.service.AutoService;
  */
 @AutoService(SinkFactory.class)
 public final class JdbcSinkFactory implements SinkFactory {
+    @Override
+    public ConnectorDescriptor connectorDescriptor() {
+        return new ConnectorDescriptor("jdbc", "1.0.0", "1",
+                java.util.Collections.singleton(ConnectorDescriptor.Type.SINK),
+                java.util.Collections.<String>emptySet(), null);
+    }
+
     @Override
     public String factoryIdentifier() {
         return "jdbc";

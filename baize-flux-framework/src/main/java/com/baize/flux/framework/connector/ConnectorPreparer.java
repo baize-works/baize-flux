@@ -9,6 +9,7 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.factory.TableSourceFactory;
 import com.baize.flux.framework.job.JobDefinition;
+import com.baize.flux.framework.plugin.ClassLoaderScope;
 import com.baize.flux.framework.job.SinkDefinition;
 import com.baize.flux.framework.job.SourceDefinition;
 
@@ -104,8 +105,10 @@ public final class ConnectorPreparer {
             TableSourceFactory<SplitT> factory,
             SourceFactoryContext context) throws Exception {
 
-        Source<SplitT> source =
-                factory.createSource(context);
+        Source<SplitT> source;
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(factory.getClass().getClassLoader())) {
+            source = factory.createSource(context);
+        }
 
         if (source == null) {
             throw new ConnectorException(
@@ -114,8 +117,10 @@ public final class ConnectorPreparer {
                             + "' returned a null source");
         }
 
-        List<CatalogTable> catalogTables =
-                factory.discoverTableSchemas(context);
+        List<CatalogTable> catalogTables;
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(factory.getClass().getClassLoader())) {
+            catalogTables = factory.discoverTableSchemas(context);
+        }
 
         Map<TablePath, CatalogTable> tableMap =
                 buildTableMap(

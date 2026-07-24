@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.source;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
+import com.baize.flux.api.connector.ConnectorDescriptor;
 import com.baize.flux.api.configuration.util.OptionRule;
 import com.baize.flux.api.source.SourceFactoryContext;
 import com.baize.flux.api.table.catalog.CatalogTable;
@@ -33,6 +34,13 @@ public final class JdbcSourceFactory
         implements TableSourceFactory<JdbcSourceSplit> {
 
     private static final String IDENTIFIER = "jdbc";
+
+    @Override
+    public ConnectorDescriptor connectorDescriptor() {
+        return new ConnectorDescriptor("jdbc", "1.0.0", "1",
+                java.util.Collections.singleton(ConnectorDescriptor.Type.SOURCE),
+                java.util.Collections.<String>emptySet(), null);
+    }
 
     @Override
     public String factoryIdentifier() {

@@ -9,6 +9,7 @@ import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.JobPlanner;
 
 import java.util.Objects;
+import java.nio.file.Path;
 
 /**
  * 本地离线 Flux 执行引擎。
@@ -20,12 +21,15 @@ public final class LocalFluxEngine
 
     private final ConnectorPreparer connectorPreparer;
 
+    private final FactoryRegistry registry;
+
     private final JobPlanner jobPlanner;
 
     public LocalFluxEngine(
             ClassLoader classLoader,
             ConnectorPreparer connectorPreparer,
-            JobPlanner jobPlanner) {
+            JobPlanner jobPlanner,
+            FactoryRegistry registry) {
 
         this.classLoader =
                 Objects.requireNonNull(
@@ -37,6 +41,8 @@ public final class LocalFluxEngine
                         connectorPreparer,
                         "connectorPreparer must not be null");
 
+        this.registry = Objects.requireNonNull(registry, "registry must not be null");
+
         this.jobPlanner =
                 Objects.requireNonNull(
                         jobPlanner,
@@ -45,6 +51,10 @@ public final class LocalFluxEngine
 
     public static LocalFluxEngine create(
             ClassLoader classLoader) {
+        return create(classLoader, new Path[0]);
+    }
+
+    public static LocalFluxEngine create(ClassLoader classLoader, Path... pluginDirectories) {
 
         ClassLoader effectiveClassLoader =
                 classLoader == null
@@ -54,7 +64,7 @@ public final class LocalFluxEngine
 
         FactoryRegistry registry =
                 FactoryRegistry.discover(
-                        effectiveClassLoader);
+                        effectiveClassLoader, pluginDirectories);
 
         ConnectorPreparer preparer =
                 new ConnectorPreparer(
@@ -67,7 +77,8 @@ public final class LocalFluxEngine
         return new LocalFluxEngine(
                 effectiveClassLoader,
                 preparer,
-                planner);
+                planner,
+                registry);
     }
 
     @Override
@@ -75,27 +86,17 @@ public final class LocalFluxEngine
             JobDefinition definition)
             throws Exception {
 
-        PreparedJob preparedJob =
-                connectorPreparer.prepare(
-                        definition);
-
-        ExecutionPlan executionPlan =
-                jobPlanner.plan(
-                        preparedJob);
-
-        JobExecution jobExecution =
-                new JobExecution(
-                        executionPlan,
-                        classLoader);
-
-        return jobExecution.execute();
+        try {
+            PreparedJob preparedJob = connectorPreparer.prepare(definition);
+            ExecutionPlan executionPlan = jobPlanner.plan(preparedJob);
+            return new JobExecution(executionPlan, classLoader).execute();
+        } finally {
+            registry.close();
+        }
     }
 
     @Override
     public void close() {
-        /*
-         * 当前 Engine 不持有长生命周期线程池。
-         * 后续支持多 Job 并发时，可在这里关闭资源。
-         */
+        registry.close();
     }
 }

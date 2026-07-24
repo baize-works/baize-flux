@@ -6,6 +6,7 @@ import com.baize.flux.framework.channel.InputGate;
 import com.baize.flux.framework.channel.RecordEnvelope;
 import com.baize.flux.framework.execution.TaskContext;
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.plugin.ClassLoaderScope;
 import com.baize.flux.framework.planner.SinkTaskPlan;
 
 import java.util.Objects;
@@ -54,7 +55,7 @@ public final class SinkTask
 
         boolean committed = false;
 
-        try {
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(plan.getPreparedSink().getWriter().getClass().getClassLoader())) {
             writer =
                     plan.getPreparedSink()
                             .getWriter();

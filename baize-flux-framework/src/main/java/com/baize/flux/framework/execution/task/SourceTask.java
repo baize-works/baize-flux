@@ -11,6 +11,7 @@ import com.baize.flux.framework.channel.RecordEnvelope;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskContext;
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.plugin.ClassLoaderScope;
 import com.baize.flux.framework.planner.SourceTaskPlan;
 
 import java.util.Map;
@@ -61,7 +62,7 @@ public final class SourceTask<
 
         Throwable failure = null;
 
-        try {
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(preparedSource.getSource().getClass().getClassLoader())) {
             reader =
                     preparedSource
                             .getSource()
