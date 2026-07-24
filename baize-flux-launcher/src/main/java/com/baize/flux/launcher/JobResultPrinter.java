@@ -4,6 +4,7 @@ import com.baize.flux.framework.metrics.ChannelMetrics;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.metrics.TaskMetrics;
 import com.baize.flux.framework.job.JobResult;
+import com.baize.flux.framework.job.CommitSummary;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -27,6 +28,18 @@ public final class JobResultPrinter {
         line(output, "作业名称", result.getJobName());
         line(output, "执行状态", result.getStatus());
         line(output, "执行耗时（毫秒）", result.getDurationMillis());
+        CommitSummary commits = result.getCommitSummary();
+        output.println("  提交结果：");
+        line(output, "提交语义", commits.getCommitScope());
+        line(output, "成功提交 SinkTask 数", commits.getCommittedTaskCount());
+        line(output, "失败或未提交 SinkTask 数", commits.getFailedOrUncommittedTaskCount());
+        line(output, "部分提交", commits.isPartialCommit());
+        if (commits.isPartialCommit()) {
+            line(output, "警告", commits.getWarning());
+        }
+        for (String advice : commits.getRetryAdvice()) {
+            line(output, "安全重跑建议", advice);
+        }
 
         output.println("  汇总指标：");
         output.println("    数据源：");

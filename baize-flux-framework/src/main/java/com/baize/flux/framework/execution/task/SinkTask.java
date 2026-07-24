@@ -1,6 +1,7 @@
 package com.baize.flux.framework.execution.task;
 
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.CommitScope;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.InputGate;
 import com.baize.flux.framework.channel.RecordEnvelope;
@@ -21,6 +22,10 @@ public final class SinkTask
 
     private final InputGate<RecordEnvelope<FluxRow>>
             inputGate;
+
+    private volatile boolean committed;
+    private volatile String retryAdvice;
+    private volatile CommitScope commitScope = CommitScope.TASK_LOCAL;
 
     public SinkTask(
             SinkTaskPlan plan,
@@ -52,12 +57,12 @@ public final class SinkTask
 
         Throwable failure = null;
 
-        boolean committed = false;
-
         try {
             writer =
                     plan.getPreparedSink()
                             .getWriter();
+            commitScope = writer.getCommitScope();
+            retryAdvice = writer.getRetryAdvice();
 
             writer.open();
 
@@ -123,6 +128,7 @@ public final class SinkTask
             }
 
             long commitStart = System.nanoTime();
+            writer.prepareCommit();
             writer.commit();
             context.getMetrics().addDatabaseCommitNanos(System.nanoTime() - commitStart);
 
@@ -133,7 +139,9 @@ public final class SinkTask
 
             if (writer != null) {
                 try {
-                    writer.rollback();
+                    if (!committed) {
+                        writer.abort();
+                    }
                 } catch (Throwable rollbackFailure) {
                     throwable.addSuppressed(
                             rollbackFailure);
@@ -155,8 +163,8 @@ public final class SinkTask
                         /*
                          * 事务尚未提交时，关闭异常需要让任务失败。
                          */
-                        throw propagate(
-                                closeFailure);
+                        failure = closeFailure;
+                        throw propagate(closeFailure);
                     }
 
                     /*
@@ -167,6 +175,12 @@ public final class SinkTask
             }
         }
     }
+
+    public boolean isCommitted() { return committed; }
+
+    public CommitScope getCommitScope() { return commitScope; }
+
+    public String getRetryAdvice() { return retryAdvice; }
 
     private static RuntimeException propagate(
             Throwable throwable)

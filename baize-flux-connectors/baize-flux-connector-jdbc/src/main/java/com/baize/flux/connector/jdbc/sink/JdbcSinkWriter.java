@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.sink;
 
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.CommitScope;
 import com.baize.flux.api.source.RecordBatch;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
@@ -18,17 +19,21 @@ import java.util.Objects;
 public final class JdbcSinkWriter
         implements SinkWriter<FluxRow> {
 
+    private final JdbcSinkConfig config;
+
     private final JdbcOutputFormat outputFormat;
 
     public JdbcSinkWriter(
             JdbcSinkConfig config) {
 
+        this.config =
+                Objects.requireNonNull(
+                        config,
+                        "config must not be null");
         this.outputFormat =
                 new JdbcOutputFormatBuilder()
                         .withConfig(
-                                Objects.requireNonNull(
-                                        config,
-                                        "config must not be null"))
+                                this.config)
                         .build();
     }
 
@@ -60,8 +65,32 @@ public final class JdbcSinkWriter
     }
 
     @Override
-    public void rollback() throws Exception {
+    public void abort() throws Exception {
         outputFormat.rollback();
+    }
+
+    @Override
+    public CommitScope getCommitScope() {
+        return CommitScope.TASK_LOCAL;
+    }
+
+    @Override
+    public String getRetryAdvice() {
+        if (config.isUpsert()) {
+            return "JDBC UPSERT can usually be rerun when primary keys are stable, but correctness depends on the database dialect's UPSERT semantics.";
+        }
+        switch (config.getDataSaveMode()) {
+            case APPEND_DATA:
+                return "JDBC APPEND_DATA may duplicate rows that were committed before failure; deduplicate or verify target data before rerunning.";
+            case DROP_DATA:
+                return "JDBC DROP_DATA may have cleared target data before failure; validate and restore/reload as needed before rerunning.";
+            case CUSTOM_PROCESSING:
+                return "JDBC CUSTOM_PROCESSING rerun safety is determined by the configured SQL; review its effects before rerunning.";
+            case ERROR_WHEN_DATA_EXISTS:
+                return "JDBC ERROR_WHEN_DATA_EXISTS reruns depend on whether committed data now exists; inspect the target before rerunning.";
+            default:
+                return "JDBC rerun safety depends on the configured save mode; inspect the target before rerunning.";
+        }
     }
 
     @Override

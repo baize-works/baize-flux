@@ -21,6 +21,8 @@ public final class JobResult {
 
     private final Throwable failure;
 
+    private final CommitSummary commitSummary;
+
     public JobResult(
             String jobName,
             JobStatus status,
@@ -28,6 +30,11 @@ public final class JobResult {
             long endTimeMillis,
             JobMetrics metrics,
             Throwable failure) {
+        this(jobName, status, startTimeMillis, endTimeMillis, metrics, failure, CommitSummary.empty());
+    }
+
+    public JobResult(String jobName, JobStatus status, long startTimeMillis, long endTimeMillis,
+                     JobMetrics metrics, Throwable failure, CommitSummary commitSummary) {
 
         this.jobName =
                 Objects.requireNonNull(
@@ -48,6 +55,7 @@ public final class JobResult {
                         "metrics must not be null");
 
         this.failure = failure;
+        this.commitSummary = Objects.requireNonNull(commitSummary, "commitSummary must not be null");
     }
 
     public void throwIfFailed() throws Exception {
@@ -95,6 +103,8 @@ public final class JobResult {
     public Throwable getFailure() {
         return failure;
     }
+
+    public CommitSummary getCommitSummary() { return commitSummary; }
 
     public boolean isSuccess() {
         return status == JobStatus.SUCCEEDED;

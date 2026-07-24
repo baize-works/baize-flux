@@ -13,6 +13,7 @@ import com.baize.flux.framework.execution.task.ExecutionTask;
 import com.baize.flux.framework.execution.task.SinkTask;
 import com.baize.flux.framework.execution.task.SourceTask;
 import com.baize.flux.framework.job.JobResult;
+import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.job.JobStatus;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.ExecutionPlan;
@@ -75,6 +76,7 @@ public final class JobExecution {
                         DataChannel<RecordEnvelope<FluxRow>>>();
 
         Throwable failure = null;
+        CommitSummary commitSummary = CommitSummary.empty();
 
         try {
             int sourceTaskCount =
@@ -92,7 +94,7 @@ public final class JobExecution {
                     sourceTaskCount,
                     sinkTaskCount);
 
-            List<ExecutionTask> sinkTasks =
+            List<SinkTask> sinkTasks =
                     createSinkTasks(channels);
 
             List<ExecutionTask> sourceTasks =
@@ -123,10 +125,9 @@ public final class JobExecution {
                                     }
                                 });
 
-                failure =
-                        coordinator.execute(
-                                sinkTasks,
-                                sourceTasks);
+                ExecutionOutcome outcome = coordinator.execute(sinkTasks, sourceTasks);
+                failure = outcome.getFailure();
+                commitSummary = outcome.getCommitSummary();
             }
 
         } catch (Throwable throwable) {
@@ -145,7 +146,7 @@ public final class JobExecution {
 
         JobStatus status;
 
-        if (failure != null) {
+        if (failure != null || commitSummary.isPartialCommit()) {
             status = JobStatus.FAILED;
         } else if (cancellationToken.isCancelled()) {
             status = JobStatus.CANCELED;
@@ -159,7 +160,8 @@ public final class JobExecution {
                 startTime,
                 System.currentTimeMillis(),
                 jobMetrics,
-                failure);
+                failure,
+                commitSummary);
     }
 
     public void cancel() {
@@ -192,7 +194,7 @@ public final class JobExecution {
         }
     }
 
-    private List<ExecutionTask> createSinkTasks(
+    private List<SinkTask> createSinkTasks(
             List<DataChannel<RecordEnvelope<FluxRow>>>
                     channels) {
 
@@ -204,8 +206,8 @@ public final class JobExecution {
                     "Sink task count does not match channel count");
         }
 
-        List<ExecutionTask> tasks =
-                new ArrayList<ExecutionTask>(
+        List<SinkTask> tasks =
+                new ArrayList<SinkTask>(
                         plans.size());
 
         for (int i = 0; i < plans.size(); i++) {

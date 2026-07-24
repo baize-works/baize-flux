@@ -12,7 +12,9 @@ import com.baize.flux.api.table.catalog.CatalogTable;
  * open
  *   -> write
  *   -> write
- *   -> commit / rollback
+ *   -> prepareCommit
+ *   -> commit
+ *   -> abort (on failure before commit)
  *   -> close
  * </pre>
  */
@@ -37,16 +39,39 @@ public interface SinkWriter<T> extends AutoCloseable {
             CatalogTable sourceTable)
             throws Exception;
 
-    /**
-     * 当前 SinkTask 全部数据写入成功后提交。
-     */
+    /** Called after all writes succeed and before the task-local commit boundary. */
+    default void prepareCommit() throws Exception {
+    }
+
+    /** Commits this writer at {@link #getCommitScope()}; it is not necessarily a Job commit. */
     default void commit() throws Exception {
     }
 
+    /** Aborts uncommitted work after a write or prepare/commit failure. */
+    default void abort() throws Exception {
+        rollback();
+    }
+
     /**
-     * 当前 SinkTask 执行失败时回滚。
+     * Legacy rollback hook. New writers should implement {@link #abort()}.
      */
+    @Deprecated
     default void rollback() throws Exception {
+    }
+
+    /**
+     * Returns the strongest commit scope provided by this writer.
+     *
+     * <p>The default is task-local: independently committing JDBC-style writers do not
+     * guarantee Job-level atomicity or a global rollback.
+     */
+    default CommitScope getCommitScope() {
+        return CommitScope.TASK_LOCAL;
+    }
+
+    /** User-facing advice for safely rerunning a failed job, if the connector can provide it. */
+    default String getRetryAdvice() {
+        return "This sink commits per task; verify already committed target data before rerunning.";
     }
 
     /**

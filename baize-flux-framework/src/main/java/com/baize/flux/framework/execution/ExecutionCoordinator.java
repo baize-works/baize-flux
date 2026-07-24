@@ -1,11 +1,14 @@
 package com.baize.flux.framework.execution;
 
 import com.baize.flux.framework.execution.task.ExecutionTask;
+import com.baize.flux.framework.execution.task.SinkTask;
+import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.metrics.TaskMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -68,8 +71,8 @@ public final class ExecutionCoordinator {
                         "cancellationHook must not be null");
     }
 
-    public Throwable execute(
-            List<ExecutionTask> sinkTasks,
+    public ExecutionOutcome execute(
+            List<SinkTask> sinkTasks,
             List<ExecutionTask> sourceTasks) {
 
         Objects.requireNonNull(
@@ -90,7 +93,7 @@ public final class ExecutionCoordinator {
         allTasks.addAll(sourceTasks);
 
         if (allTasks.isEmpty()) {
-            return null;
+            return new ExecutionOutcome(null, CommitSummary.empty());
         }
 
         List<Future<TaskResult>> futures =
@@ -175,7 +178,21 @@ public final class ExecutionCoordinator {
                     throwable);
         }
 
-        return firstFailure;
+        return new ExecutionOutcome(firstFailure, summarizeCommits(sinkTasks));
+    }
+
+    private CommitSummary summarizeCommits(List<SinkTask> sinkTasks) {
+        int committed = 0;
+        LinkedHashSet<String> advice = new LinkedHashSet<String>();
+        for (SinkTask sinkTask : sinkTasks) {
+            if (sinkTask.isCommitted()) committed++;
+            String taskAdvice = sinkTask.getRetryAdvice();
+            if (taskAdvice != null && !taskAdvice.isEmpty()) advice.add(taskAdvice);
+        }
+        return new CommitSummary(committed, sinkTasks.size() - committed,
+                sinkTasks.isEmpty() ? com.baize.flux.api.sink.CommitScope.TASK_LOCAL
+                        : sinkTasks.get(0).getCommitScope(),
+                new ArrayList<String>(advice));
     }
 
     private void cancelAll(
