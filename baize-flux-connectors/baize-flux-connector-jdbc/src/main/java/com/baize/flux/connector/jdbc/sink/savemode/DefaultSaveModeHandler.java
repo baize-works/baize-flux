@@ -2,6 +2,7 @@ package com.baize.flux.connector.jdbc.sink.savemode;
 
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
+import com.baize.flux.api.table.catalog.SchemaCompatibilityReport;
 import com.baize.flux.api.table.catalog.WritableCatalog;
 import com.baize.flux.api.table.catalog.exception.TableNotFoundException;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
@@ -50,21 +51,48 @@ public class DefaultSaveModeHandler implements SaveModeHandler {
                 if (!exists) {
                     createTable();
                 }
+                if (exists) {
+                    validateExistingSchema(false);
+                }
+                return;
+            case CREATE_OR_ADD_COLUMNS:
+                if (!exists) {
+                    createTable();
+                    return;
+                }
+                SchemaCompatibilityReport report = validateExistingSchema(true);
+                for (com.baize.flux.api.table.catalog.Column column : report.getMissingTargetColumns()) {
+                    catalog.addColumn(tablePath, column);
+                }
                 return;
             case ERROR_WHEN_SCHEMA_NOT_EXIST:
                 if (!exists) {
                     throw new TableNotFoundException(catalog.name(), tablePath);
                 }
+                validateExistingSchema(false);
                 return;
             case IGNORE:
                 if (!exists) {
                     throw new TableNotFoundException(catalog.name(), tablePath);
                 }
+                validateExistingSchema(false);
                 return;
             default:
                 throw new UnsupportedOperationException(
                         "Unsupported schema save mode: " + schemaSaveMode);
         }
+    }
+
+    private SchemaCompatibilityReport validateExistingSchema(boolean allowMissingColumns) {
+        SchemaCompatibilityReport report = SchemaCompatibilityReport.compare(
+                table.getTableSchema(), catalog.getTable(tablePath).getTableSchema());
+        if (!report.getIncompatibleColumns().isEmpty()
+                || (!allowMissingColumns && !report.getMissingTargetColumns().isEmpty())) {
+            throw new IllegalArgumentException("Incompatible target schema: "
+                    + report.getIncompatibleColumns() + "; missing target columns: "
+                    + report.getMissingTargetColumns());
+        }
+        return report;
     }
 
     @Override

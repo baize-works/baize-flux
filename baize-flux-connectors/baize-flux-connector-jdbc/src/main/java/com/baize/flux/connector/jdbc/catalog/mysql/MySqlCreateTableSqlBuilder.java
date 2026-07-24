@@ -199,12 +199,18 @@ public final class MySqlCreateTableSqlBuilder {
                         column,
                         preserveSourceType));
 
-        definitions.add(
-                column.isNullable()
-                        ? "NULL"
-                        : "NOT NULL");
+        String generated = column.getAttributes().get("generated");
 
-        if (!column.isAutoIncrement()
+        if (hasText(generated)) {
+            definitions.add("GENERATED ALWAYS AS (" + generated + ")");
+            String storage = column.getAttributes().get("generated_storage");
+            definitions.add("STORED".equalsIgnoreCase(storage) ? "STORED" : "VIRTUAL");
+        } else {
+            definitions.add(column.isNullable() ? "NULL" : "NOT NULL");
+        }
+
+        if (!hasText(generated)
+                && !column.isAutoIncrement()
                 && column.getDefaultValue() != null) {
 
             definitions.add(
@@ -213,7 +219,7 @@ public final class MySqlCreateTableSqlBuilder {
                             column));
         }
 
-        if (column.isAutoIncrement()) {
+        if (!hasText(generated) && column.isAutoIncrement()) {
             definitions.add(
                     "AUTO_INCREMENT");
         }
@@ -246,6 +252,13 @@ public final class MySqlCreateTableSqlBuilder {
         return String.join(
                 " ",
                 definitions);
+    }
+
+    /** Builds a reusable escaped column definition for ALTER TABLE ADD COLUMN. */
+    public String buildColumnDefinition(Column column) {
+        boolean preserveSourceType = "mysql".equalsIgnoreCase(
+                catalogTable.getOptions().get("dialect"));
+        return buildColumn(column, preserveSourceType);
     }
 
     private String buildPrimaryKey(

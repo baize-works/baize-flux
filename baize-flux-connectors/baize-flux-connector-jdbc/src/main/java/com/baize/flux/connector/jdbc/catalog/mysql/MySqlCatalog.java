@@ -524,6 +524,26 @@ public final class MySqlCatalog
     }
 
     @Override
+    public void addColumn(TablePath tablePath, Column column)
+            throws CatalogException, TableNotFoundException {
+        checkOpened();
+        TablePath normalized = normalizeTablePath(tablePath);
+        if (!tableExists(normalized)) {
+            throw new TableNotFoundException(catalogName, normalized);
+        }
+        CatalogTable table = getTable(normalized);
+        String definition = new MySqlCreateTableSqlBuilder(normalized, table, typeMapper)
+                .buildColumnDefinition(column);
+        String sql = "ALTER TABLE " + quoteTable(normalized) + " ADD COLUMN " + definition;
+        try (Connection connection = openDatabaseConnection(normalized.getDatabaseName())) {
+            execute(connection, sql);
+        } catch (SQLException e) {
+            throw new CatalogException("增加 MySQL 字段失败，table=" + normalized
+                    + ", column=" + column.getName(), e);
+        }
+    }
+
+    @Override
     public void dropTable(
             TablePath tablePath,
             boolean ignoreIfNotExists)
