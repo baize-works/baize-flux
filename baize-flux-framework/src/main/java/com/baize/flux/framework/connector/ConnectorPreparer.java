@@ -60,7 +60,9 @@ public final class ConnectorPreparer {
 
         PreparedSource<?> source =
                 prepareSource(
-                        definition.getSource());
+                        definition.getSource(),
+                        definition.getExecutionConfig()
+                                .getSourceParallelism());
 
         List<PreparedSink> sinks =
                 prepareSinks(
@@ -76,7 +78,8 @@ public final class ConnectorPreparer {
     }
 
     private PreparedSource<?> prepareSource(
-            SourceDefinition definition) throws Exception {
+            SourceDefinition definition,
+            int sourceParallelism) throws Exception {
 
         TableSourceFactory<?> factory =
                 registry.getSourceFactory(
@@ -95,14 +98,16 @@ public final class ConnectorPreparer {
         return createPreparedSource(
                 definition.getType(),
                 factory,
-                context);
+                context,
+                sourceParallelism);
     }
 
     private <SplitT extends SourceSplit>
     PreparedSource<SplitT> createPreparedSource(
             String identifier,
             TableSourceFactory<SplitT> factory,
-            SourceFactoryContext context) throws Exception {
+            SourceFactoryContext context,
+            int sourceParallelism) throws Exception {
 
         Source<SplitT> source =
                 factory.createSource(context);
@@ -113,6 +118,8 @@ public final class ConnectorPreparer {
                             + identifier
                             + "' returned a null source");
         }
+
+        source.validateParallelism(sourceParallelism);
 
         List<CatalogTable> catalogTables =
                 factory.discoverTableSchemas(context);

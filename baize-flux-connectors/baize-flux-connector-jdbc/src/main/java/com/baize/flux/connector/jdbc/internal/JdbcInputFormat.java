@@ -4,6 +4,7 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcSourceConfig;
+import com.baize.flux.connector.jdbc.config.ReadConsistency;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialect;
 import com.baize.flux.connector.jdbc.core.dialect.JdbcDialectLoader;
 import com.baize.flux.connector.jdbc.source.JdbcSourceSplit;
@@ -38,6 +39,12 @@ public final class JdbcInputFormat {
 
     public void openInputFormat() throws Exception {
         connection = connectionProvider.getOrEstablishConnection();
+        if (config.getReadConsistency()
+                != ReadConsistency.BEST_EFFORT) {
+            dialect.configureSnapshotConnection(
+                    connection,
+                    config.getReadConsistency());
+        }
     }
 
     public void open(JdbcSourceSplit split) throws Exception {
