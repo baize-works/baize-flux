@@ -3,6 +3,7 @@ package com.baize.flux.framework.planner;
 import com.baize.flux.api.source.Source;
 import com.baize.flux.api.source.SourceSplit;
 import com.baize.flux.framework.connector.PreparedJob;
+import com.baize.flux.framework.connector.PreparedSink;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskId;
 import com.baize.flux.framework.job.ExecutionConfig;
@@ -97,6 +98,14 @@ public final class JobPlanner {
             int sinkParallelism =
                     config.getSinkParallelism();
 
+            List<PreparedSink> preparedSinks =
+                    preparedJob.getSinks();
+
+            if (preparedSinks.size() != sinkParallelism) {
+                throw new IllegalStateException(
+                        "Prepared sink count does not match sink parallelism");
+            }
+
             for (int i = 0; i < sinkParallelism; i++) {
                 sinkPlans.add(
                         new SinkTaskPlan(
@@ -104,7 +113,7 @@ public final class JobPlanner {
                                         "sink",
                                         i,
                                         sinkParallelism),
-                                preparedJob.getSink()));
+                                preparedSinks.get(i)));
             }
         }
 

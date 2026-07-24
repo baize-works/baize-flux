@@ -2,6 +2,9 @@ package com.baize.flux.framework.connector;
 
 import com.baize.flux.framework.job.ExecutionConfig;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -13,14 +16,14 @@ public final class PreparedJob {
 
     private final PreparedSource<?> source;
 
-    private final PreparedSink sink;
+    private final List<PreparedSink> sinks;
 
     private final ExecutionConfig executionConfig;
 
     public PreparedJob(
             String jobName,
             PreparedSource<?> source,
-            PreparedSink sink,
+            List<PreparedSink> sinks,
             ExecutionConfig executionConfig) {
 
         this.jobName =
@@ -33,10 +36,17 @@ public final class PreparedJob {
                         source,
                         "source must not be null");
 
-        this.sink =
-                Objects.requireNonNull(
-                        sink,
-                        "sink must not be null");
+        this.sinks =
+                Collections.unmodifiableList(
+                        new ArrayList<PreparedSink>(
+                                Objects.requireNonNull(
+                                        sinks,
+                                        "sinks must not be null")));
+
+        if (this.sinks.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "sinks must not be empty");
+        }
 
         this.executionConfig =
                 Objects.requireNonNull(
@@ -52,8 +62,8 @@ public final class PreparedJob {
         return source;
     }
 
-    public PreparedSink getSink() {
-        return sink;
+    public List<PreparedSink> getSinks() {
+        return sinks;
     }
 
     public ExecutionConfig getExecutionConfig() {
