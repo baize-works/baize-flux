@@ -1,27 +1,20 @@
 package com.baize.flux.launcher;
 
-import com.baize.flux.api.configuration.Option;
-import com.baize.flux.api.configuration.Options;
-
-import java.util.Map;
-
 /**
- * Command-line entry point for one local bounded sync job.
+ * Runs a local bounded sync job from a HOCON configuration file.
+ *
+ * <p>For example:
+ *
+ * <pre>
+ * java com.baize.flux.launcher.LauncherConfigurationExample \
+ *     examples/jdbc-single-table.conf
+ * </pre>
  */
 public final class LauncherConfigurationExample {
-    private static final Option<String> NAME = Options.key("job.name").stringType().noDefaultValue();
-    private static final Option<Integer> BATCH_SIZE = Options.key("runtime.batch-size").intType().defaultValue(1000);
-    private static final Option<String> SOURCE_TYPE = Options.key("source.type").stringType().noDefaultValue();
-    private static final Option<Map<String, Object>> SOURCE_OPTIONS = Options.key("source.options").mapObjectType().noDefaultValue();
-    private static final Option<String> SINK_TYPE = Options.key("sink.type").stringType().noDefaultValue();
-    private static final Option<Map<String, Object>> SINK_OPTIONS = Options.key("sink.options").mapObjectType().noDefaultValue();
-
     private LauncherConfigurationExample() {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) throw new IllegalArgumentException("Usage: LauncherConfigurationExample <job.conf>");
+        LocalSyncLauncher.main(args);
     }
-
-
 }

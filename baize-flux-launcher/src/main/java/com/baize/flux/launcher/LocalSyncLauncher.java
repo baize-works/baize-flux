@@ -6,6 +6,10 @@ import com.baize.flux.framework.job.JobConfigParser;
 import com.baize.flux.framework.job.JobDefinition;
 import com.baize.flux.framework.job.JobResult;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 /**
  * 本地离线同步启动器。
  *
@@ -29,11 +33,11 @@ public final class LocalSyncLauncher {
         if (args.length != 1) {
             throw new IllegalArgumentException(
                     "Usage: LocalSyncLauncher "
-                            + "\"<HOCON job configuration>\"");
+                            + "<job.conf | \"HOCON job configuration\">");
         }
 
         run(
-                args[0],
+                readConfiguration(args[0]),
                 Thread.currentThread()
                         .getContextClassLoader());
     }
@@ -58,49 +62,17 @@ public final class LocalSyncLauncher {
                             definition);
         }
 
-        printResult(result);
+        JobResultPrinter.print(result);
 
         result.throwIfFailed();
 
         return result;
     }
 
-    private static void printResult(
-            JobResult result) {
-
-        System.out.println(
-                "Flux job finished:");
-
-        System.out.println(
-                "  job-name="
-                        + result.getJobName());
-
-        System.out.println(
-                "  status="
-                        + result.getStatus());
-
-        System.out.println(
-                "  duration-ms="
-                        + result.getDurationMillis());
-
-        System.out.println(
-                "  source-batches="
-                        + result.getMetrics()
-                        .getSourceBatchCount());
-
-        System.out.println(
-                "  source-records="
-                        + result.getMetrics()
-                        .getSourceRecordCount());
-
-        System.out.println(
-                "  sink-batches="
-                        + result.getMetrics()
-                        .getSinkBatchCount());
-
-        System.out.println(
-                "  sink-records="
-                        + result.getMetrics()
-                        .getSinkRecordCount());
+    private static String readConfiguration(String argument) throws Exception {
+        if (Files.isRegularFile(Paths.get(argument))) {
+            return new String(Files.readAllBytes(Paths.get(argument)), StandardCharsets.UTF_8);
+        }
+        return argument;
     }
 }
