@@ -26,11 +26,6 @@
         </dependency>
         <dependency>
             <groupId>com.baize.flux</groupId>
-            <artifactId>baize-flux-connectors</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.baize.flux</groupId>
             <artifactId>baize-flux-connector-jdbc</artifactId>
             <version>${project.version}</version>
         </dependency>
