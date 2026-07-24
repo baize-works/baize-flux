@@ -49,6 +49,9 @@ public class TaskMetricsTest {
         sink.addSinkWriteSuccessRecords(8);
         sink.addSinkWrittenBytes(80);
         sink.addDatabaseCommitNanos(3_000_000L);
+        source.incrementBatchRetryCount();
+        sink.incrementBatchRetryCount();
+        sink.incrementBatchRetryCount();
 
         assertEquals(10L, job.getSourceRecordCount());
         assertEquals(8L, job.getSinkRecordCount());
@@ -57,5 +60,6 @@ public class TaskMetricsTest {
         assertEquals(80L, job.getSinkWrittenBytes());
         assertEquals(1L, job.getCompletedSplitCount());
         assertEquals(3L, job.getDatabaseCommitMillis());
+        assertEquals(3L, job.getBatchRetryCount());
     }
 }

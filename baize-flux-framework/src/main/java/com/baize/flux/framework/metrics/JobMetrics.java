@@ -72,6 +72,9 @@ public final class JobMetrics {
                     case 9:
                         n += m.getUnknownStateRecordCount();
                         break;
+                    case 10:
+                        n += m.getBatchRetryCount();
+                        break;
                 }
             }
         return n;
@@ -162,7 +165,7 @@ public final class JobMetrics {
     }
 
     public long getBatchRetryCount() {
-        return 0;
+        return sum(null, 10);
     }
 
     public long getDatabaseCommitMillis() {
