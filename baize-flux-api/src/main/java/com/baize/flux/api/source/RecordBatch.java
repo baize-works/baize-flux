@@ -44,6 +44,8 @@ public final class RecordBatch<T> implements Serializable {
      */
     private final boolean endOfInput;
 
+    private final long estimatedBytes;
+
     private RecordBatch(
             String dataSetId,
             String splitId,
@@ -54,6 +56,7 @@ public final class RecordBatch<T> implements Serializable {
         this.splitId = splitId;
         this.records = records;
         this.endOfInput = endOfInput;
+        this.estimatedBytes = estimateRecords(records);
     }
 
     /**
@@ -97,6 +100,20 @@ public final class RecordBatch<T> implements Serializable {
 
     public List<T> getRecords() {
         return records;
+    }
+
+    /** Approximate bytes occupied by this batch's records. */
+    public long getEstimatedBytes() {
+        return estimatedBytes;
+    }
+
+    private static long estimateRecords(List<?> records) {
+        long total = 16L;
+        for (Object record : records) {
+            long size = RecordSizeEstimator.estimate(record);
+            total = total > Long.MAX_VALUE - size ? Long.MAX_VALUE : total + size;
+        }
+        return total;
     }
 
     public int size() {

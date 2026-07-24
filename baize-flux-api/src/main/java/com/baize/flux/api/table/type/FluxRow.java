@@ -3,6 +3,9 @@ package com.baize.flux.api.table.type;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
+import java.math.BigDecimal;
+import java.time.temporal.TemporalAccessor;
+import java.util.Date;
 
 /**
  * Flux 离线数据行。
@@ -82,6 +85,30 @@ public final class FluxRow implements Serializable {
     /**
      * 复制完整数据行。
      */
+    /** Approximate bytes used by this row for channel backpressure accounting. */
+    public long estimatedSizeBytes() {
+        long total = 24L + 8L * fields.length;
+        for (Object field : fields) {
+            total = addSaturated(total, estimateFieldBytes(field));
+        }
+        return total;
+    }
+
+    private static long estimateFieldBytes(Object value) {
+        if (value == null) return 8L;
+        if (value instanceof byte[]) return 16L + ((byte[]) value).length;
+        if (value instanceof String || value instanceof Character) return 40L + 2L * value.toString().length();
+        if (value instanceof BigDecimal) return 48L + 2L * ((BigDecimal) value).precision();
+        if (value instanceof Boolean || value instanceof Byte || value instanceof Short
+                || value instanceof Integer || value instanceof Long || value instanceof Float || value instanceof Double) return 24L;
+        if (value instanceof Date || value instanceof TemporalAccessor) return 32L;
+        return 256L;
+    }
+
+    private static long addSaturated(long left, long right) {
+        return left > Long.MAX_VALUE - right ? Long.MAX_VALUE : left + right;
+    }
+
     public FluxRow copy() {
         return new FluxRow(fields, true);
     }

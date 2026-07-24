@@ -182,7 +182,11 @@ public final class JobExecution {
                             "source-to-sink-" + i,
                             executionPlan
                                     .getExecutionConfig()
-                                    .getChannelCapacity(),
+                                    .getMaxBufferedBatches(),
+                            executionPlan.getExecutionConfig().getMaxBufferedRecords(),
+                            executionPlan.getExecutionConfig().getMaxBufferedBytes(),
+                            executionPlan.getExecutionConfig().getMaxRecordsPerSecond(),
+                            executionPlan.getExecutionConfig().getMaxBytesPerSecond(),
                             sourceTaskCount);
 
             channels.add(channel);
