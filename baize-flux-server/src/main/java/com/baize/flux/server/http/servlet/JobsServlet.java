@@ -27,28 +27,24 @@ public final class JobsServlet
     protected void doPost(
             HttpServletRequest request,
             HttpServletResponse response)
-             {
+            throws IOException {
 
         validateSubmitContentType(request);
 
-                 try {
-                     write(
-                             response,
-                             202,
-                             service.submit(
-                                     requestBody(
-                                             request,
-                                             maxRequestBytes)));
-                 } catch (IOException e) {
-                     e.printStackTrace();
-                 }
-             }
+        write(
+                response,
+                202,
+                service.submit(
+                        requestBody(
+                                request,
+                                maxRequestBytes)));
+    }
 
 
     protected void doGet(
             HttpServletRequest request,
             HttpServletResponse response)
-             {
+            throws IOException {
 
         int page =
                 intParameter(
@@ -62,17 +58,12 @@ public final class JobsServlet
                         "pageSize",
                         20);
 
-                 try {
-                     write(
-                             response,
-                             200,
-                             service.jobs(
-                                     request.getParameter(
-                                             "status"),
-                                     page,
-                                     pageSize));
-                 } catch (IOException e) {
-                     e.printStackTrace();
-                 }
-             }
+        write(
+                response,
+                200,
+                service.jobs(
+                        request.getParameter("status"),
+                        page,
+                        pageSize));
+    }
 }

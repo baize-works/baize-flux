@@ -14,7 +14,7 @@ public final class HealthServlet
     protected void doGet(
             HttpServletRequest request,
             HttpServletResponse response)
-            {
+            throws IOException {
 
         Map<String, Object> result =
                 new LinkedHashMap<String, Object>();
@@ -27,13 +27,9 @@ public final class HealthServlet
                 "timestamp",
                 System.currentTimeMillis());
 
-                try {
-                    write(
-                            response,
-                            200,
-                            result);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        write(
+                response,
+                200,
+                result);
+    }
 }
