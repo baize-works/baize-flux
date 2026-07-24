@@ -3,195 +3,99 @@ package com.baize.flux.framework.connector;
 import com.baize.flux.api.factory.Factory;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.table.factory.TableSourceFactory;
+import com.baize.flux.framework.classloading.ConnectorClassLoader;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
-/**
- * Connector Factory 注册中心。
- *
- * <p>统一负责 SourceFactory 和 SinkFactory 的 SPI 发现。
- */
-public final class FactoryRegistry {
+/** Discovers application and isolated connector factories. */
+public final class FactoryRegistry implements AutoCloseable {
+    private final Map<String, TableSourceFactory<?>> sourceFactories = new LinkedHashMap<String, TableSourceFactory<?>>();
+    private final Map<String, SinkFactory> sinkFactories = new LinkedHashMap<String, SinkFactory>();
+    private final Map<Factory, FactoryOrigin> origins = new IdentityHashMap<Factory, FactoryOrigin>();
+    private final List<ConnectorClassLoader> pluginLoaders = new ArrayList<ConnectorClassLoader>();
 
-    private final Map<String, TableSourceFactory<?>>
-            sourceFactories;
-
-    private final Map<String, SinkFactory>
-            sinkFactories;
-
-    public FactoryRegistry(ClassLoader classLoader) {
-        Objects.requireNonNull(
-                classLoader,
-                "classLoader must not be null");
-
-        this.sourceFactories =
-                discoverSourceFactories(classLoader);
-
-        this.sinkFactories =
-                discoverSinkFactories(classLoader);
+    public FactoryRegistry(ClassLoader classLoader) { this(classLoader, Collections.<Path>emptyList()); }
+    public FactoryRegistry(ClassLoader classLoader, Iterable<Path> pluginDirectories) {
+        ClassLoader parent = Objects.requireNonNull(classLoader, "classLoader must not be null");
+        discoverFrom(parent, "application classpath");
+        for (Path directory : pluginDirectories) discoverPlugin(parent, Objects.requireNonNull(directory, "plugin directory must not be null"));
     }
-
-    public static FactoryRegistry discover(
-            ClassLoader classLoader) {
-
-        ClassLoader effectiveClassLoader =
-                classLoader == null
-                        ? Thread.currentThread()
-                        .getContextClassLoader()
-                        : classLoader;
-
-        return new FactoryRegistry(
-                effectiveClassLoader);
+    public static FactoryRegistry discover(ClassLoader classLoader) { return new FactoryRegistry(effective(classLoader)); }
+    public static FactoryRegistry discover(ClassLoader classLoader, Path... pluginDirectories) {
+        List<Path> paths = new ArrayList<Path>();
+        if (pluginDirectories != null) Collections.addAll(paths, pluginDirectories);
+        return new FactoryRegistry(effective(classLoader), paths);
     }
-
-    public TableSourceFactory<?> getSourceFactory(
-            String identifier) {
-
-        String normalized = normalize(identifier);
-
-        TableSourceFactory<?> factory =
-                sourceFactories.get(normalized);
-
-        if (factory == null) {
-            throw new ConnectorException(
-                    "Could not find source factory for identifier '"
-                            + identifier
-                            + "'. Available identifiers: "
-                            + sourceFactories.keySet());
+    public static FactoryRegistry discover(ClassLoader classLoader, Iterable<Path> pluginDirectories) {
+        return new FactoryRegistry(effective(classLoader), pluginDirectories);
+    }
+    public TableSourceFactory<?> getSourceFactory(String identifier) { return required(sourceFactories, identifier, "source"); }
+    public SinkFactory getSinkFactory(String identifier) { return required(sinkFactories, identifier, "sink"); }
+    public ClassLoader getClassLoader(Factory factory) {
+        FactoryOrigin origin = origins.get(factory);
+        return origin == null ? factory.getClass().getClassLoader() : origin.loader;
+    }
+    private void discoverPlugin(ClassLoader parent, Path directory) {
+        final URL[] urls;
+        try {
+            if (!Files.isDirectory(directory)) throw new ConnectorException("Plugin path is not a directory: " + directory);
+            List<URL> result = new ArrayList<URL>();
+            java.nio.file.DirectoryStream<Path> jars = Files.newDirectoryStream(directory, "*.jar");
+            try { for (Path jar : jars) result.add(jar.toUri().toURL()); } finally { jars.close(); }
+            urls = result.toArray(new URL[result.size()]);
+        } catch (IOException e) { throw new ConnectorException("Could not read plugin path '" + directory + "'", e); }
+        ConnectorClassLoader loader = new ConnectorClassLoader(urls, parent);
+        try { discoverFrom(loader, directory.toAbsolutePath().toString()); pluginLoaders.add(loader); }
+        catch (RuntimeException e) { try { loader.close(); } catch (IOException close) { e.addSuppressed(close); } throw e; }
+    }
+    private void discoverFrom(ClassLoader loader, String path) {
+        discoverSources(loader, path); discoverSinks(loader, path);
+    }
+    private void discoverSources(ClassLoader loader, String path) {
+        try { for (TableSourceFactory<?> factory : ServiceLoader.load(TableSourceFactory.class, loader)) put(sourceFactories, factory, "source", loader, path); }
+        catch (ServiceConfigurationError e) { throw new ConnectorException("Could not load source factories from plugin path '" + path + "'", e); }
+    }
+    private void discoverSinks(ClassLoader loader, String path) {
+        try { for (SinkFactory factory : ServiceLoader.load(SinkFactory.class, loader)) put(sinkFactories, factory, "sink", loader, path); }
+        catch (ServiceConfigurationError e) { throw new ConnectorException("Could not load sink factories from plugin path '" + path + "'", e); }
+    }
+    private <T extends Factory> void put(Map<String, T> factories, T factory, String kind, ClassLoader loader, String path) {
+        String id = normalize(factory.factoryIdentifier()); T prior = factories.get(id);
+        if (prior != null) {
+            FactoryOrigin previous = origins.get(prior);
+            throw new ConnectorException("Duplicated " + kind + " factory identifier '" + id + "': "
+                    + describe(prior, previous) + " conflicts with " + describe(factory, new FactoryOrigin(loader, path)));
         }
-
+        factories.put(id, factory); origins.put(factory, new FactoryOrigin(loader, path));
+    }
+    private static String describe(Factory factory, FactoryOrigin origin) {
+        Package p = factory.getClass().getPackage(); String version = p == null ? null : p.getImplementationVersion();
+        return factory.getClass().getName() + " (version=" + (version == null ? "unknown" : version) + ", pluginPath=" + origin.path + ")";
+    }
+    private static <T> T required(Map<String, T> map, String id, String kind) {
+        T factory = map.get(normalize(id));
+        if (factory == null) throw new ConnectorException("Could not find " + kind + " factory for identifier '" + id + "'. Available identifiers: " + map.keySet());
         return factory;
     }
-
-    public SinkFactory getSinkFactory(
-            String identifier) {
-
-        String normalized = normalize(identifier);
-
-        SinkFactory factory =
-                sinkFactories.get(normalized);
-
-        if (factory == null) {
-            throw new ConnectorException(
-                    "Could not find sink factory for identifier '"
-                            + identifier
-                            + "'. Available identifiers: "
-                            + sinkFactories.keySet());
-        }
-
-        return factory;
+    private static ClassLoader effective(ClassLoader loader) { return loader == null ? Thread.currentThread().getContextClassLoader() : loader; }
+    private static String normalize(String id) { Objects.requireNonNull(id, "factory identifier must not be null"); String value = id.trim().toLowerCase(Locale.ROOT); if (value.isEmpty()) throw new IllegalArgumentException("factory identifier must not be blank"); return value; }
+    @Override public void close() {
+        IOException failure = null; for (ConnectorClassLoader loader : pluginLoaders) try { loader.close(); } catch (IOException e) { if (failure == null) failure = e; else failure.addSuppressed(e); }
+        pluginLoaders.clear(); if (failure != null) throw new ConnectorException("Could not close connector class loaders", failure);
     }
-
-    private Map<String, TableSourceFactory<?>>
-    discoverSourceFactories(
-            ClassLoader classLoader) {
-
-        Map<String, TableSourceFactory<?>> result =
-                new LinkedHashMap<
-                        String,
-                        TableSourceFactory<?>>();
-
-        try {
-            ServiceLoader<TableSourceFactory> loader =
-                    ServiceLoader.load(
-                            TableSourceFactory.class,
-                            classLoader);
-
-            for (TableSourceFactory<?> factory : loader) {
-                putFactory(
-                        result,
-                        factory.factoryIdentifier(),
-                        factory,
-                        "source");
-            }
-
-            return Collections.unmodifiableMap(result);
-
-        } catch (ServiceConfigurationError error) {
-            throw new ConnectorException(
-                    "Could not load source factories",
-                    error);
-        }
-    }
-
-    private Map<String, SinkFactory>
-    discoverSinkFactories(
-            ClassLoader classLoader) {
-
-        Map<String, SinkFactory> result =
-                new LinkedHashMap<String, SinkFactory>();
-
-        try {
-            ServiceLoader<SinkFactory> loader =
-                    ServiceLoader.load(
-                            SinkFactory.class,
-                            classLoader);
-
-            for (SinkFactory factory : loader) {
-                putFactory(
-                        result,
-                        factory.factoryIdentifier(),
-                        factory,
-                        "sink");
-            }
-
-            return Collections.unmodifiableMap(result);
-
-        } catch (ServiceConfigurationError error) {
-            throw new ConnectorException(
-                    "Could not load sink factories",
-                    error);
-        }
-    }
-
-    private static <T extends Factory> void putFactory(
-            Map<String, T> factories,
-            String identifier,
-            T factory,
-            String kind) {
-
-        String normalized = normalize(identifier);
-
-        T previous =
-                factories.put(
-                        normalized,
-                        factory);
-
-        if (previous != null) {
-            throw new ConnectorException(
-                    "Duplicated "
-                            + kind
-                            + " factory identifier '"
-                            + identifier
-                            + "': "
-                            + previous.getClass().getName()
-                            + ", "
-                            + factory.getClass().getName());
-        }
-    }
-
-    private static String normalize(
-            String identifier) {
-
-        Objects.requireNonNull(
-                identifier,
-                "factory identifier must not be null");
-
-        String normalized =
-                identifier.trim()
-                        .toLowerCase(Locale.ROOT);
-
-        if (normalized.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "factory identifier must not be blank");
-        }
-
-        return normalized;
-    }
+    private static final class FactoryOrigin { private final ClassLoader loader; private final String path; private FactoryOrigin(ClassLoader loader, String path) { this.loader = loader; this.path = path; } }
 }

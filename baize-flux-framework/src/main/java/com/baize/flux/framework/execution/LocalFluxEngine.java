@@ -9,6 +9,7 @@ import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.JobPlanner;
 
 import java.util.Objects;
+import java.nio.file.Path;
 
 /**
  * 本地离线 Flux 执行引擎。
@@ -22,10 +23,20 @@ public final class LocalFluxEngine
 
     private final JobPlanner jobPlanner;
 
+    private final FactoryRegistry registry;
+
     public LocalFluxEngine(
             ClassLoader classLoader,
             ConnectorPreparer connectorPreparer,
             JobPlanner jobPlanner) {
+        this(classLoader, connectorPreparer, jobPlanner, null);
+    }
+
+    private LocalFluxEngine(
+            ClassLoader classLoader,
+            ConnectorPreparer connectorPreparer,
+            JobPlanner jobPlanner,
+            FactoryRegistry registry) {
 
         this.classLoader =
                 Objects.requireNonNull(
@@ -41,6 +52,7 @@ public final class LocalFluxEngine
                 Objects.requireNonNull(
                         jobPlanner,
                         "jobPlanner must not be null");
+        this.registry = registry;
     }
 
     public static LocalFluxEngine create(
@@ -67,7 +79,14 @@ public final class LocalFluxEngine
         return new LocalFluxEngine(
                 effectiveClassLoader,
                 preparer,
-                planner);
+                planner,
+                registry);
+    }
+
+    public static LocalFluxEngine create(ClassLoader classLoader, Path... pluginDirectories) {
+        ClassLoader effectiveClassLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
+        FactoryRegistry registry = FactoryRegistry.discover(effectiveClassLoader, pluginDirectories);
+        return new LocalFluxEngine(effectiveClassLoader, new ConnectorPreparer(registry, effectiveClassLoader), new JobPlanner(), registry);
     }
 
     @Override
@@ -75,24 +94,20 @@ public final class LocalFluxEngine
             JobDefinition definition)
             throws Exception {
 
-        PreparedJob preparedJob =
-                connectorPreparer.prepare(
-                        definition);
-
-        ExecutionPlan executionPlan =
-                jobPlanner.plan(
-                        preparedJob);
-
-        JobExecution jobExecution =
-                new JobExecution(
-                        executionPlan,
-                        classLoader);
-
-        return jobExecution.execute();
+        try {
+            PreparedJob preparedJob = connectorPreparer.prepare(definition);
+            ExecutionPlan executionPlan = jobPlanner.plan(preparedJob);
+            JobExecution jobExecution = new JobExecution(executionPlan, classLoader);
+            return jobExecution.execute();
+        } finally {
+            // Plugin loaders are job resources; no open jar remains after a job completes or fails.
+            if (registry != null) registry.close();
+        }
     }
 
     @Override
     public void close() {
+        if (registry != null) registry.close();
         /*
          * 当前 Engine 不持有长生命周期线程池。
          * 后续支持多 Job 并发时，可在这里关闭资源。

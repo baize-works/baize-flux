@@ -53,6 +53,8 @@ public final class SinkTask
             TaskContext context)
             throws Exception {
 
+        try (com.baize.flux.framework.classloading.ClassLoaderScope ignored =
+                com.baize.flux.framework.classloading.ClassLoaderScope.open(plan.getPreparedSink().getClassLoader())) {
         SinkWriter<FluxRow> writer = null;
 
         Throwable failure = null;
@@ -171,6 +173,7 @@ public final class SinkTask
                      */
                 }
             }
+        }
         }
     }
 
