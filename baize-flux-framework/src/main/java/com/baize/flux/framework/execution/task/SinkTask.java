@@ -2,6 +2,9 @@ package com.baize.flux.framework.execution.task;
 
 import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.sink.CommitScope;
+import com.baize.flux.api.sink.DirtyDataAwareSinkWriter;
+import com.baize.flux.api.dirtydata.DirtyDataContext;
+import com.baize.flux.api.dirtydata.DirtyDataSummary;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.framework.channel.InputGate;
 import com.baize.flux.framework.channel.RecordEnvelope;
@@ -25,6 +28,7 @@ public final class SinkTask
 
     private volatile boolean committed;
     private volatile CommitScope commitScope = CommitScope.TASK_LOCAL;
+    private volatile DirtyDataSummary dirtyDataSummary = DirtyDataSummary.empty();
     private volatile String retryAdvice = "This sink commits per task; verify already committed targets before retrying.";
 
     public SinkTask(
@@ -64,6 +68,7 @@ public final class SinkTask
                     plan.getPreparedSink()
                             .createWriter();
 
+            if (writer instanceof DirtyDataAwareSinkWriter) ((DirtyDataAwareSinkWriter) writer).configureDirtyData(new DirtyDataContext(plan.getTaskId().getStageName(), getTaskId().toString(), plan.getPreparedSink().getClass().getName(), null, null));
             writer.open();
             commitScope = writer.getCommitScope();
             retryAdvice = writer.getRetryAdvice();
@@ -154,6 +159,7 @@ public final class SinkTask
             if (writer != null) {
                 try {
                     writer.close();
+                    if (writer instanceof DirtyDataAwareSinkWriter) dirtyDataSummary = ((DirtyDataAwareSinkWriter) writer).getDirtyDataSummary();
                 } catch (Throwable closeFailure) {
                     if (failure != null) {
                         failure.addSuppressed(
@@ -176,6 +182,8 @@ public final class SinkTask
         }
         }
     }
+
+    public DirtyDataSummary getDirtyDataSummary() { return dirtyDataSummary; }
 
     public boolean isCommitted() { return committed; }
 
