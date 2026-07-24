@@ -42,7 +42,7 @@ public final class JobExecution {
                 for (final PipelinePlan p : executionPlan.getPipelinePlans())
                     submitted.add(cs.submit(new Callable<PipelineResult>() {
                         public PipelineResult call() {
-                            return new PipelineExecution(p, executionPlan.getExecutionConfig(), cancellationToken, jobMetrics, classLoader).execute();
+                            return new PipelineExecution(p, executionPlan.getExecutionConfig(), cancellationToken, jobMetrics, classLoader, executionPlan.getJobName(), start).execute();
                         }
                     }));
                 for (int i = 0; i < submitted.size(); i++) {

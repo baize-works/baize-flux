@@ -33,13 +33,17 @@ final class PipelineExecution {
     private final CancellationToken token;
     private final JobMetrics metrics;
     private final ClassLoader loader;
+    private final String jobName;
+    private final long runId;
 
-    PipelineExecution(PipelinePlan plan, com.baize.flux.framework.job.ExecutionConfig config, CancellationToken token, JobMetrics metrics, ClassLoader loader) {
+    PipelineExecution(PipelinePlan plan, com.baize.flux.framework.job.ExecutionConfig config, CancellationToken token, JobMetrics metrics, ClassLoader loader, String jobName, long runId) {
         this.plan = plan;
         this.config = config;
         this.token = token;
         this.metrics = metrics;
         this.loader = loader;
+        this.jobName = jobName;
+        this.runId = runId;
     }
 
     private static void fail(List<DataChannel<RecordEnvelope<FluxRow>>> channels, Throwable cause) {
@@ -63,7 +67,7 @@ final class PipelineExecution {
                 metrics.registerSplitProvider(source.getSplitProvider());
                 sources.add(createSource(source, channels));
             }
-            try (TaskExecutor executor = new TaskExecutor(sinks.size() + sources.size(), "baize-flux-" + plan.getPipelineId())) {
+            try (TaskExecutor executor = new TaskExecutor(sinks.size() + sources.size(), "baize-flux-" + plan.getPipelineId(), jobName, runId)) {
                 ExecutionCoordinator outcomeCoordinator = new ExecutionCoordinator(executor, token, metrics, loader, new Runnable() {
                     public void run() {
                         fail(channels, token.getCause());
