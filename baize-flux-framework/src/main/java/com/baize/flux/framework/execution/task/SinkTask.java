@@ -9,6 +9,7 @@ import com.baize.flux.framework.execution.TaskId;
 import com.baize.flux.framework.planner.SinkTaskPlan;
 
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 
 /**
  * Sink 数据写入任务。
@@ -43,30 +44,41 @@ public final class SinkTask
     }
 
     @Override
-    public void execute(TaskContext context)
+    public void execute(
+            TaskContext context)
             throws Exception {
 
         SinkWriter<FluxRow> writer = null;
 
         Throwable failure = null;
 
+        boolean committed = false;
+
         try {
-            /*
-             * 每个 SinkTask 创建自己的 Writer。
-             */
             writer =
                     plan.getPreparedSink()
                             .createWriter();
 
-            while (!context
-                    .getCancellationToken()
-                    .isCancelled()) {
+            writer.open();
+
+            while (true) {
+                /*
+                 * 不能因为其他 Task 触发取消，就正常退出并提交部分数据。
+                 */
+                if (context
+                        .getCancellationToken()
+                        .isCancelled()) {
+
+                    throw new CancellationException(
+                            "SinkTask was cancelled: "
+                                    + getTaskId());
+                }
 
                 RecordEnvelope<FluxRow> envelope =
                         inputGate.read();
 
                 /*
-                 * Channel 所有生产者均已完成。
+                 * 所有 SourceTask 均已结束。
                  */
                 if (envelope == null) {
                     break;
@@ -81,13 +93,40 @@ public final class SinkTask
 
                 context.getMetrics()
                         .addRecordCount(
-                                envelope.getBatch()
+                                envelope
+                                        .getBatch()
                                         .getRecords()
                                         .size());
             }
 
+            /*
+             * 在读取结束与提交之间再次检查取消状态，
+             * 防止最后一批处理完成时其他任务刚好失败。
+             */
+            if (context
+                    .getCancellationToken()
+                    .isCancelled()) {
+
+                throw new CancellationException(
+                        "SinkTask was cancelled before commit: "
+                                + getTaskId());
+            }
+
+            writer.commit();
+
+            committed = true;
+
         } catch (Throwable throwable) {
             failure = throwable;
+
+            if (writer != null) {
+                try {
+                    writer.rollback();
+                } catch (Throwable rollbackFailure) {
+                    throwable.addSuppressed(
+                            rollbackFailure);
+                }
+            }
 
             throw propagate(throwable);
 
@@ -99,10 +138,19 @@ public final class SinkTask
                     if (failure != null) {
                         failure.addSuppressed(
                                 closeFailure);
-                    } else {
+
+                    } else if (!committed) {
+                        /*
+                         * 事务尚未提交时，关闭异常需要让任务失败。
+                         */
                         throw propagate(
                                 closeFailure);
                     }
+
+                    /*
+                     * 数据已经提交后，单纯连接关闭异常不能再把任务标记为失败。
+                     * 否则上层重试可能造成数据重复。
+                     */
                 }
             }
         }

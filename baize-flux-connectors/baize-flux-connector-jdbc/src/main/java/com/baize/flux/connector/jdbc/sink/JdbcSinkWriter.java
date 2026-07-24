@@ -6,20 +6,61 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
 import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
 
+import java.util.Objects;
+
 /**
- * Local JDBC sink writer backed by {@link JdbcOutputFormat}.
+ * JDBC SinkWriter。
+ *
+ * <p>一个 SinkTask 使用一个 JdbcSinkWriter，
+ * 对应一条独立 JDBC 事务。
  */
-public final class JdbcSinkWriter implements SinkWriter<FluxRow> {
+public final class JdbcSinkWriter
+        implements SinkWriter<FluxRow> {
+
     private final JdbcOutputFormat outputFormat;
 
-    public JdbcSinkWriter(JdbcSinkConfig config) {
-        outputFormat = new JdbcOutputFormatBuilder().withConfig(config).build();
+    public JdbcSinkWriter(
+            JdbcSinkConfig config) {
+
+        this.outputFormat =
+                new JdbcOutputFormatBuilder()
+                        .withConfig(
+                                Objects.requireNonNull(
+                                        config,
+                                        "config must not be null"))
+                        .build();
     }
 
     @Override
-    public void write(RecordBatch<FluxRow> batch, CatalogTable sourceTable) throws Exception {
-        if (batch == null || batch.isEndOfInput()) return;
-        outputFormat.write(batch.getRecords(), sourceTable);
+    public void open() {
+        outputFormat.open();
+    }
+
+    @Override
+    public void write(
+            RecordBatch<FluxRow> batch,
+            CatalogTable sourceTable)
+            throws Exception {
+
+        if (batch == null
+                || batch.isEndOfInput()
+                || batch.getRecords().isEmpty()) {
+            return;
+        }
+
+        outputFormat.write(
+                batch.getRecords(),
+                sourceTable);
+    }
+
+    @Override
+    public void commit() throws Exception {
+        outputFormat.commit();
+    }
+
+    @Override
+    public void rollback() throws Exception {
+        outputFormat.rollback();
     }
 
     @Override

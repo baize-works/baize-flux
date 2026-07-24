@@ -33,7 +33,7 @@ public final class JdbcMultiTableSyncExample {
                     + "\n"
                     + "  table_list = [\n"
                     + "    { table_path = \"flux_test.user_info\" },\n"
-                    + "    { table_path = \"flux_test.orders\" }\n"
+                    + "    { table_path = \"flux_test.user_info_copy\" }\n"
                     + "  ]\n"
                     + "}\n"
                     + "\n"
