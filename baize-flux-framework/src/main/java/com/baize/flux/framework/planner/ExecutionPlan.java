@@ -1,73 +1,23 @@
 package com.baize.flux.framework.planner;
 
 import com.baize.flux.framework.job.ExecutionConfig;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-
-/**
- * 本地执行计划。
- */
+/** Job 的计划；Pipeline 是一级执行模型。 */
 public final class ExecutionPlan {
-
     private final String jobName;
-
     private final ExecutionConfig executionConfig;
-
-    private final List<SourceTaskPlan<?>> sourceTaskPlans;
-
-    private final List<SinkTaskPlan> sinkTaskPlans;
-
-    public ExecutionPlan(
-            String jobName,
-            ExecutionConfig executionConfig,
-            List<SourceTaskPlan<?>> sourceTaskPlans,
-            List<SinkTaskPlan> sinkTaskPlans) {
-
-        this.jobName =
-                Objects.requireNonNull(
-                        jobName,
-                        "jobName must not be null");
-
-        this.executionConfig =
-                Objects.requireNonNull(
-                        executionConfig,
-                        "executionConfig must not be null");
-
-        this.sourceTaskPlans =
-                Collections.unmodifiableList(
-                        new ArrayList<SourceTaskPlan<?>>(
-                                Objects.requireNonNull(
-                                        sourceTaskPlans,
-                                        "sourceTaskPlans must not be null")));
-
-        this.sinkTaskPlans =
-                Collections.unmodifiableList(
-                        new ArrayList<SinkTaskPlan>(
-                                Objects.requireNonNull(
-                                        sinkTaskPlans,
-                                        "sinkTaskPlans must not be null")));
+    private final List<PipelinePlan> pipelinePlans;
+    public ExecutionPlan(String jobName, ExecutionConfig executionConfig, List<PipelinePlan> pipelinePlans) {
+        this.jobName = Objects.requireNonNull(jobName, "jobName must not be null");
+        this.executionConfig = Objects.requireNonNull(executionConfig, "executionConfig must not be null");
+        this.pipelinePlans = Collections.unmodifiableList(new ArrayList<PipelinePlan>(Objects.requireNonNull(pipelinePlans, "pipelinePlans must not be null")));
     }
-
-    public String getJobName() {
-        return jobName;
-    }
-
-    public ExecutionConfig getExecutionConfig() {
-        return executionConfig;
-    }
-
-    public List<SourceTaskPlan<?>> getSourceTaskPlans() {
-        return sourceTaskPlans;
-    }
-
-    public List<SinkTaskPlan> getSinkTaskPlans() {
-        return sinkTaskPlans;
-    }
-
-    public boolean isEmpty() {
-        return sourceTaskPlans.isEmpty();
-    }
+    public String getJobName() { return jobName; }
+    public ExecutionConfig getExecutionConfig() { return executionConfig; }
+    public List<PipelinePlan> getPipelinePlans() { return pipelinePlans; }
+    /** 仅用于兼容旧的观测代码，执行层不得以此重建 Pipeline。 */
+    public List<SourceTaskPlan<?>> getSourceTaskPlans() { List<SourceTaskPlan<?>> result = new ArrayList<SourceTaskPlan<?>>(); for (PipelinePlan p : pipelinePlans) result.addAll(p.getSourceTaskPlans()); return Collections.unmodifiableList(result); }
+    public List<SinkTaskPlan> getSinkTaskPlans() { List<SinkTaskPlan> result = new ArrayList<SinkTaskPlan>(); for (PipelinePlan p : pipelinePlans) result.addAll(p.getSinkTaskPlans()); return Collections.unmodifiableList(result); }
+    public boolean isEmpty() { return pipelinePlans.isEmpty(); }
 }

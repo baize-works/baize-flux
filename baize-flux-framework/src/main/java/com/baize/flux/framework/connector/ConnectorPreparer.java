@@ -67,12 +67,8 @@ public final class ConnectorPreparer {
                         definition.getExecutionConfig()
                                 .getSourceParallelism());
 
-        List<PreparedSink> sinks =
-                prepareSinks(
-                        definition.getSink(),
-                        definition.getExecutionConfig()
-                                .getSinkParallelism(),
-                        source.getTables());
+        Map<String, List<PreparedSink>> sinks =
+                prepareSinks(definition.getSink(), definition.getExecutionConfig().getSinkParallelism(), source.getTables());
 
         return new PreparedJob(
                 definition.getName(),
@@ -142,7 +138,7 @@ public final class ConnectorPreparer {
                 registry.getClassLoader(factory));
     }
 
-    private List<PreparedSink> prepareSinks(
+    private Map<String, List<PreparedSink>> prepareSinks(
             SinkDefinition definition,
             int parallelism,
             Map<TablePath, CatalogTable> sourceTables) throws Exception {
@@ -156,30 +152,23 @@ public final class ConnectorPreparer {
                 .validate(
                         factory.optionRule());
 
-        PreparedSinkMetadata metadata;
-        try (ClassLoaderScope ignored = ClassLoaderScope.open(registry.getClassLoader(factory))) {
-            metadata = factory.createPreparer(definition.getOptions())
-                    .prepare(new SinkPrepareContext(definition.getOptions(), sourceTables));
+        Map<String, List<PreparedSink>> result = new LinkedHashMap<String, List<PreparedSink>>();
+        for (Map.Entry<TablePath, CatalogTable> table : sourceTables.entrySet()) {
+            // Sink preparation is deliberately per dataset: DDL/cleanup and metadata cannot leak across tables.
+            Map<TablePath, CatalogTable> oneTable = new LinkedHashMap<TablePath, CatalogTable>();
+            oneTable.put(table.getKey(), table.getValue());
+            PreparedSinkMetadata metadata;
+            try (ClassLoaderScope ignored = ClassLoaderScope.open(registry.getClassLoader(factory))) {
+                metadata = factory.createPreparer(definition.getOptions())
+                        .prepare(new SinkPrepareContext(definition.getOptions(), oneTable));
+            }
+            if (metadata == null) throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
+            List<PreparedSink> sinks = new java.util.ArrayList<PreparedSink>(parallelism);
+            for (int i = 0; i < parallelism; i++)
+                sinks.add(new PreparedSink(definition.getType(), factory, definition.getOptions(), metadata, registry.getClassLoader(factory)));
+            result.put(table.getKey().toString(), sinks);
         }
-        if (metadata == null) {
-            throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
-        }
-
-        List<PreparedSink> sinks =
-                new java.util.ArrayList<PreparedSink>(
-                        parallelism);
-
-        for (int i = 0; i < parallelism; i++) {
-            sinks.add(
-                    new PreparedSink(
-                            definition.getType(),
-                            factory,
-                            definition.getOptions(),
-                            metadata,
-                            registry.getClassLoader(factory)));
-        }
-
-        return sinks;
+        return result;
     }
 
     private <SplitT extends SourceSplit> Source<SplitT> createSourceInScope(TableSourceFactory<SplitT> factory, SourceFactoryContext context) throws Exception {

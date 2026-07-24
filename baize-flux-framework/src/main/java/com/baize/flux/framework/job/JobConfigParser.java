@@ -104,6 +104,8 @@ public final class JobConfigParser {
                         ? root.getInt("env.sink-parallelism")
                         : ExecutionConfig.DEFAULT_SINK_PARALLELISM;
 
+        int pipelineParallelism = root.hasPath("env.pipeline-parallelism") ? root.getInt("env.pipeline-parallelism") : ExecutionConfig.DEFAULT_PIPELINE_PARALLELISM;
+
         int channelCapacity = root.hasPath("env.max-buffered-batches") ? root.getInt("env.max-buffered-batches")
                 : root.hasPath("env.channel-capacity") ? root.getInt("env.channel-capacity") : ExecutionConfig.DEFAULT_CHANNEL_CAPACITY;
         long maxBufferedRecords = readOptionalLong(root, "env.max-buffered-records");
@@ -139,7 +141,7 @@ public final class JobConfigParser {
                 ? SplitAssignmentMode.valueOf(root.getString("env.split-assignment-mode").trim().toUpperCase(java.util.Locale.ROOT))
                 : SplitAssignmentMode.STATIC_ROUND_ROBIN;
 
-        ExecutionConfig executionConfig = new ExecutionConfig(batchSize, sourceParallelism, sinkParallelism,
+        ExecutionConfig executionConfig = new ExecutionConfig(batchSize, sourceParallelism, sinkParallelism, pipelineParallelism,
                 channelCapacity, maxBufferedRecords, maxBufferedBytes, maxRecordsPerSecond, maxBytesPerSecond,
                 sinkPartitionStrategy, splitAssignmentMode);
 

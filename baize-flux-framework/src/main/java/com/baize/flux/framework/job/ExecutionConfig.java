@@ -8,32 +8,33 @@ public final class ExecutionConfig {
     public static final int DEFAULT_SOURCE_PARALLELISM = 1;
     public static final int DEFAULT_SINK_PARALLELISM = 1;
     public static final int DEFAULT_CHANNEL_CAPACITY = 32;
+    public static final int DEFAULT_PIPELINE_PARALLELISM = Math.max(1, Runtime.getRuntime().availableProcessors());
 
-    private final int batchSize, sourceParallelism, sinkParallelism, maxBufferedBatches;
+    private final int batchSize, sourceParallelism, sinkParallelism, pipelineParallelism, maxBufferedBatches;
     private final long maxBufferedRecords, maxBufferedBytes, maxRecordsPerSecond, maxBytesPerSecond;
     private final SinkPartitionStrategy sinkPartitionStrategy;
     private final SplitAssignmentMode splitAssignmentMode;
 
     public ExecutionConfig(int batchSize, int sourceParallelism, int sinkParallelism, int channelCapacity) {
-        this(batchSize, sourceParallelism, sinkParallelism, channelCapacity, -1, -1, -1, -1,
+        this(batchSize, sourceParallelism, sinkParallelism, DEFAULT_PIPELINE_PARALLELISM, channelCapacity, -1, -1, -1, -1,
                 SinkPartitionStrategy.TABLE_AFFINITY, SplitAssignmentMode.STATIC_ROUND_ROBIN);
     }
 
     public ExecutionConfig(int batchSize, int sourceParallelism, int sinkParallelism, int channelCapacity,
                            SinkPartitionStrategy strategy) {
-        this(batchSize, sourceParallelism, sinkParallelism, channelCapacity, -1, -1, -1, -1,
+        this(batchSize, sourceParallelism, sinkParallelism, DEFAULT_PIPELINE_PARALLELISM, channelCapacity, -1, -1, -1, -1,
                 strategy, SplitAssignmentMode.STATIC_ROUND_ROBIN);
     }
 
     public ExecutionConfig(int batchSize, int sourceParallelism, int sinkParallelism, int channelCapacity,
                            SinkPartitionStrategy strategy, SplitAssignmentMode mode) {
-        this(batchSize, sourceParallelism, sinkParallelism, channelCapacity, -1, -1, -1, -1, strategy, mode);
+        this(batchSize, sourceParallelism, sinkParallelism, DEFAULT_PIPELINE_PARALLELISM, channelCapacity, -1, -1, -1, -1, strategy, mode);
     }
 
-    public ExecutionConfig(int batchSize, int sourceParallelism, int sinkParallelism, int maxBufferedBatches,
+    public ExecutionConfig(int batchSize, int sourceParallelism, int sinkParallelism, int pipelineParallelism, int maxBufferedBatches,
                            long maxBufferedRecords, long maxBufferedBytes, long maxRecordsPerSecond, long maxBytesPerSecond,
                            SinkPartitionStrategy strategy, SplitAssignmentMode mode) {
-        if (batchSize <= 0 || sourceParallelism <= 0 || sinkParallelism <= 0)
+        if (batchSize <= 0 || sourceParallelism <= 0 || sinkParallelism <= 0 || pipelineParallelism <= 0)
             throw new IllegalArgumentException("batch size and parallelism must be greater than 0");
         if (maxBufferedBatches <= 0 && maxBufferedRecords <= 0 && maxBufferedBytes <= 0)
             throw new IllegalArgumentException("at least one buffer limit must be greater than 0");
@@ -44,6 +45,7 @@ public final class ExecutionConfig {
         this.batchSize = batchSize;
         this.sourceParallelism = sourceParallelism;
         this.sinkParallelism = sinkParallelism;
+        this.pipelineParallelism = pipelineParallelism;
         this.maxBufferedBatches = maxBufferedBatches;
         this.maxBufferedRecords = maxBufferedRecords;
         this.maxBufferedBytes = maxBufferedBytes;
@@ -68,6 +70,8 @@ public final class ExecutionConfig {
     public int getSinkParallelism() {
         return sinkParallelism;
     }
+
+    public int getPipelineParallelism() { return pipelineParallelism; }
 
     /**
      * Compatibility accessor for the historical channel-capacity setting.

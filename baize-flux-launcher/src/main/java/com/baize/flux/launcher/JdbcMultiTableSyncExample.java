@@ -11,6 +11,7 @@ public final class JdbcMultiTableSyncExample {
                     + "}\n"
                     + "\n"
                     + "env {\n"
+                    + "  pipeline-parallelism = 2\n"
                     + "  source-parallelism = 4\n"
                     + "  sink-parallelism = 2\n"
                     + "  channel-capacity = 32\n"
