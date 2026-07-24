@@ -1,6 +1,7 @@
 package com.baize.flux.api.channel;
 
 import com.baize.flux.api.table.type.FluxRow;
+import com.baize.flux.api.source.RecordSizeEstimator;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -63,6 +64,14 @@ public final class FluxRowBatch implements Serializable {
 
     public int size() {
         return rows.size();
+    }
+
+    public long getEstimatedBytes() {
+        long total = 32L;
+        for (FluxRow row : rows) {
+            total += RecordSizeEstimator.estimateObjectSizeBytes(row);
+        }
+        return total;
     }
 
     public boolean isEndOfInput() {

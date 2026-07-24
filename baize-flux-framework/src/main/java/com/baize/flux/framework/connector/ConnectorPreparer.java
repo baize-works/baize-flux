@@ -11,6 +11,7 @@ import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.catalog.TablePath;
 import com.baize.flux.api.table.factory.TableSourceFactory;
 import com.baize.flux.framework.job.JobDefinition;
+import com.baize.flux.framework.classloading.ClassLoaderScope;
 import com.baize.flux.framework.job.SinkDefinition;
 import com.baize.flux.framework.job.SourceDefinition;
 
@@ -113,7 +114,7 @@ public final class ConnectorPreparer {
             int sourceParallelism) throws Exception {
 
         Source<SplitT> source =
-                factory.createSource(context);
+                createSourceInScope(factory, context);
 
         if (source == null) {
             throw new ConnectorException(
@@ -124,8 +125,10 @@ public final class ConnectorPreparer {
 
         source.validateParallelism(sourceParallelism);
 
-        List<CatalogTable> catalogTables =
-                factory.discoverTableSchemas(context);
+        List<CatalogTable> catalogTables;
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(registry.getClassLoader(factory))) {
+            catalogTables = factory.discoverTableSchemas(context);
+        }
 
         Map<TablePath, CatalogTable> tableMap =
                 buildTableMap(
@@ -135,7 +138,8 @@ public final class ConnectorPreparer {
         return new PreparedSource<SplitT>(
                 identifier,
                 source,
-                tableMap);
+                tableMap,
+                registry.getClassLoader(factory));
     }
 
     private List<PreparedSink> prepareSinks(
@@ -152,8 +156,11 @@ public final class ConnectorPreparer {
                 .validate(
                         factory.optionRule());
 
-        PreparedSinkMetadata metadata = factory.createPreparer(definition.getOptions())
-                .prepare(new SinkPrepareContext(definition.getOptions(), sourceTables));
+        PreparedSinkMetadata metadata;
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(registry.getClassLoader(factory))) {
+            metadata = factory.createPreparer(definition.getOptions())
+                    .prepare(new SinkPrepareContext(definition.getOptions(), sourceTables));
+        }
         if (metadata == null) {
             throw new ConnectorException("Sink factory '" + definition.getType() + "' returned null preparation metadata");
         }
@@ -168,10 +175,17 @@ public final class ConnectorPreparer {
                             definition.getType(),
                             factory,
                             definition.getOptions(),
-                            metadata));
+                            metadata,
+                            registry.getClassLoader(factory)));
         }
 
         return sinks;
+    }
+
+    private <SplitT extends SourceSplit> Source<SplitT> createSourceInScope(TableSourceFactory<SplitT> factory, SourceFactoryContext context) throws Exception {
+        try (ClassLoaderScope ignored = ClassLoaderScope.open(registry.getClassLoader(factory))) {
+            return factory.createSource(context);
+        }
     }
 
     private Map<TablePath, CatalogTable> buildTableMap(

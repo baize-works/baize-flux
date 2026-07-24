@@ -1,5 +1,7 @@
 package com.baize.flux.api.table.type;
 
+import com.baize.flux.api.source.RecordSizeEstimator;
+
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
@@ -84,6 +86,15 @@ public final class FluxRow implements Serializable {
      */
     public FluxRow copy() {
         return new FluxRow(fields, true);
+    }
+
+    /** Returns a stable approximate size for backpressure accounting. */
+    public long estimatedSizeBytes() {
+        long size = 24L + 16L + fields.length * 8L;
+        for (Object field : fields) {
+            size += RecordSizeEstimator.estimateObjectSizeBytes(field);
+        }
+        return size;
     }
 
     /**

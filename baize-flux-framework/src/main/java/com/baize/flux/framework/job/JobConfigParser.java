@@ -66,10 +66,12 @@ public final class JobConfigParser {
                         ? root.getInt("env.sink-parallelism")
                         : ExecutionConfig.DEFAULT_SINK_PARALLELISM;
 
-        int channelCapacity =
-                root.hasPath("env.channel-capacity")
-                        ? root.getInt("env.channel-capacity")
-                        : ExecutionConfig.DEFAULT_CHANNEL_CAPACITY;
+        int channelCapacity = root.hasPath("env.max-buffered-batches") ? root.getInt("env.max-buffered-batches")
+                : root.hasPath("env.channel-capacity") ? root.getInt("env.channel-capacity") : ExecutionConfig.DEFAULT_CHANNEL_CAPACITY;
+        long maxBufferedRecords = readOptionalLong(root, "env.max-buffered-records");
+        long maxBufferedBytes = readOptionalLong(root, "env.max-buffered-bytes");
+        long maxRecordsPerSecond = readOptionalLong(root, "env.max-records-per-second");
+        long maxBytesPerSecond = readOptionalLong(root, "env.max-bytes-per-second");
 
         Config sourceConnectorConfig =
                 sourceConfig
@@ -100,7 +102,8 @@ public final class JobConfigParser {
                 : SplitAssignmentMode.STATIC_ROUND_ROBIN;
 
         ExecutionConfig executionConfig = new ExecutionConfig(batchSize, sourceParallelism, sinkParallelism,
-                channelCapacity, sinkPartitionStrategy, splitAssignmentMode);
+                channelCapacity, maxBufferedRecords, maxBufferedBytes, maxRecordsPerSecond, maxBytesPerSecond,
+                sinkPartitionStrategy, splitAssignmentMode);
 
         return new JobDefinition(
                 jobName,
@@ -124,6 +127,10 @@ public final class JobConfigParser {
         }
 
         return ExecutionConfig.DEFAULT_SOURCE_PARALLELISM;
+    }
+
+    private static long readOptionalLong(Config root, String path) {
+        return root.hasPath(path) ? root.getLong(path) : -1L;
     }
 
     private static void requireObject(

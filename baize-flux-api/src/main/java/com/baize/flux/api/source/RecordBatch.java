@@ -103,6 +103,27 @@ public final class RecordBatch<T> implements Serializable {
         return records.size();
     }
 
+    /** Estimates this batch using the supplied stable record estimator. */
+    public long estimatedSizeBytes(RecordSizeEstimator<? super T> estimator) {
+        Objects.requireNonNull(estimator, "estimator must not be null");
+        long total = 32L;
+        for (T record : records) {
+            long estimate = estimator.estimateSizeBytes(record);
+            total += Math.max(0L, estimate);
+        }
+        return total;
+    }
+
+    /** Estimates bytes with the public conservative default estimator. */
+    public long getEstimatedBytes() {
+        return estimatedSizeBytes(new RecordSizeEstimator<T>() {
+            @Override
+            public long estimateSizeBytes(T record) {
+                return RecordSizeEstimator.estimateObjectSizeBytes(record);
+            }
+        });
+    }
+
     public boolean isEndOfInput() {
         return endOfInput;
     }
