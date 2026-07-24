@@ -4,6 +4,7 @@ import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.configuration.util.OptionRule;
 import com.baize.flux.api.factory.SinkFactory;
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.source.RecordBatch;
 import com.baize.flux.api.table.catalog.CatalogTable;
 import com.baize.flux.api.table.type.FluxRow;
@@ -13,12 +14,12 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNotSame;
 
 public class PreparedSinkTest {
 
     @Test
-    public void initializesWriterDuringPreparation() {
+    public void createsWriterOnlyAtTaskStartup() {
         AtomicInteger createCount = new AtomicInteger();
         SinkWriter<FluxRow> writer = new NoOpSinkWriter();
 
@@ -26,10 +27,12 @@ public class PreparedSinkTest {
                 new PreparedSink(
                         "test",
                         new TestingSinkFactory(createCount, writer),
-                        ReadonlyConfig.fromMap(Collections.<String, Object>emptyMap()));
+                        ReadonlyConfig.fromMap(Collections.<String, Object>emptyMap()),
+                        new PreparedSinkMetadata(Collections.emptyMap()));
 
+        assertEquals(0, createCount.get());
+        assertNotSame(null, preparedSink.createWriter());
         assertEquals(1, createCount.get());
-        assertSame(writer, preparedSink.getWriter());
     }
 
     private static final class TestingSinkFactory implements SinkFactory {

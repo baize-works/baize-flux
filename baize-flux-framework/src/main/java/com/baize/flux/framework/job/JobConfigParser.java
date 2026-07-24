@@ -90,12 +90,17 @@ public final class JobConfigParser {
                         ReadonlyConfig.fromConfig(
                                 sinkConnectorConfig));
 
+        SinkPartitionStrategy sinkPartitionStrategy = root.hasPath("env.sink-partition-strategy")
+                ? SinkPartitionStrategy.valueOf(root.getString("env.sink-partition-strategy").trim().toUpperCase(java.util.Locale.ROOT))
+                : SinkPartitionStrategy.TABLE_AFFINITY;
+
         ExecutionConfig executionConfig =
                 new ExecutionConfig(
                         batchSize,
                         sourceParallelism,
                         sinkParallelism,
-                        channelCapacity);
+                        channelCapacity,
+                sinkPartitionStrategy);
 
         return new JobDefinition(
                 jobName,

@@ -2,64 +2,30 @@ package com.baize.flux.framework.connector;
 
 import com.baize.flux.api.configuration.ReadonlyConfig;
 import com.baize.flux.api.factory.SinkFactory;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.sink.SinkWriter;
 import com.baize.flux.api.table.type.FluxRow;
 
 import java.util.Objects;
 
-/**
- * 已完成 Factory 发现、配置校验和 Writer 初始化的 Sink。
- *
- * <p>SinkWriter 在 Job Prepare 阶段创建，并在对应的 SinkTask 中执行。
- */
+/** Immutable sink configuration and metadata; writers are runtime resources. */
 public final class PreparedSink {
-
     private final String factoryIdentifier;
-
+    private final SinkFactory factory;
     private final ReadonlyConfig options;
-
-    private final SinkWriter<FluxRow> writer;
-
-    public PreparedSink(
-            String factoryIdentifier,
-            SinkFactory factory,
-            ReadonlyConfig options) {
-
-        this.factoryIdentifier =
-                Objects.requireNonNull(
-                        factoryIdentifier,
-                        "factoryIdentifier must not be null");
-
-        this.options =
-                Objects.requireNonNull(
-                        options,
-                        "options must not be null");
-
-        SinkFactory nonNullFactory =
-                Objects.requireNonNull(
-                        factory,
-                        "factory must not be null");
-
-        this.writer =
-                nonNullFactory.createSink(options);
-
-        if (this.writer == null) {
-            throw new ConnectorException(
-                    "Sink factory '"
-                            + factoryIdentifier
-                            + "' returned a null writer");
-        }
+    private final PreparedSinkMetadata metadata;
+    public PreparedSink(String factoryIdentifier, SinkFactory factory, ReadonlyConfig options, PreparedSinkMetadata metadata) {
+        this.factoryIdentifier = Objects.requireNonNull(factoryIdentifier, "factoryIdentifier must not be null");
+        this.factory = Objects.requireNonNull(factory, "factory must not be null");
+        this.options = Objects.requireNonNull(options, "options must not be null");
+        this.metadata = Objects.requireNonNull(metadata, "metadata must not be null");
     }
-
-    public SinkWriter<FluxRow> getWriter() {
+    public SinkWriter<FluxRow> createWriter() {
+        SinkWriter<FluxRow> writer = factory.createSink(options, metadata);
+        if (writer == null) throw new ConnectorException("Sink factory '" + factoryIdentifier + "' returned a null writer");
         return writer;
     }
-
-    public String getFactoryIdentifier() {
-        return factoryIdentifier;
-    }
-
-    public ReadonlyConfig getOptions() {
-        return options;
-    }
+    public String getFactoryIdentifier() { return factoryIdentifier; }
+    public ReadonlyConfig getOptions() { return options; }
+    public PreparedSinkMetadata getMetadata() { return metadata; }
 }

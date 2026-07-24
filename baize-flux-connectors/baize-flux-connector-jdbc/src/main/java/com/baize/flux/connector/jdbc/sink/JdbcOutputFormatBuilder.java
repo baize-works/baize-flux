@@ -1,6 +1,7 @@
 package com.baize.flux.connector.jdbc.sink;
 
 import com.baize.flux.connector.jdbc.config.JdbcSinkConfig;
+import com.baize.flux.api.sink.PreparedSinkMetadata;
 
 import java.util.Objects;
 
@@ -9,14 +10,17 @@ import java.util.Objects;
  */
 public final class JdbcOutputFormatBuilder {
     private JdbcSinkConfig config;
+    private PreparedSinkMetadata metadata;
 
     public JdbcOutputFormatBuilder withConfig(JdbcSinkConfig config) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         return this;
     }
 
+    public JdbcOutputFormatBuilder withMetadata(PreparedSinkMetadata metadata) { this.metadata = metadata; return this; }
+
     public JdbcOutputFormat build() {
         if (config == null) throw new IllegalStateException("JdbcSinkConfig must be configured before build");
-        return new JdbcOutputFormat(config);
+        return new JdbcOutputFormat(config, metadata);
     }
 }

@@ -21,11 +21,22 @@ public final class ExecutionConfig {
 
     private final int channelCapacity;
 
+    private final SinkPartitionStrategy sinkPartitionStrategy;
+
     public ExecutionConfig(
             int batchSize,
             int sourceParallelism,
             int sinkParallelism,
             int channelCapacity) {
+        this(batchSize, sourceParallelism, sinkParallelism, channelCapacity, SinkPartitionStrategy.TABLE_AFFINITY);
+    }
+
+    public ExecutionConfig(
+            int batchSize,
+            int sourceParallelism,
+            int sinkParallelism,
+            int channelCapacity,
+            SinkPartitionStrategy sinkPartitionStrategy) {
 
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
@@ -51,6 +62,7 @@ public final class ExecutionConfig {
         this.sourceParallelism = sourceParallelism;
         this.sinkParallelism = sinkParallelism;
         this.channelCapacity = channelCapacity;
+        this.sinkPartitionStrategy = sinkPartitionStrategy == null ? SinkPartitionStrategy.TABLE_AFFINITY : sinkPartitionStrategy;
     }
 
     public int getBatchSize() {
@@ -67,5 +79,9 @@ public final class ExecutionConfig {
 
     public int getChannelCapacity() {
         return channelCapacity;
+    }
+
+    public SinkPartitionStrategy getSinkPartitionStrategy() {
+        return sinkPartitionStrategy;
     }
 }

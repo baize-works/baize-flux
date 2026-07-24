@@ -19,7 +19,7 @@ import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.SinkTaskPlan;
 import com.baize.flux.framework.planner.SourceTaskPlan;
 import com.baize.flux.framework.routing.Partitioner;
-import com.baize.flux.framework.routing.TableHashPartitioner;
+import com.baize.flux.framework.routing.SinkPartitioner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -282,7 +282,7 @@ public final class JobExecution {
          */
         Partitioner<RecordEnvelope<FluxRow>>
                 partitioner =
-                new TableHashPartitioner<FluxRow>();
+                new SinkPartitioner<FluxRow>(executionPlan.getExecutionConfig().getSinkPartitionStrategy());
 
         OutputGate<RecordEnvelope<FluxRow>>
                 outputGate =

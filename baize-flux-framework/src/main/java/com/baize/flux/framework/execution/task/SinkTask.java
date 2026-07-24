@@ -57,7 +57,7 @@ public final class SinkTask
         try {
             writer =
                     plan.getPreparedSink()
-                            .getWriter();
+                            .createWriter();
 
             writer.open();
 
