@@ -14,6 +14,7 @@ import com.baize.flux.framework.execution.task.SinkTask;
 import com.baize.flux.framework.execution.task.SourceTask;
 import com.baize.flux.framework.job.JobResult;
 import com.baize.flux.framework.job.JobStatus;
+import com.baize.flux.framework.job.CommitSummary;
 import com.baize.flux.framework.metrics.JobMetrics;
 import com.baize.flux.framework.planner.ExecutionPlan;
 import com.baize.flux.framework.planner.SinkTaskPlan;
@@ -75,6 +76,7 @@ public final class JobExecution {
                         DataChannel<RecordEnvelope<FluxRow>>>();
 
         Throwable failure = null;
+        CommitSummary commitSummary = CommitSummary.empty();
 
         try {
             int sourceTaskCount =
@@ -123,10 +125,9 @@ public final class JobExecution {
                                     }
                                 });
 
-                failure =
-                        coordinator.execute(
-                                sinkTasks,
-                                sourceTasks);
+                ExecutionCoordinator.ExecutionOutcome outcome = coordinator.execute(sinkTasks, sourceTasks);
+                failure = outcome.getFailure();
+                commitSummary = outcome.getCommitSummary();
             }
 
         } catch (Throwable throwable) {
@@ -145,7 +146,13 @@ public final class JobExecution {
 
         JobStatus status;
 
-        if (failure != null) {
+        if (commitSummary.isPartialCommit()) {
+            /* A partial task-local commit must never be presented as a successful or canceled Job. */
+            status = JobStatus.FAILED;
+            if (failure == null) {
+                failure = new IllegalStateException(commitSummary.getWarning());
+            }
+        } else if (failure != null) {
             status = JobStatus.FAILED;
         } else if (cancellationToken.isCancelled()) {
             status = JobStatus.CANCELED;
@@ -159,7 +166,8 @@ public final class JobExecution {
                 startTime,
                 System.currentTimeMillis(),
                 jobMetrics,
-                failure);
+                failure,
+                commitSummary);
     }
 
     public void cancel() {
