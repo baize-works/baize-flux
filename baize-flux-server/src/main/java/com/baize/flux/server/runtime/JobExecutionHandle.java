@@ -1,0 +1,2 @@
+package com.baize.flux.server.runtime; import com.baize.flux.framework.execution.JobExecution; import java.util.concurrent.Future;
+final class JobExecutionHandle { final String id,name; final long create=System.currentTimeMillis(); volatile long start,end; volatile ServerJobStatus status=ServerJobStatus.SUBMITTED; volatile JobExecution execution; volatile Future<?> future; JobExecutionHandle(String i,String n){id=i;name=n;} synchronized void cancel(){ status=ServerJobStatus.CANCELLING; if(execution!=null) execution.cancel(); } }

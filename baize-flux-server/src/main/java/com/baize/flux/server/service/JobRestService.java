@@ -1,0 +1,4 @@
+package com.baize.flux.server.service;
+import com.baize.flux.framework.job.*; import com.typesafe.config.ConfigException; import com.baize.flux.server.runtime.*; import java.util.*;
+/** 将 HTTP 输入转换为领域调用；Servlet 不直接接触执行器或并发容器。 */
+public final class JobRestService { private final JobManager manager; public JobRestService(JobManager m){manager=m;} public JobSnapshot submit(String hocon){if(hocon==null||hocon.trim().isEmpty())throw new IllegalArgumentException("Job configuration is empty");JobDefinition d; try { d=new JobConfigParser().parse(hocon); } catch (ConfigException e) { throw new IllegalArgumentException("Invalid HOCON job configuration"); }String id=manager.submit(d);return manager.getJob(id);} public JobSnapshot job(String id){return manager.getJob(id);} public List<JobSnapshot> jobs(){return manager.listJobs();} public void cancel(String id){manager.cancel(id);} }
