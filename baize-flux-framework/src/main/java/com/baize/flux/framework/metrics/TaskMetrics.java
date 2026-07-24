@@ -36,6 +36,9 @@ public final class TaskMetrics {
     private final AtomicLong databaseCommitNanos = new AtomicLong();
     private final AtomicLong sqlExecutionNanos = new AtomicLong();
     private final AtomicLong completedSplitCount = new AtomicLong();
+    private final AtomicLong totalSplitCount = new AtomicLong();
+    private final AtomicLong runningSplitCount = new AtomicLong();
+    private final AtomicLong failedSplitCount = new AtomicLong();
     private final Set<String> completedSplits = ConcurrentHashMap.newKeySet();
 
     private volatile String currentTable;
@@ -97,6 +100,11 @@ public final class TaskMetrics {
         currentSplit = split;
     }
 
+    public void setTotalSplitCount(long count) { totalSplitCount.set(Math.max(0L, count)); }
+    public void markSplitRunning() { runningSplitCount.incrementAndGet(); }
+    public void markSplitFinished() { if (runningSplitCount.get() > 0L) runningSplitCount.decrementAndGet(); }
+    public void markSplitFailed() { markSplitFinished(); failedSplitCount.incrementAndGet(); }
+
     /** Marks a split completed once; repeated notifications are intentionally idempotent. */
     public void markSplitCompleted(String splitId) {
         if (splitId != null && completedSplits.add(splitId)) {
@@ -139,6 +147,10 @@ public final class TaskMetrics {
     public String getCurrentTable() { return currentTable; }
     public String getCurrentSplit() { return currentSplit; }
     public long getCompletedSplitCount() { return completedSplitCount.get(); }
+    public long getTotalSplitCount() { return totalSplitCount.get(); }
+    public long getPendingSplitCount() { return Math.max(0L, totalSplitCount.get() - runningSplitCount.get() - completedSplitCount.get() - failedSplitCount.get()); }
+    public long getRunningSplitCount() { return runningSplitCount.get(); }
+    public long getFailedSplitCount() { return failedSplitCount.get(); }
     public long getExpectedRecordCount() { return expectedRecordCount; }
 
     /** Rows per second since start, using source rows when available and sink rows otherwise. */

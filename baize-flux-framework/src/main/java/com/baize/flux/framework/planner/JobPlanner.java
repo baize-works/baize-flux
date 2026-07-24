@@ -7,6 +7,9 @@ import com.baize.flux.framework.connector.PreparedSink;
 import com.baize.flux.framework.connector.PreparedSource;
 import com.baize.flux.framework.execution.TaskId;
 import com.baize.flux.framework.job.ExecutionConfig;
+import com.baize.flux.framework.job.SplitAssignmentMode;
+import com.baize.flux.framework.execution.split.LocalSplitQueue;
+import com.baize.flux.framework.execution.split.SplitProvider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,9 +69,10 @@ public final class JobPlanner {
         }
 
         List<List<SplitT>> assignments =
-                splitAssigner.assign(
-                        splits,
-                        config.getSourceParallelism());
+                splitAssigner.assign(splits, config.getSourceParallelism());
+
+        SplitProvider<SplitT> sharedProvider = config.getSplitAssignmentMode() == SplitAssignmentMode.DYNAMIC
+                ? new LocalSplitQueue<SplitT>(splits) : null;
 
         List<SourceTaskPlan<?>> sourcePlans =
                 new ArrayList<SourceTaskPlan<?>>();
@@ -88,7 +92,8 @@ public final class JobPlanner {
                             taskId,
                             preparedSource,
                             assignments.get(i),
-                            config.getBatchSize()));
+                            config.getBatchSize(),
+                            sharedProvider));
         }
 
         List<SinkTaskPlan> sinkPlans =

@@ -1,6 +1,7 @@
 package com.baize.flux.framework.metrics;
 
 import com.baize.flux.framework.execution.TaskId;
+import com.baize.flux.framework.execution.split.SplitProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,6 +19,8 @@ public final class JobMetrics {
     private final Map<TaskId, TaskMetrics> taskMetrics =
             new ConcurrentHashMap<TaskId, TaskMetrics>();
 
+    private final List<SplitProvider<?>> splitProviders = new CopyOnWriteArrayList<SplitProvider<?>>();
+
     private final List<ChannelMetrics> channelMetrics =
             new CopyOnWriteArrayList<ChannelMetrics>();
 
@@ -34,6 +37,14 @@ public final class JobMetrics {
                 ? created
                 : previous;
     }
+
+    public void registerSplitProvider(SplitProvider<?> provider) { if (provider != null && !splitProviders.contains(provider)) splitProviders.add(provider); }
+    public long getTotalSplitCount() { return splitProviders.isEmpty() ? sumSplits(0) : splitCount(0); }
+    public long getPendingSplitCount() { return splitProviders.isEmpty() ? sumSplits(1) : splitCount(1); }
+    public long getRunningSplitCount() { return splitProviders.isEmpty() ? sumSplits(2) : splitCount(2); }
+    public long getFailedSplitCount() { return splitProviders.isEmpty() ? sumSplits(4) : splitCount(4); }
+    private long sumSplits(int type) { long total=0L; for (TaskMetrics m : taskMetrics.values()) { if (!"source".equals(m.getTaskId().getStageName())) continue; total += type == 0 ? m.getTotalSplitCount() : type == 1 ? m.getPendingSplitCount() : type == 2 ? m.getRunningSplitCount() : m.getFailedSplitCount(); } return total; }
+    private long splitCount(int type) { long total = 0L; for (SplitProvider<?> p : splitProviders) { total += type == 0 ? p.getTotalSplitCount() : type == 1 ? p.getPendingSplitCount() : type == 2 ? p.getRunningSplitCount() : p.getFailedSplitCount(); } return total; }
 
     public void registerChannel(
             ChannelMetrics metrics) {
@@ -78,7 +89,7 @@ public final class JobMetrics {
     public long getSkippedRecordCount() { return sumMetric(null, Metric.SKIPPED_RECORDS); }
     public long getSourceReadBytes() { return sumMetric("source", Metric.SOURCE_BYTES); }
     public long getSinkWrittenBytes() { return sumMetric("sink", Metric.SINK_BYTES); }
-    public long getCompletedSplitCount() { return sumMetric("source", Metric.COMPLETED_SPLITS); }
+    public long getCompletedSplitCount() { return splitProviders.isEmpty() ? sumMetric("source", Metric.COMPLETED_SPLITS) : splitCount(3); }
     public long getBatchRetryCount() { return sumMetric(null, Metric.BATCH_RETRIES); }
     public long getDatabaseCommitMillis() { return sumMetric("sink", Metric.COMMIT_MILLIS); }
     public long getSqlExecutionMillis() { return sumMetric(null, Metric.SQL_MILLIS); }
