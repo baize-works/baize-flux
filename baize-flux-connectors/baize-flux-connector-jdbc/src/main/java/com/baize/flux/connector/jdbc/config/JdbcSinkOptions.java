@@ -4,6 +4,7 @@ import com.baize.flux.api.configuration.Option;
 import com.baize.flux.api.configuration.Options;
 import com.baize.flux.connector.jdbc.sink.DataSaveMode;
 import com.baize.flux.connector.jdbc.sink.DirtyDataPolicy;
+import com.baize.flux.connector.jdbc.sink.DirtyDataOutputType;
 import com.baize.flux.connector.jdbc.sink.SchemaSaveMode;
 
 import java.util.List;
@@ -127,6 +128,17 @@ public final class JdbcSinkOptions
                     .enumType(DirtyDataPolicy.class)
                     .defaultValue(DirtyDataPolicy.FAIL_FAST)
                     .withDescription("脏数据处理策略：FAIL_FAST 或 SKIP");
+
+    public static final Option<DirtyDataOutputType> DIRTY_DATA_OUTPUT_TYPE =
+            Options.key("dirty_data_output_type").enumType(DirtyDataOutputType.class).defaultValue(DirtyDataOutputType.MEMORY).withDescription("脏数据样例输出类型：MEMORY、LOGGING 或 JSONL");
+    public static final Option<String> DIRTY_DATA_OUTPUT_PATH =
+            Options.key("dirty_data_output_path").stringType().noDefaultValue().withDescription("JSONL 脏数据输出文件路径");
+    public static final Option<Integer> DIRTY_DATA_MAX_SAMPLES =
+            Options.key("dirty_data_max_samples").intType().defaultValue(100).withDescription("内存保留的脏数据样例上限");
+    public static final Option<Integer> DIRTY_DATA_MAX_COUNT =
+            Options.key("dirty_data_max_count").intType().defaultValue(Integer.MAX_VALUE).withDescription("允许跳过的脏数据数量上限");
+    public static final Option<Double> DIRTY_DATA_MAX_PERCENTAGE =
+            Options.key("dirty_data_max_percentage").doubleType().defaultValue(1D).withDescription("允许跳过的脏数据比例上限；分母为已尝试写入记录数");
 
     /**
      * 自动创建目标表时是否创建主键。

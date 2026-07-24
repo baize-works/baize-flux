@@ -1,6 +1,9 @@
 package com.baize.flux.connector.jdbc.sink;
 
 import com.baize.flux.api.sink.SinkWriter;
+import com.baize.flux.api.sink.DirtyDataAwareSinkWriter;
+import com.baize.flux.api.dirtydata.*;
+import java.nio.file.Paths;
 import com.baize.flux.api.sink.CommitScope;
 import com.baize.flux.api.sink.PreparedSinkMetadata;
 import com.baize.flux.api.source.RecordBatch;
@@ -18,11 +21,12 @@ import java.util.Objects;
  * 对应一条独立 JDBC 事务。
  */
 public final class JdbcSinkWriter
-        implements SinkWriter<FluxRow> {
+        implements SinkWriter<FluxRow>, DirtyDataAwareSinkWriter {
 
     private final JdbcOutputFormat outputFormat;
 
     private final JdbcSinkConfig config;
+    private DirtyDataContext dirtyDataContext;
 
     public JdbcSinkWriter(
             JdbcSinkConfig config,
@@ -38,7 +42,22 @@ public final class JdbcSinkWriter
     }
 
     @Override
-    public void open() {
+    public void configureDirtyData(DirtyDataContext context) {
+        DirtyDataCollector collector;
+        switch (config.getDirtyDataOutputType()) {
+            case LOGGING: collector = new LoggingDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage()); break;
+            case JSONL: collector = new JsonLinesDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage(), Paths.get(config.getDirtyDataOutputPath())); break;
+            default: collector = new BoundedMemoryDirtyDataCollector(context.getTaskId(), config.getDirtyDataMaxSamples(), config.getDirtyDataMaxCount(), config.getDirtyDataMaxPercentage());
+        }
+        dirtyDataContext = context;
+        outputFormat.setDirtyDataCollector(collector, context);
+    }
+
+    @Override
+    public DirtyDataSummary getDirtyDataSummary() { return outputFormat.getDirtyDataSummary(); }
+
+    @Override
+    public void open() throws Exception {
         outputFormat.open();
     }
 
@@ -53,6 +72,8 @@ public final class JdbcSinkWriter
                 || batch.getRecords().isEmpty()) {
             return;
         }
+
+        if (dirtyDataContext != null) outputFormat.updateDirtyDataContext(dirtyDataContext.withDataSet(batch.getDataSetId(), batch.getSplitId()));
 
         outputFormat.write(
                 batch.getRecords(),
@@ -96,10 +117,5 @@ public final class JdbcSinkWriter
         outputFormat.close();
     }
 
-    /**
-     * Returns immutable snapshots of rows skipped under {@code dirty_data_policy=SKIP}.
-     */
-    public List<JdbcRowError> getRowErrors() {
-        return outputFormat.getRowErrors();
-    }
+
 }
